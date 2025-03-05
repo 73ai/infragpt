@@ -19,7 +19,7 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "infragpt=infragpt.bin.launcher:main",
+            "infragpt=infragpt.bin.launcher:main_launcher",
         ],
     },
     scripts=['bin/infragpt'],

@@ -11,7 +11,8 @@ except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     import infragpt
 
-from infragpt.main import cli, main
+# Import directly from cli.commands to ensure we're using the correct cli implementation
+from infragpt.cli.commands import cli, main
 
 if __name__ == "__main__":
     # Check if we're using the `--` special form to pass everything after as a prompt

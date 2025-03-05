@@ -2,9 +2,10 @@
 """Launcher for InfraGPT."""
 
 import sys
-from ..main import cli, main
+# Import directly from cli.commands to ensure we're using the correct cli implementation
+from ..cli.commands import cli, main
 
-def main():
+def main_launcher():
     """Entry point for console_scripts."""
     # Check if we're using the `--` special form to pass everything after as a prompt
     if len(sys.argv) > 1 and sys.argv[1] == "--":
@@ -17,4 +18,4 @@ def main():
         cli()
 
 if __name__ == "__main__":
-    main()
+    main_launcher()
