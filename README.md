@@ -43,10 +43,10 @@ InfraGPT requires API keys to work. There are three ways to provide credentials,
 
 ```bash
 # Using OpenAI GPT-4o
-infragpt --model gpt4o --api-key "your-openai-api-key" "your prompt here"
+infragpt --model gpt4o --api-key "your-openai-api-key"
 
 # Using Anthropic Claude
-infragpt --model claude --api-key "your-anthropic-api-key" "your prompt here"
+infragpt --model claude --api-key "your-anthropic-api-key"
 ```
 
 ### 2. Configuration File
@@ -89,42 +89,28 @@ If no credentials are found from any of these sources, if an empty API key is de
 
 ## Usage
 
-InfraGPT has two main subcommands:
-- `generate`: Convert natural language to Google Cloud commands (default command)
-- `history`: View or export your command history
+InfraGPT has two main modes:
+- **Interactive Mode**: The default and only mode for command generation
+- **History Command**: View or export your command history
 
-### Command Generation
+### Interactive Mode
 
-Generate gcloud commands from natural language:
-
-```
-infragpt generate "create a new VM instance called test-vm in us-central1 with 2 CPUs"
-```
-
-You can also use the tool without specifying the command:
+Launch InfraGPT in interactive mode:
 
 ```
-infragpt "create a new VM instance called test-vm in us-central1 with 2 CPUs"
+infragpt
 ```
 
-Or use the special `--` syntax to handle arguments that might conflict with CLI options:
+Once in interactive mode, enter natural language prompts at the prompt:
 
 ```
-infragpt -- "create a new VM instance called test-vm in us-central1 with 2 CPUs"
+> create a new VM instance called test-vm in us-central1 with 2 CPUs
 ```
 
 Specify the model to use:
 
 ```
-infragpt --model claude "list all my compute instances in europe-west1"
-```
-
-### Interactive Mode
-
-Launch InfraGPT in interactive mode (no initial prompt):
-
-```
-infragpt
+infragpt --model claude
 ```
 
 Use keyboard shortcuts in interactive mode:
@@ -166,7 +152,7 @@ infragpt history --export history.jsonl
 
 ## Options
 
-### Generate Command Options
+### Interactive Mode Options
 - `--model`, `-m`: Choose the LLM model (gpt4o or claude)
 - `--api-key`, `-k`: Provide an API key for the selected model
 - `--verbose`, `-v`: Enable verbose output

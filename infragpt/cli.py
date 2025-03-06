@@ -29,7 +29,7 @@ from infragpt.prompts import handle_command_result
 from infragpt.history import history_command
 
 def interactive_mode(model_type: Optional[MODEL_TYPE] = None, api_key: Optional[str] = None, verbose: bool = False):
-    """Run InfraGPT in interactive mode with enhanced prompting."""
+    """Run InfraGPT in interactive mode with natural language prompting."""
     # Ensure history directory exists
     history_dir = pathlib.Path.home() / ".infragpt"
     history_dir.mkdir(exist_ok=True)
@@ -51,7 +51,7 @@ def interactive_mode(model_type: Optional[MODEL_TYPE] = None, api_key: Optional[
     
     # Welcome message
     console.print(Panel.fit(
-        Text("InfraGPT - Convert natural language to gcloud commands", style="bold green"),
+        Text("InfraGPT - Interactive natural language to gcloud commands", style="bold green"),
         border_style="blue"
     ))
     
@@ -100,11 +100,15 @@ def interactive_mode(model_type: Optional[MODEL_TYPE] = None, api_key: Optional[
 @click.group(invoke_without_command=True)
 @click.pass_context
 @click.version_option(package_name='infragpt')
-def cli(ctx):
-    """InfraGPT - Convert natural language to Google Cloud commands and manage history."""
+@click.option('--model', '-m', type=click.Choice(['gpt4o', 'claude']), 
+              help='LLM model to use (gpt4o or claude)')
+@click.option('--api-key', '-k', help='API key for the selected model')
+@click.option('--verbose', '-v', is_flag=True, help='Enable verbose output')
+def cli(ctx, model, api_key, verbose):
+    """InfraGPT - Convert natural language to Google Cloud commands in interactive mode."""
     # If no subcommand is specified, go to interactive mode
     if ctx.invoked_subcommand is None:
-        ctx.invoke(main, prompt=())
+        main(model=model, api_key=api_key, verbose=verbose)
 
 @cli.command(name='history')
 @click.option('--limit', '-l', type=int, default=10, help='Number of history entries to display')
@@ -114,14 +118,8 @@ def history_cli(limit, type, export):
     """View or export interaction history."""
     history_command(limit, type, export)
 
-@cli.command(name='generate', help="Generate gcloud commands from natural language")
-@click.argument('prompt', nargs=-1, required=False)
-@click.option('--model', '-m', type=click.Choice(['gpt4o', 'claude']), 
-              help='LLM model to use (gpt4o or claude)')
-@click.option('--api-key', '-k', help='API key for the selected model')
-@click.option('--verbose', '-v', is_flag=True, help='Enable verbose output')
-def main(prompt, model, api_key, verbose):
-    """InfraGPT - Convert natural language to Google Cloud commands."""
+def main(model, api_key, verbose):
+    """InfraGPT - Convert natural language to Google Cloud commands in interactive mode."""
     # Initialize config file if it doesn't exist
     init_config()
     
@@ -156,15 +154,8 @@ def main(prompt, model, api_key, verbose):
                 # No credentials anywhere, prompt before continuing
                 model, api_key = prompt_credentials()
     
-    # If no prompt was provided, enter interactive mode
-    if not prompt:
-        interactive_mode(model, api_key, verbose)
-    else:
-        user_prompt = " ".join(prompt)
-        with console.status("[bold green]Generating command...[/bold green]", spinner="dots"):
-            result = generate_gcloud_command(user_prompt, model, api_key, verbose)
-        
-        handle_command_result(result, model, verbose)
+    # Enter interactive mode
+    interactive_mode(model, api_key, verbose)
 
 if __name__ == "__main__":
     cli()
