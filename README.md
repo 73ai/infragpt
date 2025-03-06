@@ -1,15 +1,28 @@
-# InfraGPT
+# InfraGPT - Your devops co-pilot 🤖 on Terminal
 
-A CLI tool that converts natural language requests into Google Cloud (gcloud) commands.
+InfraGPT lets you interactively generate and execute infrastructure commands using large language models (LLMs) in your terminal.
+InfraGPT works best with OpenAI GPT-4o and Anthropic Claude Sonet models.
 
 ![PyPI](https://img.shields.io/pypi/v/infragpt)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/priyanshujain/infragpt/publish.yml)
+
+[![asciicast](https://asciinema.org/a/w4YKOCP5zcYF0bSlZ2JSLczs8.svg)](https://asciinema.org/a/w4YKOCP5zcYF0bSlZ2JSLczs8)
+
+## Features
+
+- **Infrastructure Commands**: Generate and execute infrastructure commands using natural language
+- **Slackbot**: Integrate InfraGPT with Slack to generate commands from messages and take actions (coming soon)
 
 ## Installation
 
 ### Using pip
 
-Using pip to install packages system-wide is [not recommended](https://peps.python.org/pep-0668/). Instead, install InfraGPT using `pipx` in the next section.
+Using pip to install packages system-wide is [not recommended](https://peps.python.org/pep-0668/).
+pip is a general-purpose package installer for both libraries and apps with no environment isolation. pipx is made specifically for application installation, as it adds isolation yet still makes the apps available in your shell: pipx creates an isolated environment for each application and its associated packages.
+
+pipx does not ship with pip, but installing it is often an important part of bootstrapping your system.
+
+Instead, install InfraGPT using `pipx` in the next section.
 
 ### Using pipx
 
@@ -78,7 +91,7 @@ export INFRAGPT_MODEL="gpt4o"  # or "claude"
 
 When environment variables are available, InfraGPT will automatically save the detected model and API key to the configuration file for future use.
 
-If no credentials are found from any of these sources, if an empty API key is detected, or if an invalid API key is provided, InfraGPT will prompt you to select a model and enter your API key interactively at startup, before accepting any commands. 
+If no credentials are found from any of these sources, if an empty API key is detected, or if an invalid API key is provided, InfraGPT will prompt you to select a model and enter your API key interactively at startup, before accepting any commands.
 
 **API Key Validation:**
 - The application validates API keys by making a small test request to the service provider
@@ -88,12 +101,6 @@ If no credentials are found from any of these sources, if an empty API key is de
 - All validated credentials are automatically saved to the config file
 
 ## Usage
-
-InfraGPT has two main modes:
-- **Interactive Mode**: The default and only mode for command generation
-- **History Command**: View or export your command history
-
-### Interactive Mode
 
 Launch InfraGPT in interactive mode:
 
@@ -156,11 +163,6 @@ infragpt history --export history.jsonl
 - `--model`, `-m`: Choose the LLM model (gpt4o or claude)
 - `--api-key`, `-k`: Provide an API key for the selected model
 - `--verbose`, `-v`: Enable verbose output
-
-### History Command Options
-- `--limit`, `-l`: Number of history entries to display (default: 10)
-- `--type`, `-t`: Filter by interaction type (command_generation, command_action, command_execution)
-- `--export`, `-e`: Export history to specified file path
 
 ## Contributing
 
