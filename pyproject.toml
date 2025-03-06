@@ -20,7 +20,8 @@ classifiers = [
     "Topic :: Utilities",
     "Topic :: System :: Systems Administration",
 ]
-dependencies = [] # This will be populated dynamically from requirements.txt
+
+dynamic = ["dependencies"]
 
 [project.urls]
 Homepage = "https://github.com/priyanshujain/infragpt"
@@ -32,4 +33,4 @@ infragpt = "infragpt.cli:cli"
 include = ["infragpt"]
 
 [tool.setuptools.dynamic]
-dependencies = { file = ["requirements.txt"] }
+dependencies = { file = "requirements.txt" }
