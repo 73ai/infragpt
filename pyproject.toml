@@ -1,3 +1,36 @@
 [build-system]
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "infragpt"
+version = "0.1.5"
+description = "InfraGPT is an AI assistant for interactively managing your infrastructure."
+readme = "README.md"
+authors = [{ name = "Priyanshu Jain", email = "ipriyanshujain@gmail.com" }]
+requires-python = ">=3.9"
+license = { text = "GPL-3.0-only" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Topic :: Utilities",
+    "Topic :: System :: Systems Administration",
+]
+
+dynamic = ["dependencies"]
+
+[project.urls]
+Homepage = "https://github.com/priyanshujain/infragpt"
+
+[project.scripts]
+infragpt = "infragpt.cli:cli"
+
+[tool.setuptools.packages.find]
+include = ["infragpt"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = "requirements.txt" }
