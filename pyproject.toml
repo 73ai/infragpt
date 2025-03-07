@@ -30,7 +30,7 @@ Homepage = "https://github.com/priyanshujain/infragpt"
 infragpt = "infragpt.cli:cli"
 
 [tool.setuptools.packages.find]
-include = ["infragpt"]
+include = ["infragpt", "llm"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = "requirements.txt" }
