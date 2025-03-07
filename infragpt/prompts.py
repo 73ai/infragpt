@@ -103,17 +103,28 @@ def prompt_for_parameters(command: str, model_type: MODEL_TYPE, return_params: b
             description = info.get('description', f"Value for {param}")
             examples = info.get('examples', [])
             default = info.get('default', None)
+            is_required = info.get('required', False)
             
-            # Create a rich prompt with available info
-            prompt_text = f"[bold cyan]{param}[/bold cyan]"
+            # Build the prompt text with required indicator if needed
+            required_indicator = "[bold red]*[/bold red] " if is_required else ""
+            prompt_text = f"{required_indicator}[bold cyan]{param}[/bold cyan]"
+            
             if description:
                 prompt_text += f"\n  [dim]{description}[/dim]"
             if examples:
                 examples_str = ", ".join([str(ex) for ex in examples])
                 prompt_text += f"\n  [dim]Examples: {examples_str}[/dim]"
-                
-            # Get user input for this parameter
-            value = Prompt.ask(prompt_text, default=default or "")
+            
+            # For required parameters, keep prompting until we get a non-empty value
+            value = ""
+            while not value.strip() and is_required:
+                value = Prompt.ask(prompt_text, default=default or "")
+                if not value.strip():
+                    console.print("[bold red]This parameter is required. Please provide a value.[/bold red]")
+            
+            # For optional parameters, just ask once
+            if not is_required and not value:
+                value = Prompt.ask(prompt_text, default=default or "")
             
             # Store parameter value
             collected_params[param] = value
@@ -129,10 +140,10 @@ def prompt_for_parameters(command: str, model_type: MODEL_TYPE, return_params: b
     # If we just have regular parameters (no brackets), handle them normally
     console.print("\n[bold yellow]Command parameters:[/bold yellow]")
     
-    # Prompt for each parameter
+    # Prompt for each parameter - assume all standard parameters are optional for now
     updated_params = {}
     for param, default_value in params.items():
-        prompt_text = f"[bold cyan]{param}[/bold cyan]"
+        prompt_text = f"[bold cyan]{param}[/bold cyan] [dim](optional)[/dim]"
         if default_value:
             prompt_text += f" [default: {default_value}]"
         
