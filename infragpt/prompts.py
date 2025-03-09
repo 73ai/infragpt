@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+Prompt handling and command processing for InfraGPT CLI.
+"""
 
 import re
 import json
@@ -13,70 +16,22 @@ from infragpt.config import CLIPBOARD_AVAILABLE
 from infragpt.history import log_interaction
 from infragpt.llm import MODEL_TYPE, get_parameter_info
 
+# Import from shared LLM module
+from llm.prompts import get_prompt_template
+
 # Initialize console for rich output
 console = Console()
 
+
 def create_prompt():
     """Create the prompt template for generating cloud commands."""
-    template = """You are InfraGPT, a specialized assistant that helps users convert their natural language requests into
-appropriate Google Cloud (gcloud) CLI commands.
+    return get_prompt_template("command_generation")
 
-INSTRUCTIONS:
-1. Analyze the user's input to understand the intended cloud operation.
-2. If the request is valid and related to Google Cloud operations, respond with ONLY the appropriate gcloud command(s).
-3. If the operation requires multiple commands, separate them with a newline.
-4. Include parameter placeholders in square brackets like [PROJECT_ID], [TOPIC_NAME], [SUBSCRIPTION_NAME], etc.
-5. Do not include any explanations, markdown formatting, or additional text in your response.
-
-Examples:
-- Request: "Create a new VM instance called test-instance with 2 CPUs in us-central1-a"
-  Response: gcloud compute instances create test-instance --machine-type=e2-medium --zone=us-central1-a
-
-- Request: "Give viewer permissions to user@example.com for a pubsub topic"
-  Response: gcloud pubsub topics add-iam-policy-binding [TOPIC_NAME] --member=user:user@example.com --role=roles/pubsub.viewer
-
-- Request: "Create a VM instance and attach a new disk to it"
-  Response: gcloud compute instances create [INSTANCE_NAME] --zone=[ZONE] --machine-type=e2-medium
-gcloud compute disks create [DISK_NAME] --size=200GB --zone=[ZONE]
-gcloud compute instances attach-disk [INSTANCE_NAME] --disk=[DISK_NAME] --zone=[ZONE]
-
-- Request: "What's the weather like today?"
-  Response: Request cannot be fulfilled.
-
-User request: {prompt}
-
-Your gcloud command(s):"""
-    
-    return ChatPromptTemplate.from_template(template)
 
 def create_parameter_prompt():
     """Create prompt template for extracting parameter info from a command."""
-    template = """You are InfraGPT Parameter Helper, a specialized assistant that helps users understand Google Cloud CLI command parameters.
+    return get_prompt_template("parameter_info")
 
-TASK:
-Analyze the Google Cloud CLI command below and provide information about each parameter that needs to be filled in.
-For each parameter in square brackets like [PARAMETER_NAME], provide:
-1. A brief description of what this parameter is
-2. Examples of valid values
-3. Any constraints or requirements
-
-Format your response as JSON with the parameter name as key, like this:
-```json
-{{
-  "PARAMETER_NAME": {{
-    "description": "Brief description of the parameter",
-    "examples": ["example1", "example2"], 
-    "required": true,
-    "default": "default value if any, otherwise null"
-  }}
-}}
-```
-
-Command: {command}
-
-Parameter JSON:"""
-    
-    return ChatPromptTemplate.from_template(template)
 
 def parse_command_parameters(command: str) -> Tuple[str, Dict[str, str], List[str]]:
     """Parse a command to extract its parameters and bracket placeholders."""
@@ -113,6 +68,7 @@ def parse_command_parameters(command: str) -> Tuple[str, Dict[str, str], List[st
     
     return ' '.join(base_command), params, bracket_params
 
+
 def prompt_for_parameters(command: str, model_type: MODEL_TYPE, return_params: bool = False) -> Union[str, Tuple[str, Dict[str, str]]]:
     """Prompt the user for each parameter in the command with AI assistance."""
     # Show the original command template first
@@ -147,17 +103,28 @@ def prompt_for_parameters(command: str, model_type: MODEL_TYPE, return_params: b
             description = info.get('description', f"Value for {param}")
             examples = info.get('examples', [])
             default = info.get('default', None)
+            is_required = info.get('required', False)
             
-            # Create a rich prompt with available info
-            prompt_text = f"[bold cyan]{param}[/bold cyan]"
+            # Build the prompt text with required indicator if needed
+            required_indicator = "[bold red]*[/bold red] " if is_required else ""
+            prompt_text = f"{required_indicator}[bold cyan]{param}[/bold cyan]"
+            
             if description:
                 prompt_text += f"\n  [dim]{description}[/dim]"
             if examples:
                 examples_str = ", ".join([str(ex) for ex in examples])
                 prompt_text += f"\n  [dim]Examples: {examples_str}[/dim]"
-                
-            # Get user input for this parameter
-            value = Prompt.ask(prompt_text, default=default or "")
+            
+            # For required parameters, keep prompting until we get a non-empty value
+            value = ""
+            while not value.strip() and is_required:
+                value = Prompt.ask(prompt_text, default=default or "")
+                if not value.strip():
+                    console.print("[bold red]This parameter is required. Please provide a value.[/bold red]")
+            
+            # For optional parameters, just ask once
+            if not is_required and not value:
+                value = Prompt.ask(prompt_text, default=default or "")
             
             # Store parameter value
             collected_params[param] = value
@@ -173,10 +140,10 @@ def prompt_for_parameters(command: str, model_type: MODEL_TYPE, return_params: b
     # If we just have regular parameters (no brackets), handle them normally
     console.print("\n[bold yellow]Command parameters:[/bold yellow]")
     
-    # Prompt for each parameter
+    # Prompt for each parameter - assume all standard parameters are optional for now
     updated_params = {}
     for param, default_value in params.items():
-        prompt_text = f"[bold cyan]{param}[/bold cyan]"
+        prompt_text = f"[bold cyan]{param}[/bold cyan] [dim](optional)[/dim]"
         if default_value:
             prompt_text += f" [default: {default_value}]"
         
@@ -194,6 +161,7 @@ def prompt_for_parameters(command: str, model_type: MODEL_TYPE, return_params: b
         return reconstructed_command, collected_params
     return reconstructed_command
 
+
 def split_commands(result: str) -> List[str]:
     """Split multiple commands from the response."""
     if "Request cannot be fulfilled." in result:
@@ -202,6 +170,7 @@ def split_commands(result: str) -> List[str]:
     # Split by newlines and filter out empty lines
     commands = [cmd.strip() for cmd in result.splitlines() if cmd.strip()]
     return commands
+
 
 def handle_command_result(result: str, model_type: Optional[MODEL_TYPE] = None, verbose: bool = False):
     """Handle the generated command results with options to print, copy, or execute."""
