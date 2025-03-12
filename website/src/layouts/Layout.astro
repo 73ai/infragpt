@@ -55,24 +55,10 @@ const makeTitle = title
 				},
 			}}
 		/>
-
-		<script is:inline>
-			function handleThemeChange() {
-				if (localStorage.theme === "dark" || (!("theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
-					document.documentElement.classList.add("dark");
-				} else {
-					document.documentElement.classList.remove("dark");
-				}
-			}
-			handleThemeChange();
-			document.removeEventListener("astro:after-swap", handleThemeChange);
-			document.addEventListener("astro:after-swap", handleThemeChange);
-		</script>
-
 		{pwaInfo && <Fragment set:html={pwaInfo.webManifest.linkTag} />}
 		<script src="/src/pwa.ts"></script>
 	</head>
-	<body class="dark:bg-stone-950">
+	<body>
 		<Navbar />
 		<slot />
 		<Footer />
