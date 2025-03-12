@@ -1,0 +1,121 @@
+---
+const { plan } = Astro.props;
+import { t } from "i18next";
+
+const faqs = [
+	{
+		title: "How does InfraGPT work?",
+		description: "InfraGPT integrates with your cloud provider (AWS, GCP, Azure) and GitHub to analyze logs, infrastructure configurations, and cloud costs. You can chat with it in Slack to troubleshoot issues, optimize resources, and get DevOps insights.",
+	},
+// 	How does the GitHub integration work?
+// You can link your GitHub account and grant InfraGPT read access to selected repositories. When you send a message in Slack with a GitHub file link, InfraGPT will read the code and provide answers or insights.
+
+// Q3: What permissions does InfraGPT need for GitHub?
+// InfraGPT requires read-only access to your repositories to analyze code and provide intelligent responses. It does not modify code or write to your repositories.
+
+// Q4: How does InfraGPT help with cost optimization?
+// Our AI continuously scans your cloud infrastructure to identify inefficiencies, such as unused instances, over-provisioned resources, and better pricing options. It provides actionable recommendations to reduce costs.
+
+// Q5: Does InfraGPT support all cloud providers?
+// Currently, InfraGPT supports AWS, Google Cloud (GCP), and Microsoft Azure. We’re working on expanding support for other cloud platforms.
+
+// Q6: Can InfraGPT be used by small teams and startups?
+// Absolutely! InfraGPT is designed for teams of all sizes, from small startups to enterprise engineering teams. Whether you have a few cloud instances or a complex infrastructure, InfraGPT can help.
+
+// Q7: How do I get started with InfraGPT?
+// Sign up and connect your cloud provider.
+// Integrate with Slack to start chatting with InfraGPT.
+// Link your GitHub account (optional) for deeper code insights.
+// Start using InfraGPT to optimize, troubleshoot, and automate your DevOps workflows.
+{
+	title: "How does the GitHub integration work?",
+	description: "You can link your GitHub account and grant InfraGPT read access to selected repositories. When you send a message in Slack with a GitHub file link, InfraGPT will read the code and provide answers or insights.",
+},
+{
+	title: "What permissions does InfraGPT need for GitHub?",
+	description: "InfraGPT requires read-only access to your repositories to analyze code and provide intelligent responses. It does not modify code or write to your repositories.",
+},
+{
+	title: "How does InfraGPT help with cost optimization?",
+	description: "Our AI continuously scans your cloud infrastructure to identify inefficiencies, such as unused instances, over-provisioned resources, and better pricing options. It provides actionable recommendations to reduce costs.",
+},
+{
+	title: "Does InfraGPT support all cloud providers?",
+	description: "Currently, InfraGPT supports AWS, Google Cloud (GCP), and Microsoft Azure. We’re working on expanding support for other cloud platforms.",
+},
+{
+	title: "Can InfraGPT be used by small teams and startups?",
+	description: "Absolutely! InfraGPT is designed for teams of all sizes, from small startups to enterprise engineering teams. Whether you have a few cloud instances or a complex infrastructure, InfraGPT can help.",
+},
+{
+	title: "How do I get started with InfraGPT?",
+	description: `<ol class="list-decimal list-inside">
+		<li>Sign up and connect your cloud provider.</li>
+		<li>Integrate with Slack to start chatting with InfraGPT.</li>
+		<li>Link your GitHub account (optional) for deeper code insights.</li>
+		<li>Start using InfraGPT to optimize, troubleshoot, and automate your DevOps workflows.</li>
+		</ol>`,
+},
+];
+---
+
+<div class="mx-auto max-w-5xl px-6 py-24 sm:py-36 lg:px-8 lg:py-52 dark:bg-stone-950">
+	<div class="mx-auto divide-y divide-gray-900/10 dark:divide-gray-100/10">
+		<h2 class="text-2xl font-bold leading-10 tracking-tight text-gray-900 dark:text-white"
+		style="font-family: 'Young Serif';"
+		>{t("faq.title")}</h2>
+		<dl class="mt-10 space-y-6 divide-y divide-gray-900/10 dark:divide-gray-100/10">
+			{
+				faqs.map((faq) => (
+					<div class="pt-6" x-data="{ open: false }">
+						<dt>
+							<button
+								type="button"
+								class="flex w-full items-start justify-between text-left text-gray-900 dark:text-white"
+								@click="open = !open"
+								:x-bind:aria-expanded="open.toString()">
+								<span class="text-base leading-7">{faq.title}</span>
+								<span class="ml-6 flex h-7 items-center">
+									<svg
+										class="h-6 w-6"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										aria-hidden="true"
+										x-show="!open">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6"></path>
+									</svg>
+									<svg
+										class="h-6 w-6"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										aria-hidden="true"
+										x-show="open">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M18 12H6"></path>
+									</svg>
+								</span>
+							</button>
+						</dt>
+						<dd
+							x-transition:enter="transition ease-out duration-100"
+							x-transition:enter-start="opacity-0 transform scale-90"
+							x-transition:enter-end="opacity-100 transform scale-100"
+							x-transition:leave="transition ease-in duration-100"
+							x-transition:leave-start="opacity-100 transform scale-100"
+							x-transition:leave-end="opacity-0 transform scale-90"
+							class="mt-2 pr-12"
+							id="faq-0"
+							x-show="open">
+							<span class="text-base leading-7 text-gray-400 dark:text-gray-100">
+								<span set:html={faq.description}></span>
+							</span>
+						</dd>
+					</div>
+				))
+			}
+		</dl>
+	</div>
+</div>

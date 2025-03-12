@@ -1,0 +1,18 @@
+---
+import Container from "@components/container.astro";
+import Faq from "@components/faq.astro";
+import Features from "@components/features.astro";
+import Hero from "@components/hero.astro";
+import Layout from "@layouts/Layout.astro";
+import { changeLanguage } from "i18next";
+
+changeLanguage("en");
+---
+
+<Layout>
+	<Container>
+		<Hero />
+		<Features />
+		<Faq />
+	</Container>
+</Layout>

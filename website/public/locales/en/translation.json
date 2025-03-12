@@ -1,0 +1,34 @@
+{
+	"hero": {
+		"title": "AI DevOps Copilot for the Cloud",
+		"subtitle": "Supercharge your software team with InfraGPT. Automate tedious DevOps tasks, optimize cloud costs, and solve infrastructure issues in real time—right from Slack.",
+		"main_button_text": "Book a demo"
+	},
+	"hero_animated": {
+		"secondary_button_text": "Go to base version"
+	},
+	"header": {
+		"primary_button_text": "Book a demo"
+	},
+	"features": {
+		"learn_more": "Learn more",
+		"title": "Features",
+		"subtitle": "Smarter DevOps, Faster Deployments",
+		"description": "InfraGPT automates infrastructure monitoring, cost optimization, and cloud troubleshooting so your team can focus on shipping great software."
+	},
+	"faq": {
+		"title": "Frequently Asked Questions"
+	},
+	"newsletter": {
+		"title": "Subscribe to our newsletter",
+		"subtitle": "Get notified for all updates",
+		"input_placeholder": "Enter your email",
+		"button_text": "Subscribe",
+		"privacy": "We care about the protection of your data. Read our",
+		"privacy_link": "Privacy Policy."
+	},
+	"blog": {
+		"prev": "Prev",
+		"next": "Next"
+	}
+}
