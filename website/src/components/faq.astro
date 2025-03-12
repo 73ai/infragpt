@@ -1,35 +1,14 @@
 ---
 const { plan } = Astro.props;
-import { t } from "i18next";
 
 const faqs = [
 	{
 		title: "How does InfraGPT work?",
-		description: "InfraGPT integrates with your cloud provider (AWS, GCP, Azure) and GitHub to analyze logs, infrastructure configurations, and cloud costs. You can chat with it in Slack to troubleshoot issues, optimize resources, and get DevOps insights.",
+		description: "InfraGPT integrates with your cloud provider and GitHub to analyze logs, infrastructure configurations, and cloud costs. You can chat with it in Slack to give permissions, optimize resources, and get SRE insights.",
 	},
-// 	How does the GitHub integration work?
-// You can link your GitHub account and grant InfraGPT read access to selected repositories. When you send a message in Slack with a GitHub file link, InfraGPT will read the code and provide answers or insights.
-
-// Q3: What permissions does InfraGPT need for GitHub?
-// InfraGPT requires read-only access to your repositories to analyze code and provide intelligent responses. It does not modify code or write to your repositories.
-
-// Q4: How does InfraGPT help with cost optimization?
-// Our AI continuously scans your cloud infrastructure to identify inefficiencies, such as unused instances, over-provisioned resources, and better pricing options. It provides actionable recommendations to reduce costs.
-
-// Q5: Does InfraGPT support all cloud providers?
-// Currently, InfraGPT supports AWS, Google Cloud (GCP), and Microsoft Azure. We’re working on expanding support for other cloud platforms.
-
-// Q6: Can InfraGPT be used by small teams and startups?
-// Absolutely! InfraGPT is designed for teams of all sizes, from small startups to enterprise engineering teams. Whether you have a few cloud instances or a complex infrastructure, InfraGPT can help.
-
-// Q7: How do I get started with InfraGPT?
-// Sign up and connect your cloud provider.
-// Integrate with Slack to start chatting with InfraGPT.
-// Link your GitHub account (optional) for deeper code insights.
-// Start using InfraGPT to optimize, troubleshoot, and automate your DevOps workflows.
 {
 	title: "How does the GitHub integration work?",
-	description: "You can link your GitHub account and grant InfraGPT read access to selected repositories. When you send a message in Slack with a GitHub file link, InfraGPT will read the code and provide answers or insights.",
+	description: "You can link your GitHub account and grant InfraGPT read access to selected ops repositories. When you send a message in Slack with a GitHub file link, InfraGPT will read the code and provide answers or insights.",
 },
 {
 	title: "What permissions does InfraGPT need for GitHub?",
@@ -41,11 +20,11 @@ const faqs = [
 },
 {
 	title: "Does InfraGPT support all cloud providers?",
-	description: "Currently, InfraGPT supports AWS, Google Cloud (GCP), and Microsoft Azure. We’re working on expanding support for other cloud platforms.",
+	description: "Currently, InfraGPT only supports Google Cloud (GCP). We’re working on expanding support for other cloud platforms(AWS, Azure).",
 },
 {
 	title: "Can InfraGPT be used by small teams and startups?",
-	description: "Absolutely! InfraGPT is designed for teams of all sizes, from small startups to enterprise engineering teams. Whether you have a few cloud instances or a complex infrastructure, InfraGPT can help.",
+	description: "Absolutely! InfraGPT is designed specially for small teams. Whether you have a few cloud instances or a complex infrastructure, InfraGPT can help.",
 },
 {
 	title: "How do I get started with InfraGPT?",
@@ -53,7 +32,7 @@ const faqs = [
 		<li>Sign up and connect your cloud provider.</li>
 		<li>Integrate with Slack to start chatting with InfraGPT.</li>
 		<li>Link your GitHub account (optional) for deeper code insights.</li>
-		<li>Start using InfraGPT to optimize, troubleshoot, and automate your DevOps workflows.</li>
+		<li>Start using InfraGPT to optimize, troubleshoot, and automate your SRE workflows.</li>
 		</ol>`,
 },
 ];
@@ -63,7 +42,7 @@ const faqs = [
 	<div class="mx-auto divide-y divide-gray-900/10 dark:divide-gray-100/10">
 		<h2 class="text-2xl font-bold leading-10 tracking-tight text-gray-900 dark:text-white"
 		style="font-family: 'Young Serif';"
-		>{t("faq.title")}</h2>
+		>Frequently Asked Questions</h2>
 		<dl class="mt-10 space-y-6 divide-y divide-gray-900/10 dark:divide-gray-100/10">
 			{
 				faqs.map((faq) => (

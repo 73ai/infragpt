@@ -4,7 +4,6 @@ import sitemap from "@astrojs/sitemap";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { autolinkConfig } from "./plugins/rehype-autolink-config";
 import rehypeSlug from "rehype-slug";
-import astroI18next from "astro-i18next";
 import alpinejs from "@astrojs/alpinejs";
 import AstroPWA from "@vite-pwa/astro";
 import icon from "astro-icon";
@@ -20,7 +19,6 @@ export default defineConfig({
 	integrations: [
 		tailwind(),
 		sitemap(),
-		astroI18next(),
 		alpinejs(),
 		AstroPWA({
 			mode: "production",

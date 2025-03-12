@@ -1,13 +1,11 @@
 ---
 import { ViewTransitions } from "astro:transitions";
 import { pwaInfo } from "virtual:pwa-info";
-import Footer from "@components/footer.astro";
 import Navbar from "@components/navbar/navbar.astro";
+import Footer from "@components/footer.astro";
 import "@fontsource-variable/inter";
 import "@fontsource/young-serif";
-import { HeadHrefLangs } from "astro-i18next/components";
 import { SEO } from "astro-seo";
-import i18next from "i18next";
 
 export interface Props {
 	title?: string;
@@ -25,18 +23,17 @@ const { title, lang = null } = Astro.props;
 
 const makeTitle = title
 	? `${title} | InfraGPT`
-	: "InfraGPT - Starter Template for Astro with Tailwind CSS";
+	: "InfraGPT - AI SRE Copilot for the Cloud";
 ---
 
 <!doctype html>
-<html lang={lang ?? i18next.language}>
+<html lang="en">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.ico" />
 		<meta name="generator" content={Astro.generator} />
 		<meta name="theme-color" content="#ffffff" />
-		<HeadHrefLangs />
-
 		<ViewTransitions />
 
 		<!-- Global CSS -->
@@ -78,6 +75,7 @@ const makeTitle = title
 	<body class="dark:bg-stone-950">
 		<Navbar />
 		<slot />
+		<Footer />
 		<style is:global>
 			/* Improve Page speed */
 			/* https://css-tricks.com/almanac/properties/c/content-visibility/ */

@@ -1,38 +1,44 @@
 ---
 import Link from "@components/ui/link.astro";
+import { Icon } from "astro-icon/components";
 // @ts-ignore
-import { t } from "i18next";
 
 const features = [
   {
     title: "AI-Powered Cloud Troubleshooting",
     description:
       "InfraGPT sifts through logs, metrics, and alerts to diagnose issues instantly, reducing downtime and frustration",
+    icon: "fluent:cloud-flow-20-filled",
   },
   {
     title: "GitHub-Powered Code Insights",
     description:
-      "Link your GitHub, and let InfraGPT analyze your code directly from your repository to answer DevOps and cloud-related questions",
+      "Link your GitHub, and let InfraGPT analyze your code directly from ops repository to answer SRE and cloud-related questions",
+    icon: "fluent:branch-fork-20-filled",
   },
   {
     title: "Automated Cost Optimization",
     description:
       "Detect unused resources, right-size cloud instances, and get cost-saving recommendations across cloud services",
+    icon: "fluent:savings-20-filled",
   },
   {
     title: "Real-Time Slack Integration",
     description:
       "Chat with InfraGPT in Slack to troubleshoot infrastructure issues, analyze logs, and get AI-driven suggestions on the go",
+    icon: "fluent:chat-bubbles-question-20-filled",
   },
   {
-    title: "Multi-Cloud Support",
+    title: "Terminal First",
     description:
-      "Works seamlessly with GCP, AWS, and Azure(coming soon), giving you real-time visibility and control over your cloud environment",
+      "InfraGPT is designed for developers, with a terminal-first approach to manage infrastructure faster through natural language commands",
+    icon: "fluent:code-circle-20-filled",
   },
   {
     title: "Proactive Alerts & Recommendations",
     description:
       "InfraGPT continuously monitors your cloud usage, sending alerts and proactive suggestions to keep your infrastructure optimized",
+    icon: "fluent:alert-20-filled",
   },
 ];
 ---
@@ -40,16 +46,17 @@ const features = [
 <div class="relative mx-auto max-w-5xl px-6 lg:px-8">
   <div class="mx-auto max-w-2xl lg:text-center">
     <h2 class="text-base font-semibold leading-7 text-black dark:text-white">
-      {t("features.title")}
+      Features
     </h2>
     <p
       class="mt-2 text-3xl font-bold tracking-tight text-black dark:text-white sm:text-4xl"
       style="font-family: 'Young Serif';"
     >
-      {t("features.subtitle")}
+      Smarter SRE, Faster Resolutions
     </p>
     <p class="mt-6 text-lg leading-8 text-gray-900 dark:text-gray-100">
-      {t("features.description")}
+      InfraGPT automates infrastructure monitoring, cost optimization, and cloud
+      troubleshooting so your team can focus on shipping great software.
     </p>
   </div>
   <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
@@ -59,11 +66,14 @@ const features = [
       {
         features.map((item) => (
           <div class="flex flex-col">
+            <div class="mt-1 bg-blue-50 border shadow shadow-blue-100/50 border-blue-100 transition-colors rounded-lg grid place-items-center  p-2 w-10 h-10 shrink-0">
+              <Icon class="text-primary" name={item.icon} />
+          </div>
             <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-black dark:text-white">
               {item.title}
             </dt>
             <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-900 dark:text-gray-100">
-              <p class="flex-auto">{t(item.description)}</p>
+              <p class="flex-auto">{item.description}</p>
             </dd>
           </div>
         ))
