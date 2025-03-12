@@ -1,10 +1,5 @@
 ---
-import { Image } from "astro:assets";
 import Link from "@components/ui/link.astro";
-import abstractDottedGlobeIllustration from "assets/abstract-dotted-globe-illustration.png";
-import { t } from "i18next";
-
-const { dynamic = false } = Astro.props;
 ---
 
 <div class="relative isolate pt-14 dark:bg-stone-950">
@@ -43,14 +38,16 @@ const { dynamic = false } = Astro.props;
           class="text-4xl font-medium tracking-tight text-black dark:text-white sm:text-6xl"
           style="font-family: Young Serif;"
         >
-          {t("hero.title")}
+          AI SRE Copilot for the Cloud
         </h1>
         <p class="mt-6 text-lg leading-8 text-gray-900 dark:text-gray-100">
-          {t("hero.subtitle")}
+          Supercharge your software team with InfraGPT. Automate tedious SRE
+          tasks, optimize cloud costs, and solve infrastructure issues in real
+          time—right from Slack.
         </p>
         <div class="mt-10 flex items-center justify-center gap-x-2 md:gap-x-6">
           <Link href="https://cal.com/priyanshujain/30min" target="_blank"
-            >{t("hero.main_button_text")}</Link
+            >Book a demo</Link
           >
         </div>
       </div>

@@ -7,13 +7,8 @@
 		"dev": "astro dev --host",
 		"start": "astro dev",
 		"build": "astro build",
-		"build:localized": "pnpm run i18n:generate && pnpm run build",
 		"preview": "astro preview",
-		"astro": "astro",
-		"article:generate": "node ./scripts/generate-article.js",
-		"i18n:generate": "astro-i18next generate && pnpm run script:change-language-in-dynamic-pages",
-		"script:change-language-in-dynamic-pages": "node ./scripts/change-language-in-dynamic-pages.js",
-		"pwa:generate-assets": "pwa-assets-generator --preset minimal public/logo.svg"
+		"astro": "astro"
 	},
 	"dependencies": {
 		"@astrojs/alpinejs": "^0.4.0",
@@ -22,10 +17,10 @@
 		"@astrojs/tailwind": "^5.1.0",
 		"@fontsource-variable/inter": "^5.0.17",
 		"@fontsource/young-serif": "^5.2.5",
+		"@iconify-json/fluent": "^1.2.15",
 		"@types/alpinejs": "^3.13.10",
 		"alpinejs": "^3.13.7",
 		"astro": "^4.5.12",
-		"astro-i18next": "^1.0.0-beta.21",
 		"astro-icon": "^1.1.0",
 		"astro-seo": "^0.8.3",
 		"bad-words": "^3.0.4",

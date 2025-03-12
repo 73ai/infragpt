@@ -1,8 +1,8 @@
 ---
 import Button from "@components/ui/button.astro";
 import Link from "@components/ui/link.astro";
-import { localizePath } from "astro-i18next";
-import { t } from "i18next";
+import Image from "astro/components/Image.astro";
+import logo from "assets/logo.svg";
 ---
 
 <div
@@ -11,10 +11,10 @@ import { t } from "i18next";
 >
   <div class="p-4 flex flex-row items-center justify-between">
     <a
-      href={localizePath("/")}
+      href="/"
       class="flex gap-3 items-center text-lg font-semibold tracking-widest text-gray-900 uppercase rounded-lg dark:text-white focus:outline-none focus:shadow-outline"
     >
-      InfraGPT
+      <Image src={logo} alt="logo" width={160}  />
     </a>
     <button
       class="md:hidden text-gray-500 w-10 h-10 relative focus:outline-none"
@@ -61,7 +61,7 @@ import { t } from "i18next";
         target="_blank"
         class="md:px-3 md:py-2 leading-6"
       >
-        {t("header.primary_button_text")}
+      Book a demo
       </Link>
     </div>
   </nav>
