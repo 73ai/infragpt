@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: http://infragpt.zank.studio/sitemap-index.xml

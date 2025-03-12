@@ -1,0 +1,68 @@
+---
+import Button from "@components/ui/button.astro";
+import Link from "@components/ui/link.astro";
+import { localizePath } from "astro-i18next";
+import { t } from "i18next";
+---
+
+<div
+  x-data="{open: window.innerWidth < 768 ? false : true}"
+  class="flex flex-col max-w-screen-xl px-4 mx-auto md:items-center md:justify-between md:flex-row md:px-6 lg:px-8 z-10 md:pt-2 relative"
+>
+  <div class="p-4 flex flex-row items-center justify-between">
+    <a
+      href={localizePath("/")}
+      class="flex gap-3 items-center text-lg font-semibold tracking-widest text-gray-900 uppercase rounded-lg dark:text-white focus:outline-none focus:shadow-outline"
+    >
+      InfraGPT
+    </a>
+    <button
+      class="md:hidden text-gray-500 w-10 h-10 relative focus:outline-none"
+      @click="open = !open"
+    >
+      <span class="sr-only">Open main menu</span>
+      <div
+        class="block w-5 absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"
+      >
+        <span
+          aria-hidden="true"
+          class="block absolute h-0.5 w-5 bg-current transform transition duration-200 ease-in-out"
+          :class="{'rotate-45': open,' -translate-y-1.5': !open }"
+        >
+        </span>
+        <span
+          aria-hidden="true"
+          class="block absolute h-0.5 w-5 bg-current transform transition duration-200 ease-in-out"
+          :class="{'opacity-0': open } "
+        >
+        </span>
+        <span
+          aria-hidden="true"
+          class="block absolute h-0.5 w-5 bg-current transform transition duration-200 ease-in-out"
+          :class="{'-rotate-45': open, ' translate-y-1.5': !open}"
+        >
+        </span>
+      </div>
+    </button>
+  </div>
+  <nav
+    :class="{'flex': open, 'hidden': !open}"
+    x-show="open"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0 transform scale-90"
+    x-transition:enter-end="opacity-100 transform scale-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100 transform scale-100"
+    x-transition:leave-end="opacity-0 transform scale-90"
+  >
+    <div class="mt-4 md:mt-0 flex flex-col md:flex-row gap-4">
+      <Link
+        href="https://cal.com/priyanshujain/30min"
+        target="_blank"
+        class="md:px-3 md:py-2 leading-6"
+      >
+        {t("header.primary_button_text")}
+      </Link>
+    </div>
+  </nav>
+</div>
