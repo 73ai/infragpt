@@ -31,33 +31,3 @@
 ::-webkit-scrollbar-thumb {
 	background-color: #000000;
 }
-.dark {
-	::-webkit-scrollbar-track {
-		border: none;
-		background-color: rgb(12 10 9);
-	}
-	::-webkit-scrollbar {
-		width: 10px;
-		background-color: rgb(12 10 9);
-	}
-	::-webkit-scrollbar-thumb {
-		background-color: white;
-	}
-}
-
-::-moz-selection {
-	color: white;
-	background: black;
-}
-::selection {
-	color: white;
-	background: black;
-}
-.dark ::-moz-selection {
-	color: black;
-	background: white;
-}
-.dark ::selection {
-	color: black;
-	background: white;
-}

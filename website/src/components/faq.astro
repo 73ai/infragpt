@@ -38,19 +38,19 @@ const faqs = [
 ];
 ---
 
-<div class="mx-auto max-w-5xl px-6 py-24 sm:py-36 lg:px-8 lg:py-52 dark:bg-stone-950">
-	<div class="mx-auto divide-y divide-gray-900/10 dark:divide-gray-100/10">
-		<h2 class="text-2xl font-bold leading-10 tracking-tight text-gray-900 dark:text-white"
+<div class="mx-auto max-w-5xl px-6 py-24 sm:py-36 lg:px-8 lg:py-52">
+	<div class="mx-auto divide-y divide-gray-900/10">
+		<h2 class="text-2xl font-bold leading-10 tracking-tight text-gray-900"
 		style="font-family: 'Young Serif';"
 		>Frequently Asked Questions</h2>
-		<dl class="mt-10 space-y-6 divide-y divide-gray-900/10 dark:divide-gray-100/10">
+		<dl class="mt-10 space-y-6 divide-y divide-gray-900/10">
 			{
 				faqs.map((faq) => (
 					<div class="pt-6" x-data="{ open: false }">
 						<dt>
 							<button
 								type="button"
-								class="flex w-full items-start justify-between text-left text-gray-900 dark:text-white"
+								class="flex w-full items-start justify-between text-left text-gray-900"
 								@click="open = !open"
 								:x-bind:aria-expanded="open.toString()">
 								<span class="text-base leading-7">{faq.title}</span>
@@ -88,7 +88,7 @@ const faqs = [
 							class="mt-2 pr-12"
 							id="faq-0"
 							x-show="open">
-							<span class="text-base leading-7 text-gray-400 dark:text-gray-100">
+							<span class="text-base leading-7 text-gray-400">
 								<span set:html={faq.description}></span>
 							</span>
 						</dd>
