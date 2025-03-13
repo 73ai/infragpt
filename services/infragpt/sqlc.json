@@ -1,0 +1,14 @@
+{
+  "version": "1",
+  "packages": [
+    {
+      "name": "postgres",
+      "emit_json_tags": true,
+      "emit_prepared_queries": true,
+      "emit_interface": true,
+      "path": "./internal/infragptsvc/supporting/postgres",
+      "queries": "./internal/infragptsvc/supporting/postgres/queries/",
+      "schema": "./internal/infragptsvc/supporting/postgres/schema/"
+    }
+  ]
+}
