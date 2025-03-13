@@ -1,6 +1,6 @@
-# Contributing to InfraGPT Slack Bot
+# Contributing to InfraGPT Slack Service
 
-Thank you for your interest in contributing to the InfraGPT Slack Bot project! This guide will help you understand our development process, coding standards, and how to effectively contribute to the project.
+Thank you for your interest in contributing to the InfraGPT Slack service project! This guide will help you understand our development process, coding standards, and how to effectively contribute to the project.
 
 ## Table of Contents
 
@@ -15,7 +15,9 @@ Thank you for your interest in contributing to the InfraGPT Slack Bot project! T
 
 ## Project Overview
 
-InfraGPT Slack Bot is designed to streamline access management for cloud resources by providing a conversational interface within Slack. Users can request access to resources, approvers can review and respond to these requests, and once approved, the bot will automatically execute the necessary commands to grant access.
+InfraGPT Slack service is designed to streamline DevOps workflows, beginning with access management for cloud resources. It provides a conversational interface within Slack where users can make requests, approvers can review them, and the system can track and execute approved actions.
+
+The current implementation focuses on the core integration with Slack and database persistence, with plans to expand to a full access request workflow system.
 
 ## Getting Started
 
@@ -23,6 +25,7 @@ InfraGPT Slack Bot is designed to streamline access management for cloud resourc
 
 - Go 1.24 or later
 - Git
+- PostgreSQL
 - A Slack workspace for testing
 
 ### Setup
@@ -30,7 +33,7 @@ InfraGPT Slack Bot is designed to streamline access management for cloud resourc
 1. Clone the repository:
    ```
    git clone https://github.com/priyanshujain/infragpt.git
-   cd infragpt/server/api
+   cd infragpt/services/infragpt
    ```
 
 2. Install dependencies:
@@ -38,12 +41,29 @@ InfraGPT Slack Bot is designed to streamline access management for cloud resourc
    go mod download
    ```
 
-3. Build the application:
-   ```
-   go build ./cmd/main.go
+3. Create a `config.yaml` file with your configuration:
+   ```yaml
+   port: 8080
+   slack:
+     client_id: "your_slack_client_id"
+     client_secret: "your_slack_client_secret"
+     signing_secret: "your_slack_signing_secret"
+     app_token: "your_slack_app_token"
+   database:
+     host: "localhost"
+     port: 5432
+     user: "postgres"
+     password: "postgres"
+     database: "infragpt"
    ```
 
-4. Run tests:
+4. Build and run the application:
+   ```
+   go build ./cmd/main.go
+   ./main
+   ```
+
+5. Run tests:
    ```
    go test ./...
    ```
@@ -69,26 +89,32 @@ We follow an iterative development approach:
 
 ### Core Principles
 
-#### 1. Focused Functionality
+#### 1. Clean Architecture
 
-We take a focused approach to building the Slack bot by starting with only the core functionality needed for the access request workflow. Additional features should only be added as user needs are validated.
+We follow clean architecture principles with clear separation between:
+- Domain layer (business logic)
+- Application layer (orchestration)
+- Infrastructure layer (external dependencies)
+- API layer (HTTP endpoints)
 
-#### 2. Leveraging Slack's Native Features
+#### 2. Domain-Driven Design
 
-Utilize Slack's built-in features rather than duplicating them. For example, we don't need to build features like "view my requests" since Slack already provides message history and search.
+- Use domain models that reflect the business concepts
+- Define clear interfaces between layers
+- Focus on the business problem, not the technical implementation
 
-#### 3. Command-Based Design
+#### 3. Command Pattern
 
-The service API is designed using a clean command pattern:
-- Functions should take command objects that encapsulate all needed parameters
-- Commands should follow naming conventions that clearly express their purpose
+The service uses a command pattern for operations:
+- Functions take command objects that encapsulate all needed parameters
+- Commands follow naming conventions that clearly express their purpose
 - Each command should handle a specific user intent
 
 #### 4. Self-Documenting Code
 
 The code should be self-documenting with:
 - Descriptive type and function names that express purpose
-- Proper type definitions instead of string constants or comments
+- Proper type definitions instead of string constants
 - Focused interfaces with minimal surface area
 - Explicit parameter objects with clear field names
 
@@ -136,12 +162,12 @@ go test -cover ./...
 
 ### Service Interface
 
-The service interface defines the contract between the Slack integration layer and the core business logic:
+The service interface defines the contract between the API layer and the core business logic:
 
 ```go
 type Service interface {
-    AskForAccess(ctx context.Context, command AskForAccessCommand) (*AccessRequest, error)
-    RespondToAccessRequest(ctx context.Context, command RespondToAccessRequestCommand) error
+    Integrations(context.Context, IntegrationsQuery) ([]Integration, error)
+    CompleteSlackAuthentication(context.Context, CompleteSlackAuthenticationCommand) error
 }
 ```
 
@@ -157,11 +183,12 @@ Go's idiomatic error handling approach is used throughout the system:
 - Callers are responsible for checking and handling errors
 - Errors should provide appropriate context for troubleshooting
 
-### Stateful Processing
+### Database Access
 
-For multi-step workflows, we use stateful storage:
-- Persisted `AccessRequest` objects with status tracking
-- Database to maintain state across service restarts
+The system uses PostgreSQL with structured repository interfaces:
+- Repository interfaces defined in the domain layer
+- Implementations in the infrastructure layer
+- Use of prepared statements and proper error handling
 
 ## Security Considerations
 
@@ -171,12 +198,6 @@ For multi-step workflows, we use stateful storage:
 - Implement proper authorization checks for users and approvers
 - Never log sensitive information
 
-### Command Execution
-
-- Always validate commands before execution
-- Follow least privilege principle
-- Implement timeouts and rollback mechanisms
-
 ### Data Protection
 
 - Never store sensitive credentials in plaintext
@@ -185,6 +206,6 @@ For multi-step workflows, we use stateful storage:
 
 ---
 
-We appreciate your contributions and look forward to your involvement in making the InfraGPT Slack Bot even better!
+We appreciate your contributions and look forward to your involvement in making the InfraGPT service even better!
 
 If you have any questions, please reach out to the project maintainers.
