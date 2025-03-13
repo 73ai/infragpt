@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "infragpt"
-version = "0.1.14"
+version = "0.1.15"
 description = "InfraGPT is an AI assistant for interactively managing your infrastructure."
 readme = "README.md"
 authors = [{ name = "Priyanshu Jain", email = "ipriyanshujain@gmail.com" }]
