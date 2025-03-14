@@ -39,6 +39,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createSessionStmt, err = db.PrepareContext(ctx, createSession); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateSession: %w", err)
 	}
+	if q.createStateTokenStmt, err = db.PrepareContext(ctx, createStateToken); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateStateToken: %w", err)
+	}
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
@@ -66,8 +69,14 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.revokeRefreshTokenStmt, err = db.PrepareContext(ctx, revokeRefreshToken); err != nil {
 		return nil, fmt.Errorf("error preparing query RevokeRefreshToken: %w", err)
 	}
+	if q.revokeStateTokenStmt, err = db.PrepareContext(ctx, revokeStateToken); err != nil {
+		return nil, fmt.Errorf("error preparing query RevokeStateToken: %w", err)
+	}
 	if q.setNewPasswordStmt, err = db.PrepareContext(ctx, setNewPassword); err != nil {
 		return nil, fmt.Errorf("error preparing query SetNewPassword: %w", err)
+	}
+	if q.stateTokenStmt, err = db.PrepareContext(ctx, stateToken); err != nil {
+		return nil, fmt.Errorf("error preparing query StateToken: %w", err)
 	}
 	if q.userByEmailStmt, err = db.PrepareContext(ctx, userByEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query UserByEmail: %w", err)
@@ -112,6 +121,11 @@ func (q *Queries) Close() error {
 	if q.createSessionStmt != nil {
 		if cerr := q.createSessionStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createSessionStmt: %w", cerr)
+		}
+	}
+	if q.createStateTokenStmt != nil {
+		if cerr := q.createStateTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createStateTokenStmt: %w", cerr)
 		}
 	}
 	if q.createUserStmt != nil {
@@ -159,9 +173,19 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing revokeRefreshTokenStmt: %w", cerr)
 		}
 	}
+	if q.revokeStateTokenStmt != nil {
+		if cerr := q.revokeStateTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing revokeStateTokenStmt: %w", cerr)
+		}
+	}
 	if q.setNewPasswordStmt != nil {
 		if cerr := q.setNewPasswordStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing setNewPasswordStmt: %w", cerr)
+		}
+	}
+	if q.stateTokenStmt != nil {
+		if cerr := q.stateTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing stateTokenStmt: %w", cerr)
 		}
 	}
 	if q.userByEmailStmt != nil {
@@ -226,13 +250,14 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db DBTX
-	tx *sql.Tx
+	db                                 DBTX
+	tx                                 *sql.Tx
 	createDeviceStmt                   *sql.Stmt
 	createEmailVerificationStmt        *sql.Stmt
 	createRefreshTokenStmt             *sql.Stmt
 	createResetPasswordStmt            *sql.Stmt
 	createSessionStmt                  *sql.Stmt
+	createStateTokenStmt               *sql.Stmt
 	createUserStmt                     *sql.Stmt
 	deviceStmt                         *sql.Stmt
 	devicesByUserIDStmt                *sql.Stmt
@@ -242,7 +267,9 @@ type Queries struct {
 	refreshTokenStmt                   *sql.Stmt
 	resetPasswordStmt                  *sql.Stmt
 	revokeRefreshTokenStmt             *sql.Stmt
+	revokeStateTokenStmt               *sql.Stmt
 	setNewPasswordStmt                 *sql.Stmt
+	stateTokenStmt                     *sql.Stmt
 	userByEmailStmt                    *sql.Stmt
 	userByIDStmt                       *sql.Stmt
 	userSessionStmt                    *sql.Stmt
@@ -259,6 +286,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		createRefreshTokenStmt:             q.createRefreshTokenStmt,
 		createResetPasswordStmt:            q.createResetPasswordStmt,
 		createSessionStmt:                  q.createSessionStmt,
+		createStateTokenStmt:               q.createStateTokenStmt,
 		createUserStmt:                     q.createUserStmt,
 		deviceStmt:                         q.deviceStmt,
 		devicesByUserIDStmt:                q.devicesByUserIDStmt,
@@ -268,7 +296,9 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		refreshTokenStmt:                   q.refreshTokenStmt,
 		resetPasswordStmt:                  q.resetPasswordStmt,
 		revokeRefreshTokenStmt:             q.revokeRefreshTokenStmt,
+		revokeStateTokenStmt:               q.revokeStateTokenStmt,
 		setNewPasswordStmt:                 q.setNewPasswordStmt,
+		stateTokenStmt:                     q.stateTokenStmt,
 		userByEmailStmt:                    q.userByEmailStmt,
 		userByIDStmt:                       q.userByIDStmt,
 		userSessionStmt:                    q.userSessionStmt,

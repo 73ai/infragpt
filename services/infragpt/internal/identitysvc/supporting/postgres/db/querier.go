@@ -16,6 +16,7 @@ type Querier interface {
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error
 	CreateResetPassword(ctx context.Context, arg CreateResetPasswordParams) error
 	CreateSession(ctx context.Context, arg CreateSessionParams) error
+	CreateStateToken(ctx context.Context, arg CreateStateTokenParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
 	Device(ctx context.Context, deviceID uuid.UUID) (Device, error)
 	DevicesByUserID(ctx context.Context, userID uuid.UUID) ([]Device, error)
@@ -25,7 +26,9 @@ type Querier interface {
 	RefreshToken(ctx context.Context, tokenID uuid.UUID) (RefreshToken, error)
 	ResetPassword(ctx context.Context, resetID uuid.UUID) (ResetPasswordRow, error)
 	RevokeRefreshToken(ctx context.Context, tokenID uuid.UUID) error
+	RevokeStateToken(ctx context.Context, token string) error
 	SetNewPassword(ctx context.Context, arg SetNewPasswordParams) error
+	StateToken(ctx context.Context, token string) (GoogleStateToken, error)
 	UserByEmail(ctx context.Context, email string) (UserByEmailRow, error)
 	UserByID(ctx context.Context, userID uuid.UUID) (User, error)
 	UserSession(ctx context.Context, sessionID uuid.UUID) (UserSession, error)

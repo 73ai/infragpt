@@ -76,10 +76,10 @@ func runMigrations(t *testing.T, db *sql.DB) {
 		t.Fatalf("failed to get current working directory: %v", err)
 	}
 
-	migrationsDir := fmt.Sprintf("%s/supporting/postgres/db/migrations", dir)
+	migrationsDir := fmt.Sprintf("%s/supporting/postgres/db/schema", dir)
 	files, err := os.ReadDir(migrationsDir)
 	if err != nil {
-		t.Fatalf("failed to read migrations directory: %v", err)
+		t.Fatalf("failed to read schema directory: %v", err)
 	}
 
 	for _, file := range files {

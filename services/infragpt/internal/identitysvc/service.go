@@ -16,11 +16,14 @@ import (
 )
 
 type service struct {
-	sessionRepo  domain.SessionRepository
-	userRepo     domain.UserRepository
-	emailSVC     EmailService
-	tokenManager TokenManager
+	sessionRepo       domain.SessionRepository
+	userRepo          domain.UserRepository
+	emailSVC          EmailService
+	tokenManager      TokenManager
+	googleAuthGateway domain.GoogleAuthGateway
 }
+
+var _ identity.Service = (*service)(nil)
 
 func (s service) CreateUser(ctx context.Context, cmd identity.CreateUserCommand) (identity.Credentials, error) {
 	if err := ValidateEmail(cmd.Email); err != nil {
@@ -289,6 +292,67 @@ func (s service) UserSessions(ctx context.Context, query identity.UserSessionsQu
 	}
 
 	return sessions, nil
+}
+
+func (s service) InitiateGoogleAuth(ctx context.Context) (string, error) {
+	url, err := s.googleAuthGateway.AuthURL(ctx)
+	if err != nil {
+		return "", fmt.Errorf("get Google Auth URL: %w", err)
+	}
+
+	return url, nil
+}
+
+func (s service) CompleteGoogleAuth(ctx context.Context, code, state string) (identity.Credentials, error) {
+	if code == "" {
+		return identity.Credentials{}, identity.ErrGoogleAuthCodeCannotBeEmpty
+	}
+	if state == "" {
+		return identity.Credentials{}, identity.ErrGoogleAuthStateCannotBeEmpty
+	}
+
+	profile, err := s.googleAuthGateway.CompleteAuth(ctx, code, state)
+	if err != nil {
+		return identity.Credentials{}, fmt.Errorf("complete Google Auth: %w", err)
+	}
+
+	// check if user exists
+	user, err := s.userRepo.UserByEmail(ctx, profile.Email)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return identity.Credentials{}, fmt.Errorf("get user by email: %w", err)
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		// create user
+		uid := newUserID()
+		verificationID, err := s.userRepo.CreateUser(ctx, domain.User{
+			UserID: uid,
+			Email:  profile.Email,
+		})
+		if err != nil {
+			return identity.Credentials{}, fmt.Errorf("create user: %w", err)
+		}
+		// send email verification
+		err = s.userRepo.VerifyUserEmail(ctx, verificationID)
+		if err != nil {
+			return identity.Credentials{}, fmt.Errorf("email verification failed: %w", err)
+		}
+		user = domain.User{
+			UserID: uid,
+			Email:  profile.Email,
+		}
+	}
+
+	sessionID := newSessionID()
+	credentials, err := s.sessionRepo.StartUserSession(ctx, identity.UserSession{
+		UserID:    user.UserID,
+		SessionID: sessionID,
+	})
+	if err != nil {
+		return identity.Credentials{}, fmt.Errorf("start user session: %w", err)
+	}
+
+	return credentials, nil
 }
 
 func newUserID() string {

@@ -5,6 +5,7 @@
 package db
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,6 +26,14 @@ type EmailVerification struct {
 	Email          string    `json:"email"`
 	ExpiryAt       time.Time `json:"expiry_at"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+type GoogleStateToken struct {
+	Token     string       `json:"token"`
+	Revoked   bool         `json:"revoked"`
+	RevokedAt sql.NullTime `json:"revoked_at"`
+	ExpiresAt time.Time    `json:"expires_at"`
+	CreatedAt time.Time    `json:"created_at"`
 }
 
 type RefreshToken struct {

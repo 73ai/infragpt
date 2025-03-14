@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"
-	db2 "github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/supporting/postgres/db"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/supporting/postgres/db"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,7 +16,7 @@ import (
 
 type userRepository struct {
 	db      *sql.DB
-	queries *db2.Queries
+	queries *db.Queries
 }
 
 func (u userRepository) ResetPassword(ctx context.Context, token, password string) error {
@@ -46,7 +46,7 @@ func (u userRepository) ResetPassword(ctx context.Context, token, password strin
 		return fmt.Errorf("hash password: %w", err)
 	}
 
-	err = qtx.SetNewPassword(ctx, db2.SetNewPasswordParams{
+	err = qtx.SetNewPassword(ctx, db.SetNewPasswordParams{
 		UserID:       resetPassword.UserID,
 		PasswordHash: string(hashedPassword),
 	})
@@ -72,7 +72,7 @@ func (u userRepository) CreateUser(ctx context.Context, user domain.User) (strin
 	qtx := u.queries.WithTx(tx)
 
 	uid, _ := uuid.Parse(user.UserID)
-	err = qtx.CreateUser(ctx, db2.CreateUserParams{
+	err = qtx.CreateUser(ctx, db.CreateUserParams{
 		UserID:       uid,
 		Email:        user.Email,
 		PasswordHash: user.PasswordHash,
@@ -83,7 +83,7 @@ func (u userRepository) CreateUser(ctx context.Context, user domain.User) (strin
 
 	// create email verification token
 	vid := newEmailVerificationID()
-	err = qtx.CreateEmailVerification(ctx, db2.CreateEmailVerificationParams{
+	err = qtx.CreateEmailVerification(ctx, db.CreateEmailVerificationParams{
 		VerificationID: vid,
 		UserID:         uid,
 		Email:          user.Email,
@@ -174,7 +174,7 @@ func (u userRepository) RequestResetPassword(ctx context.Context, userID string)
 
 	uid := uuid.MustParse(userID)
 	rid := newResetID()
-	err = qtx.CreateResetPassword(ctx, db2.CreateResetPasswordParams{
+	err = qtx.CreateResetPassword(ctx, db.CreateResetPasswordParams{
 		UserID:   uid,
 		ResetID:  rid,
 		ExpiryAt: time.Now().Add(1 * time.Hour),
@@ -224,7 +224,7 @@ func (u userRepository) ValidateResetPasswordToken(ctx context.Context, token st
 func NewUserRepository(sqlDB *sql.DB) domain.UserRepository {
 	return &userRepository{
 		db:      sqlDB,
-		queries: db2.New(sqlDB),
+		queries: db.New(sqlDB),
 	}
 }
 

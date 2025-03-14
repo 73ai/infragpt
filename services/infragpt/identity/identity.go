@@ -34,6 +34,38 @@ var (
 	ErrResetPasswordIDCannotBeEmpty     = errors.New("reset_password_id_cannot_be_empty")
 	ErrInvalidResetPasswordToken        = errors.New("invalid_reset_password_token")
 	ErrResetPasswordTokenExpired        = errors.New("reset_password_token_expired")
+	ErrGoogleAuthCodeCannotBeEmpty      = errors.New("google_auth_code_cannot_be_empty")
+	ErrGoogleAuthStateCannotBeEmpty     = errors.New("google_auth_state_cannot_be_empty")
+)
+
+type UserSession struct {
+	UserID         string
+	SessionID      string
+	Device         UserDevice
+	UserAgent      string
+	IPAddress      string
+	IPCountryISO   string
+	LastActivityAt time.Time
+	Timezone       *time.Location
+	IsExpired      bool
+}
+
+type UserDevice struct {
+	UserID            string
+	DeviceFingerprint string
+	Name              string
+	OS                OperatingSystem
+	Brand             string
+}
+
+type OperatingSystem string
+
+var (
+	OperatingSystemAndroid OperatingSystem = "android"
+	OperatingSystemIOS     OperatingSystem = "ios"
+	OperatingSystemWindows OperatingSystem = "windows"
+	OperatingSystemMacOS   OperatingSystem = "macos"
+	OperatingSystemLinux   OperatingSystem = "linux"
 )
 
 type Service interface {
@@ -49,6 +81,9 @@ type Service interface {
 	ResetPassword(context.Context, ResetPasswordCommand) error
 
 	UserSessions(context.Context, UserSessionsQuery) ([]UserSession, error)
+
+	InitiateGoogleAuth(context.Context) (string, error)
+	CompleteGoogleAuth(context.Context, string, string) (Credentials, error)
 }
 
 type CreateUserCommand struct {
@@ -108,36 +143,6 @@ type ResetPasswordCommand struct {
 type UserSessionsQuery struct {
 	AuthorizationHeader string
 }
-
-type UserSession struct {
-	UserID         string
-	SessionID      string
-	Device         UserDevice
-	UserAgent      string
-	IPAddress      string
-	IPCountryISO   string
-	LastActivityAt time.Time
-	Timezone       *time.Location
-	IsExpired      bool
-}
-
-type UserDevice struct {
-	UserID            string
-	DeviceFingerprint string
-	Name              string
-	OS                OperatingSystem
-	Brand             string
-}
-
-type OperatingSystem string
-
-var (
-	OperatingSystemAndroid OperatingSystem = "android"
-	OperatingSystemIOS     OperatingSystem = "ios"
-	OperatingSystemWindows OperatingSystem = "windows"
-	OperatingSystemMacOS   OperatingSystem = "macos"
-	OperatingSystemLinux   OperatingSystem = "linux"
-)
 
 // Future work:
 // - Google login support
