@@ -30,7 +30,7 @@ func (s *Service) Integrations(ctx context.Context, query infragpt.IntegrationsQ
 	return integrations, nil
 }
 
-func (s *Service) CompleteSlackAuthentication(ctx context.Context, command infragpt.CompleteSlackAuthenticationCommand) error {
+func (s *Service) CompleteSlackIntegration(ctx context.Context, command infragpt.CompleteSlackIntegrationCommand) error {
 	if pid, err := s.slackGateway.CompleteAuthentication(ctx, command.Code); err != nil {
 		return fmt.Errorf("failed to complete slack authentication: %w", err)
 	} else {
