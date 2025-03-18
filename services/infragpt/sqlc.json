@@ -11,13 +11,13 @@
       "schema": "./internal/infragptsvc/supporting/postgres/schema/"
     },
     {
-      "name": "db",
+      "name": "postgres",
       "emit_json_tags": true,
       "emit_prepared_queries": true,
       "emit_interface": true,
-      "path": "./internal/identitysvc/supporting/postgres/db",
-      "queries": "./internal/identitysvc/supporting/postgres/db/queries/",
-      "schema": "./internal/identitysvc/supporting/postgres/db/schema/"
+      "path": "./internal/identitysvc/supporting/postgres",
+      "queries": "./internal/identitysvc/supporting/postgres/queries/",
+      "schema": "./internal/identitysvc/supporting/postgres/schema/"
     }
   ]
 }

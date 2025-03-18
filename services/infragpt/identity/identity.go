@@ -83,7 +83,7 @@ type Service interface {
 	UserSessions(context.Context, UserSessionsQuery) ([]UserSession, error)
 
 	InitiateGoogleAuth(context.Context) (string, error)
-	CompleteGoogleAuth(context.Context, string, string) (Credentials, error)
+	CompleteGoogleAuth(context.Context, CompleteGoogleAuthCommand) (Credentials, error)
 }
 
 type CreateUserCommand struct {
@@ -132,16 +132,21 @@ type RequestResetPasswordCommand struct {
 }
 
 type ValidateResetPasswordTokenQuery struct {
-	Token string
+	ResetID string
 }
 
 type ResetPasswordCommand struct {
-	Token    string
+	ResetID  string
 	Password string
 }
 
 type UserSessionsQuery struct {
 	AuthorizationHeader string
+}
+
+type CompleteGoogleAuthCommand struct {
+	Code  string
+	State string
 }
 
 // Future work:

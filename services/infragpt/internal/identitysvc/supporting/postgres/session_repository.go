@@ -2,11 +2,7 @@ package postgres
 
 import (
 	"context"
-	"crypto/rsa"
-	"database/sql"
 	"fmt"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"
-	db2 "github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/supporting/postgres/db"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/supporting/token"
 	"time"
 
@@ -16,26 +12,20 @@ import (
 
 // TODO: load timezones
 
-type sessionRepository struct {
-	db         *sql.DB
-	queries    *db2.Queries
-	privateKey *rsa.PrivateKey
-}
-
-func (s sessionRepository) StartUserSession(ctx context.Context, session identity.UserSession) (
+func (i *IdentityDB) StartUserSession(ctx context.Context, session identity.UserSession) (
 	identity.Credentials, error) {
-	tx, err := s.db.Begin()
+	tx, err := i.db.Begin()
 	if err != nil {
 		return identity.Credentials{}, err
 	}
 	defer tx.Rollback()
-	qtx := s.queries.WithTx(tx)
+	qtx := i.queries.WithTx(tx)
 
 	uid, _ := uuid.Parse(session.UserID)
 	sid, _ := uuid.Parse(session.SessionID)
 
 	did := newDeviceID()
-	err = qtx.CreateDevice(ctx, db2.CreateDeviceParams{
+	err = qtx.CreateDevice(ctx, CreateDeviceParams{
 		DeviceID:          did,
 		UserID:            uid,
 		DeviceFingerprint: session.Device.DeviceFingerprint,
@@ -47,7 +37,7 @@ func (s sessionRepository) StartUserSession(ctx context.Context, session identit
 		return identity.Credentials{}, fmt.Errorf("create device: %w", err)
 	}
 
-	err = qtx.CreateSession(ctx, db2.CreateSessionParams{
+	err = qtx.CreateSession(ctx, CreateSessionParams{
 		SessionID:    sid,
 		UserID:       uid,
 		DeviceID:     did,
@@ -60,7 +50,7 @@ func (s sessionRepository) StartUserSession(ctx context.Context, session identit
 		return identity.Credentials{}, fmt.Errorf("create session: %w", err)
 	}
 
-	creds, err := s.createRefreshToken(ctx, qtx, uid, sid)
+	creds, err := i.createRefreshToken(ctx, qtx, uid, sid)
 	if err != nil {
 		return identity.Credentials{}, fmt.Errorf("create refresh token: %w", err)
 	}
@@ -73,16 +63,16 @@ func (s sessionRepository) StartUserSession(ctx context.Context, session identit
 	return creds, nil
 }
 
-func (s sessionRepository) createRefreshToken(ctx context.Context, qtx *db2.Queries, uid, sid uuid.UUID) (identity.Credentials, error) {
+func (i *IdentityDB) createRefreshToken(ctx context.Context, qtx *Queries, uid, sid uuid.UUID) (identity.Credentials, error) {
 	// create refesh token
-	tokenManager := token.NewManager(s.privateKey)
+	tokenManager := token.NewManager(i.privateKey)
 	refreshToken, err := tokenManager.NewRefreshToken(sid.String())
 	if err != nil {
 		return identity.Credentials{}, fmt.Errorf("create refresh token: %w", err)
 	}
 
 	tid, _ := uuid.Parse(refreshToken.TokenID)
-	err = qtx.CreateRefreshToken(ctx, db2.CreateRefreshTokenParams{
+	err = qtx.CreateRefreshToken(ctx, CreateRefreshTokenParams{
 		TokenID:   tid,
 		SessionID: sid,
 		UserID:    uid,
@@ -105,14 +95,14 @@ func (s sessionRepository) createRefreshToken(ctx context.Context, qtx *db2.Quer
 	}, nil
 }
 
-func (s sessionRepository) RefreshToken(ctx context.Context, tokenID string) (identity.Credentials, error) {
-	tx, err := s.db.Begin()
+func (i *IdentityDB) RefreshToken(ctx context.Context, tokenID string) (identity.Credentials, error) {
+	tx, err := i.db.Begin()
 	if err != nil {
 		return identity.Credentials{}, fmt.Errorf("begin transaction: %w", err)
 	}
 
 	defer tx.Rollback()
-	qtx := s.queries.WithTx(tx)
+	qtx := i.queries.WithTx(tx)
 	tid, _ := uuid.Parse(tokenID)
 
 	refreshToken, err := qtx.RefreshToken(ctx, tid)
@@ -125,7 +115,7 @@ func (s sessionRepository) RefreshToken(ctx context.Context, tokenID string) (id
 		return identity.Credentials{}, fmt.Errorf("revoke refresh token: %w", err)
 	}
 
-	creds, err := s.createRefreshToken(ctx, qtx, refreshToken.UserID, refreshToken.SessionID)
+	creds, err := i.createRefreshToken(ctx, qtx, refreshToken.UserID, refreshToken.SessionID)
 	if err != nil {
 		return identity.Credentials{}, fmt.Errorf("create refresh token: %w", err)
 	}
@@ -138,13 +128,13 @@ func (s sessionRepository) RefreshToken(ctx context.Context, tokenID string) (id
 	return creds, nil
 }
 
-func (s sessionRepository) UserSessions(ctx context.Context, userID string) ([]identity.UserSession, error) {
-	tx, err := s.db.Begin()
+func (i *IdentityDB) UserSessions(ctx context.Context, userID string) ([]identity.UserSession, error) {
+	tx, err := i.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback()
-	qtx := s.queries.WithTx(tx)
+	qtx := i.queries.WithTx(tx)
 	uid, _ := uuid.Parse(userID)
 	sessions, err := qtx.UserSessions(ctx, uid)
 	if err != nil {
@@ -189,13 +179,13 @@ func (s sessionRepository) UserSessions(ctx context.Context, userID string) ([]i
 	return userSessions, nil
 }
 
-func (s sessionRepository) UserSession(ctx context.Context, sessionID string) (identity.UserSession, error) {
-	tx, err := s.db.Begin()
+func (i *IdentityDB) UserSession(ctx context.Context, sessionID string) (identity.UserSession, error) {
+	tx, err := i.db.Begin()
 	if err != nil {
 		return identity.UserSession{}, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback()
-	qtx := s.queries.WithTx(tx)
+	qtx := i.queries.WithTx(tx)
 	sid, _ := uuid.Parse(sessionID)
 	session, err := qtx.UserSession(ctx, sid)
 	if err != nil {
@@ -229,14 +219,6 @@ func (s sessionRepository) UserSession(ctx context.Context, sessionID string) (i
 			Brand:             device.Brand,
 		},
 	}, nil
-}
-
-func NewSessionRepository(sqlDB *sql.DB, privateKey *rsa.PrivateKey) domain.SessionRepository {
-	return &sessionRepository{
-		db:         sqlDB,
-		queries:    db2.New(sqlDB),
-		privateKey: privateKey,
-	}
 }
 
 func newDeviceID() uuid.UUID {

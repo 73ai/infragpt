@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/supporting/postgres/db"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,19 +13,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type userRepository struct {
-	db      *sql.DB
-	queries *db.Queries
-}
-
-func (u userRepository) ResetPassword(ctx context.Context, token, password string) error {
-	tx, err := u.db.Begin()
+func (i *IdentityDB) ResetPassword(ctx context.Context, token, password string) error {
+	tx, err := i.db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
 
 	defer tx.Rollback()
-	qtx := u.queries.WithTx(tx)
+	qtx := i.queries.WithTx(tx)
 
 	resetID, _ := uuid.Parse(token)
 	resetPassword, err := qtx.ResetPassword(ctx, resetID)
@@ -46,7 +40,7 @@ func (u userRepository) ResetPassword(ctx context.Context, token, password strin
 		return fmt.Errorf("hash password: %w", err)
 	}
 
-	err = qtx.SetNewPassword(ctx, db.SetNewPasswordParams{
+	err = qtx.SetNewPassword(ctx, SetNewPasswordParams{
 		UserID:       resetPassword.UserID,
 		PasswordHash: string(hashedPassword),
 	})
@@ -62,17 +56,17 @@ func (u userRepository) ResetPassword(ctx context.Context, token, password strin
 	return nil
 }
 
-func (u userRepository) CreateUser(ctx context.Context, user domain.User) (string, error) {
-	tx, err := u.db.Begin()
+func (i *IdentityDB) CreateUser(ctx context.Context, user domain.User) (string, error) {
+	tx, err := i.db.Begin()
 	if err != nil {
 		return "", fmt.Errorf("begin transaction: %w", err)
 	}
 
 	defer tx.Rollback()
-	qtx := u.queries.WithTx(tx)
+	qtx := i.queries.WithTx(tx)
 
 	uid, _ := uuid.Parse(user.UserID)
-	err = qtx.CreateUser(ctx, db.CreateUserParams{
+	err = qtx.CreateUser(ctx, CreateUserParams{
 		UserID:       uid,
 		Email:        user.Email,
 		PasswordHash: user.PasswordHash,
@@ -83,7 +77,7 @@ func (u userRepository) CreateUser(ctx context.Context, user domain.User) (strin
 
 	// create email verification token
 	vid := newEmailVerificationID()
-	err = qtx.CreateEmailVerification(ctx, db.CreateEmailVerificationParams{
+	err = qtx.CreateEmailVerification(ctx, CreateEmailVerificationParams{
 		VerificationID: vid,
 		UserID:         uid,
 		Email:          user.Email,
@@ -101,8 +95,8 @@ func (u userRepository) CreateUser(ctx context.Context, user domain.User) (strin
 	return vid.String(), nil
 }
 
-func (u userRepository) UserByEmail(ctx context.Context, email string) (domain.User, error) {
-	user, err := u.queries.UserByEmail(ctx, email)
+func (i *IdentityDB) UserByEmail(ctx context.Context, email string) (domain.User, error) {
+	user, err := i.queries.UserByEmail(ctx, email)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("get user by email: %w", err)
 	}
@@ -114,14 +108,14 @@ func (u userRepository) UserByEmail(ctx context.Context, email string) (domain.U
 	}, nil
 }
 
-func (u userRepository) VerifyUserEmail(ctx context.Context, verificationID string) error {
-	tx, err := u.db.Begin()
+func (i *IdentityDB) VerifyUserEmail(ctx context.Context, verificationID string) error {
+	tx, err := i.db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
 
 	defer tx.Rollback()
-	qtx := u.queries.WithTx(tx)
+	qtx := i.queries.WithTx(tx)
 
 	vid, _ := uuid.Parse(verificationID)
 	emailVerification, err := qtx.EmailVerification(ctx, vid)
@@ -163,18 +157,18 @@ func (u userRepository) VerifyUserEmail(ctx context.Context, verificationID stri
 	return nil
 }
 
-func (u userRepository) RequestResetPassword(ctx context.Context, userID string) (string, error) {
-	tx, err := u.db.Begin()
+func (i *IdentityDB) RequestResetPassword(ctx context.Context, userID string) (string, error) {
+	tx, err := i.db.Begin()
 	if err != nil {
 		return "", fmt.Errorf("begin transaction: %w", err)
 	}
 
 	defer tx.Rollback()
-	qtx := u.queries.WithTx(tx)
+	qtx := i.queries.WithTx(tx)
 
 	uid := uuid.MustParse(userID)
 	rid := newResetID()
-	err = qtx.CreateResetPassword(ctx, db.CreateResetPasswordParams{
+	err = qtx.CreateResetPassword(ctx, CreateResetPasswordParams{
 		UserID:   uid,
 		ResetID:  rid,
 		ExpiryAt: time.Now().Add(1 * time.Hour),
@@ -191,14 +185,14 @@ func (u userRepository) RequestResetPassword(ctx context.Context, userID string)
 	return rid.String(), nil
 }
 
-func (u userRepository) ValidateResetPasswordToken(ctx context.Context, token string) error {
-	tx, err := u.db.Begin()
+func (i *IdentityDB) ValidateResetPasswordToken(ctx context.Context, token string) error {
+	tx, err := i.db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
 
 	defer tx.Rollback()
-	qtx := u.queries.WithTx(tx)
+	qtx := i.queries.WithTx(tx)
 
 	resetID, _ := uuid.Parse(token)
 	resetPassword, err := qtx.ResetPassword(ctx, resetID)
@@ -219,13 +213,6 @@ func (u userRepository) ValidateResetPasswordToken(ctx context.Context, token st
 	}
 
 	return nil
-}
-
-func NewUserRepository(sqlDB *sql.DB) domain.UserRepository {
-	return &userRepository{
-		db:      sqlDB,
-		queries: db.New(sqlDB),
-	}
 }
 
 func newEmailVerificationExpiry() time.Time {

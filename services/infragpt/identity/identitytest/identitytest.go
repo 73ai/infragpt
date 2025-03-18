@@ -514,7 +514,7 @@ func Ensure(t *testing.T, svc identity.Service, externalActions ExternalActions)
 		ctx := context.Background()
 		t.Run("Fails if token is empty", func(t *testing.T) {
 			query := identity.ValidateResetPasswordTokenQuery{
-				Token: "",
+				ResetID: "",
 			}
 			err := svc.ValidateResetPasswordToken(ctx, query)
 			if !errors.Is(err, identity.ErrResetPasswordIDCannotBeEmpty) {
@@ -524,7 +524,7 @@ func Ensure(t *testing.T, svc identity.Service, externalActions ExternalActions)
 		})
 		t.Run("Fails if token is invalid", func(t *testing.T) {
 			query := identity.ValidateResetPasswordTokenQuery{
-				Token: "invalid",
+				ResetID: "invalid",
 			}
 			err := svc.ValidateResetPasswordToken(ctx, query)
 			if !errors.Is(err, identity.ErrInvalidResetPasswordToken) {
@@ -541,7 +541,7 @@ func Ensure(t *testing.T, svc identity.Service, externalActions ExternalActions)
 		ctx := context.Background()
 		t.Run("Fails if token is empty", func(t *testing.T) {
 			cmd := identity.ResetPasswordCommand{
-				Token:    "",
+				ResetID:  "",
 				Password: someValidPassword(),
 			}
 			err := svc.ResetPassword(ctx, cmd)
@@ -552,7 +552,7 @@ func Ensure(t *testing.T, svc identity.Service, externalActions ExternalActions)
 		})
 		t.Run("Fails if token is invalid", func(t *testing.T) {
 			cmd := identity.ResetPasswordCommand{
-				Token:    someInvalidResetPasswordToken(),
+				ResetID:  someInvalidResetPasswordToken(),
 				Password: someValidPassword(),
 			}
 			err := svc.ResetPassword(ctx, cmd)

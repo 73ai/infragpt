@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/priyanshujain/infragpt/services/infragpt/infragptapi"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/postgresconfig"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/postgres"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/slack"
@@ -34,9 +35,9 @@ func main() {
 	}
 
 	type Config struct {
-		Port     int             `yaml:"port"`
-		Slack    slack.Config    `mapstructure:"slack"`
-		Database postgres.Config `mapstructure:"database"`
+		Port     int                   `yaml:"port"`
+		Slack    slack.Config          `mapstructure:"slack"`
+		Database postgresconfig.Config `mapstructure:"database"`
 	}
 
 	var c Config
@@ -45,7 +46,7 @@ func main() {
 	}
 
 	slackConfig := c.Slack
-	db, err := c.Database.New(ctx)
+	db, err := postgres.Config{Config: c.Database}.New()
 	if err != nil {
 		panic(fmt.Errorf("error connecting to database: %w", err))
 	}

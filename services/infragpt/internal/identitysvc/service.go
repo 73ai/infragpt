@@ -238,10 +238,10 @@ func (s service) RequestResetPassword(ctx context.Context, cmd identity.RequestR
 }
 
 func (s service) ValidateResetPasswordToken(ctx context.Context, query identity.ValidateResetPasswordTokenQuery) error {
-	if query.Token == "" {
+	if query.ResetID == "" {
 		return identity.ErrResetPasswordIDCannotBeEmpty
 	}
-	err := s.userRepo.ValidateResetPasswordToken(ctx, query.Token)
+	err := s.userRepo.ValidateResetPasswordToken(ctx, query.ResetID)
 	if err != nil {
 		return fmt.Errorf("validate password reset token: %w", err)
 	}
@@ -250,17 +250,17 @@ func (s service) ValidateResetPasswordToken(ctx context.Context, query identity.
 
 // TODO: add uuid validation check for most uuid type fields before sending to repository
 func (s service) ResetPassword(ctx context.Context, cmd identity.ResetPasswordCommand) error {
-	if cmd.Token == "" {
+	if cmd.ResetID == "" {
 		return identity.ErrResetPasswordIDCannotBeEmpty
 	}
 
-	if err := s.userRepo.ValidateResetPasswordToken(ctx, cmd.Token); err != nil {
+	if err := s.userRepo.ValidateResetPasswordToken(ctx, cmd.ResetID); err != nil {
 		return fmt.Errorf("validate password reset token: %w", err)
 	}
 	if err := ValidatePassword(cmd.Password); err != nil {
 		return fmt.Errorf("validate password: %w", err)
 	}
-	err := s.userRepo.ResetPassword(ctx, cmd.Token, cmd.Password)
+	err := s.userRepo.ResetPassword(ctx, cmd.ResetID, cmd.Password)
 	if err != nil {
 		return fmt.Errorf("reset password: %w", err)
 	}
@@ -303,7 +303,10 @@ func (s service) InitiateGoogleAuth(ctx context.Context) (string, error) {
 	return url, nil
 }
 
-func (s service) CompleteGoogleAuth(ctx context.Context, code, state string) (identity.Credentials, error) {
+func (s service) CompleteGoogleAuth(ctx context.Context, cmd identity.CompleteGoogleAuthCommand) (identity.Credentials, error) {
+	code := cmd.Code
+	state := cmd.State
+
 	if code == "" {
 		return identity.Credentials{}, identity.ErrGoogleAuthCodeCannotBeEmpty
 	}

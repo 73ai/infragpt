@@ -3,7 +3,7 @@
 //   sqlc v1.27.0
 // source: state_token.sql
 
-package db
+package postgres
 
 import (
 	"context"
