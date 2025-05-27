@@ -11,6 +11,23 @@ import (
 	"github.com/google/uuid"
 )
 
+type Channel struct {
+	ChannelID   string         `json:"channel_id"`
+	TeamID      string         `json:"team_id"`
+	ChannelName sql.NullString `json:"channel_name"`
+	IsMonitored bool           `json:"is_monitored"`
+	CreatedAt   time.Time      `json:"created_at"`
+}
+
+type Conversation struct {
+	ConversationID uuid.UUID `json:"conversation_id"`
+	TeamID         string    `json:"team_id"`
+	ChannelID      string    `json:"channel_id"`
+	ThreadTs       string    `json:"thread_ts"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
 type Integration struct {
 	ID                uuid.UUID `json:"id"`
 	Provider          string    `json:"provider"`
@@ -19,6 +36,19 @@ type Integration struct {
 	ProviderProjectID string    `json:"provider_project_id"`
 	Active            bool      `json:"active"`
 	CreatedAt         time.Time `json:"created_at"`
+}
+
+type Message struct {
+	MessageID      uuid.UUID      `json:"message_id"`
+	ConversationID uuid.UUID      `json:"conversation_id"`
+	SlackMessageTs string         `json:"slack_message_ts"`
+	SenderUserID   string         `json:"sender_user_id"`
+	SenderUsername sql.NullString `json:"sender_username"`
+	SenderEmail    sql.NullString `json:"sender_email"`
+	SenderName     sql.NullString `json:"sender_name"`
+	MessageText    string         `json:"message_text"`
+	IsBotMessage   bool           `json:"is_bot_message"`
+	CreatedAt      time.Time      `json:"created_at"`
 }
 
 type SlackToken struct {

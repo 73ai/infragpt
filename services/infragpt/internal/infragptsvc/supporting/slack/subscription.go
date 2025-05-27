@@ -53,6 +53,11 @@ func (s *Slack) handleEventAPI(ctx context.Context, event slackevents.EventsAPIE
 			if err != nil {
 				return fmt.Errorf("failed to handle app mention: %w", err)
 			}
+		case *slackevents.MessageEvent:
+			err := s.handleChannelMessage(ctx, teamID, ev, handler)
+			if err != nil {
+				return fmt.Errorf("failed to handle channel message: %w", err)
+			}
 		default:
 			slog.Info("Unhandled callback event:", "event", ev)
 		}

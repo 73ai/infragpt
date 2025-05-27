@@ -51,6 +51,7 @@ func main() {
 		panic(fmt.Errorf("error connecting to database: %w", err))
 	}
 	slackConfig.WorkSpaceTokenRepository = db
+	slackConfig.ChannelRepository = db
 
 	sr, err := slackConfig.New(ctx)
 	if err != nil {
@@ -58,8 +59,10 @@ func main() {
 	}
 
 	svcConfig := infragptsvc.Config{
-		SlackGateway:          sr,
-		IntegrationRepository: db,
+		SlackGateway:             sr,
+		IntegrationRepository:    db,
+		ConversationRepository:   db,
+		ChannelRepository:        db,
 	}
 
 	svc, err := svcConfig.New(ctx)

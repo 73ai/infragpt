@@ -2,15 +2,20 @@ package infragptsvc
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/priyanshujain/infragpt/services/infragpt"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
 	"log/slog"
+	"time"
 )
 
 type Service struct {
-	slackGateway          domain.SlackGateway
-	integrationRepository domain.IntegrationRepository
+	slackGateway           domain.SlackGateway
+	integrationRepository  domain.IntegrationRepository
+	conversationRepository domain.ConversationRepository
+	channelRepository      domain.ChannelRepository
 }
 
 func (s *Service) Integrations(ctx context.Context, query infragpt.IntegrationsQuery) ([]infragpt.Integration, error) {
@@ -53,14 +58,84 @@ func (s *Service) CompleteSlackIntegration(ctx context.Context, command infragpt
 var _ infragpt.Service = (*Service)(nil)
 
 func (s *Service) SubscribeSlackNotifications(ctx context.Context) error {
-	if err := s.slackGateway.SubscribeAppMentioned(ctx, s.handleUserCommand); err != nil {
-		return fmt.Errorf("failed to subscribe app mentioned events: %w", err)
+	if err := s.slackGateway.SubscribeAllMessages(ctx, s.handleUserCommand); err != nil {
+		return fmt.Errorf("failed to subscribe to all messages: %w", err)
 	}
 
 	return nil
 }
 
 func (s *Service) handleUserCommand(ctx context.Context, command domain.UserCommand) error {
-	slog.Info("Received user command", "command", command)
+	slog.Info("Received user command", "type", command.MessageType, "channel", command.Thread.Channel, "user", command.Thread.Sender.Username)
+
+	conversation, err := s.conversationRepository.GetConversationByThread(ctx, command.Thread.TeamID, command.Thread.Channel, command.Thread.ThreadTS)
+	if err != nil {
+		slog.Error("Failed to get conversation", "error", err)
+		return fmt.Errorf("failed to get conversation: %w", err)
+	}
+
+	if conversation == nil {
+		conversation, err = s.conversationRepository.CreateConversation(ctx, command.Thread.TeamID, command.Thread.Channel, command.Thread.ThreadTS)
+		if err != nil {
+			slog.Error("Failed to create conversation", "error", err)
+			return fmt.Errorf("failed to create conversation: %w", err)
+		}
+	}
+
+	message := domain.Message{
+		ConversationID: conversation.ID,
+		SlackMessageTS: fmt.Sprintf("%d", time.Now().UnixNano()),
+		Sender:         command.Thread.Sender,
+		MessageText:    command.Thread.Message,
+		IsBotMessage:   false,
+	}
+
+	// check if the message is already stored
+	_, err = s.conversationRepository.MessageBySlackTS(ctx, conversation.ID, command.Thread.Sender.ID, command.MessageTS)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			slog.Info("No existing message found, proceeding to store new message")
+		} else {
+			slog.Error("Failed to get messages by Slack timestamp", "error", err)
+			return fmt.Errorf("failed to get messages by Slack timestamp: %w", err)
+		}
+	}
+
+	_, err = s.conversationRepository.StoreMessage(ctx, conversation.ID, message)
+	if err != nil {
+		slog.Error("Failed to store message", "error", err)
+		return fmt.Errorf("failed to store message: %w", err)
+	}
+
+	conversationHistory, err := s.conversationRepository.GetConversationHistory(ctx, conversation.ID, 50)
+	if err != nil {
+		slog.Error("Failed to get conversation history", "error", err)
+	} else {
+		slog.Info("Retrieved conversation history", "messageCount", len(conversationHistory))
+	}
+
+	err = s.slackGateway.ReplyMessage(ctx, command.Thread, "I received your message and stored it in the conversation history!")
+	if err != nil {
+		slog.Error("Failed to reply to message", "error", err)
+		return fmt.Errorf("failed to reply to message: %w", err)
+	}
+
+	botMessage := domain.Message{
+		ConversationID: conversation.ID,
+		SlackMessageTS: fmt.Sprintf("%d", time.Now().UnixNano()),
+		Sender: domain.SlackUser{
+			ID:       "bot",
+			Username: "bot",
+			Name:     "InfraGPT Bot",
+		},
+		MessageText:  "I received your message and stored it in the conversation history!",
+		IsBotMessage: true,
+	}
+
+	_, err = s.conversationRepository.StoreMessage(ctx, conversation.ID, botMessage)
+	if err != nil {
+		slog.Error("Failed to store bot response", "error", err)
+	}
+
 	return nil
 }
