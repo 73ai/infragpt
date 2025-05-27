@@ -13,7 +13,7 @@ export const get = async () => {
 
 	return rss({
 		title: `InfraGPT`,
-		description: "InfraGPT - Starter Template for Astro with Tailwind CSS",
+		description: "InfraGPT - AI SRE Copilot for the Cloud",
 		site: import.meta.env.SITE,
 
 		items: posts.map((post) => ({
