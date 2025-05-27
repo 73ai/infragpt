@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
-	"github.com/priyanshujain/infragpt/services/infragpt/generic/httperrors"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -35,7 +35,7 @@ func (h *httpHandler) completeSlackAuthentication(w http.ResponseWriter, r *http
 	code := r.URL.Query().Get("code")
 
 	ApiHandlerFunc(func(ctx context.Context, x request) (response, error) {
-		err := h.svc.CompleteSlackAuthentication(ctx, infragpt.CompleteSlackAuthenticationCommand{
+		err := h.svc.CompleteSlackIntegration(ctx, infragpt.CompleteSlackIntegrationCommand{
 			BusinessID: uuid.New().String(),
 			Code:       code,
 		})

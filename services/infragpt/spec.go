@@ -29,14 +29,14 @@ type Integration struct {
 type Service interface {
 	Integrations(context.Context, IntegrationsQuery) ([]Integration, error)
 
-	CompleteSlackAuthentication(context.Context, CompleteSlackAuthenticationCommand) error
+	CompleteSlackIntegration(context.Context, CompleteSlackIntegrationCommand) error
 }
 
 type IntegrationsQuery struct {
 	BusinessID string
 }
 
-type CompleteSlackAuthenticationCommand struct {
+type CompleteSlackIntegrationCommand struct {
 	BusinessID string
 	Code       string
 }
