@@ -5,25 +5,21 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
 )
 
-func (db *InfraGPTDB) GetConversationByThread(ctx context.Context, teamID, channelID, threadTS string) (*domain.Conversation, error) {
+func (db *InfraGPTDB) GetConversationByThread(ctx context.Context, teamID, channelID, threadTS string) (domain.Conversation, error) {
 	dbConversation, err := db.Querier.GetConversationByThread(ctx, GetConversationByThreadParams{
 		TeamID:    teamID,
 		ChannelID: channelID,
 		ThreadTs:  threadTS,
 	})
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to get conversation: %w", err)
+		return domain.Conversation{}, fmt.Errorf("failed to get conversation: %w", err)
 	}
 
-	return &domain.Conversation{
+	return domain.Conversation{
 		ID:        dbConversation.ConversationID,
 		TeamID:    dbConversation.TeamID,
 		ChannelID: dbConversation.ChannelID,
@@ -33,17 +29,17 @@ func (db *InfraGPTDB) GetConversationByThread(ctx context.Context, teamID, chann
 	}, nil
 }
 
-func (db *InfraGPTDB) CreateConversation(ctx context.Context, teamID, channelID, threadTS string) (*domain.Conversation, error) {
+func (db *InfraGPTDB) CreateConversation(ctx context.Context, teamID, channelID, threadTS string) (domain.Conversation, error) {
 	dbConversation, err := db.Querier.CreateConversation(ctx, CreateConversationParams{
 		TeamID:    teamID,
 		ChannelID: channelID,
 		ThreadTs:  threadTS,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create conversation: %w", err)
+		return domain.Conversation{}, fmt.Errorf("failed to create conversation: %w", err)
 	}
 
-	return &domain.Conversation{
+	return domain.Conversation{
 		ID:        dbConversation.ConversationID,
 		TeamID:    dbConversation.TeamID,
 		ChannelID: dbConversation.ChannelID,
@@ -53,7 +49,7 @@ func (db *InfraGPTDB) CreateConversation(ctx context.Context, teamID, channelID,
 	}, nil
 }
 
-func (db *InfraGPTDB) StoreMessage(ctx context.Context, conversationID uuid.UUID, message domain.Message) (*domain.Message, error) {
+func (db *InfraGPTDB) StoreMessage(ctx context.Context, conversationID uuid.UUID, message domain.Message) (domain.Message, error) {
 	var senderUsername, senderEmail, senderName sql.NullString
 
 	if message.Sender.Username != "" {
@@ -65,7 +61,7 @@ func (db *InfraGPTDB) StoreMessage(ctx context.Context, conversationID uuid.UUID
 	if message.Sender.Name != "" {
 		senderName = sql.NullString{String: message.Sender.Name, Valid: true}
 	}
-
+	
 	dbMessage, err := db.Querier.StoreMessage(ctx, StoreMessageParams{
 		ConversationID: conversationID,
 		SlackMessageTs: message.SlackMessageTS,
@@ -77,10 +73,10 @@ func (db *InfraGPTDB) StoreMessage(ctx context.Context, conversationID uuid.UUID
 		IsBotMessage:   message.IsBotMessage,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to store message: %w", err)
+		return domain.Message{}, fmt.Errorf("failed to store message: %w", err)
 	}
 
-	return &domain.Message{
+	return domain.Message{
 		ID:             dbMessage.MessageID,
 		ConversationID: dbMessage.ConversationID,
 		SlackMessageTS: dbMessage.SlackMessageTs,
@@ -96,11 +92,8 @@ func (db *InfraGPTDB) StoreMessage(ctx context.Context, conversationID uuid.UUID
 	}, nil
 }
 
-func (db *InfraGPTDB) GetConversationHistory(ctx context.Context, conversationID uuid.UUID, limit int) ([]domain.Message, error) {
-	dbMessages, err := db.Querier.GetConversationHistory(ctx, GetConversationHistoryParams{
-		ConversationID: conversationID,
-		Limit:          int32(limit),
-	})
+func (db *InfraGPTDB) GetConversationHistory(ctx context.Context, conversationID uuid.UUID) ([]domain.Message, error) {
+	dbMessages, err := db.Querier.GetConversationHistory(ctx, conversationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get conversation history: %w", err)
 	}

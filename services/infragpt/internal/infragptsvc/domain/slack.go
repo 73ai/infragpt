@@ -84,11 +84,11 @@ type WorkSpaceTokenRepository interface {
 }
 
 type ConversationRepository interface {
-	GetConversationByThread(ctx context.Context, teamID, channelID, threadTS string) (*Conversation, error)
-	CreateConversation(ctx context.Context, teamID, channelID, threadTS string) (*Conversation, error)
-	StoreMessage(ctx context.Context, conversationID uuid.UUID, message Message) (*Message, error)
+	GetConversationByThread(ctx context.Context, teamID, channelID, threadTS string) (Conversation, error)
+	CreateConversation(ctx context.Context, teamID, channelID, threadTS string) (Conversation, error)
+	StoreMessage(ctx context.Context, conversationID uuid.UUID, message Message) (Message, error)
 	MessageBySlackTS(ctx context.Context, conversationID uuid.UUID, senderID, slackMessageTS string) (Message, error)
-	GetConversationHistory(ctx context.Context, conversationID uuid.UUID, limit int) ([]Message, error)
+	GetConversationHistory(ctx context.Context, conversationID uuid.UUID) ([]Message, error)
 }
 
 type ChannelRepository interface {

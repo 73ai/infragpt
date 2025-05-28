@@ -16,6 +16,7 @@ type Service struct {
 	integrationRepository  domain.IntegrationRepository
 	conversationRepository domain.ConversationRepository
 	channelRepository      domain.ChannelRepository
+	agentService           domain.AgentService
 }
 
 func (s *Service) Integrations(ctx context.Context, query infragpt.IntegrationsQuery) ([]infragpt.Integration, error) {
@@ -68,17 +69,27 @@ func (s *Service) SubscribeSlackNotifications(ctx context.Context) error {
 func (s *Service) handleUserCommand(ctx context.Context, command domain.UserCommand) error {
 	slog.Info("Received user command", "type", command.MessageType, "channel", command.Thread.Channel, "user", command.Thread.Sender.Username)
 
-	conversation, err := s.conversationRepository.GetConversationByThread(ctx, command.Thread.TeamID, command.Thread.Channel, command.Thread.ThreadTS)
-	if err != nil {
+	var pastMessages []domain.Message
+
+	var conversation domain.Conversation
+	var err error
+	conversation, err = s.conversationRepository.GetConversationByThread(ctx, command.Thread.TeamID, command.Thread.Channel, command.Thread.ThreadTS)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		slog.Error("Failed to get conversation", "error", err)
 		return fmt.Errorf("failed to get conversation: %w", err)
 	}
 
-	if conversation == nil {
+	if errors.Is(err, sql.ErrNoRows) {
 		conversation, err = s.conversationRepository.CreateConversation(ctx, command.Thread.TeamID, command.Thread.Channel, command.Thread.ThreadTS)
 		if err != nil {
 			slog.Error("Failed to create conversation", "error", err)
 			return fmt.Errorf("failed to create conversation: %w", err)
+		}
+	} else {
+		pastMessages, err = s.conversationRepository.GetConversationHistory(ctx, conversation.ID)
+		if err != nil {
+			slog.Error("Failed to get conversation history", "error", err)
+			return fmt.Errorf("failed to get conversation history: %w", err)
 		}
 	}
 
@@ -107,14 +118,23 @@ func (s *Service) handleUserCommand(ctx context.Context, command domain.UserComm
 		return fmt.Errorf("failed to store message: %w", err)
 	}
 
-	conversationHistory, err := s.conversationRepository.GetConversationHistory(ctx, conversation.ID, 50)
-	if err != nil {
-		slog.Error("Failed to get conversation history", "error", err)
-	} else {
-		slog.Info("Retrieved conversation history", "messageCount", len(conversationHistory))
+	agentRequest := domain.AgentRequest{
+		Conversation: conversation,
+		Message:      message,
+		PastMessages: pastMessages,
 	}
 
-	err = s.slackGateway.ReplyMessage(ctx, command.Thread, "I received your message and stored it in the conversation history!")
+	agentResponse, err := s.agentService.ProcessMessage(ctx, agentRequest)
+	if err != nil {
+		slog.Error("Failed to process message with agent service", "error", err)
+		agentResponse = domain.AgentResponse{
+			ResponseText: "Agent service unavailable",
+			Success:      false,
+			ErrorMessage: err.Error(),
+		}
+	}
+
+	err = s.slackGateway.ReplyMessage(ctx, command.Thread, agentResponse.ResponseText)
 	if err != nil {
 		slog.Error("Failed to reply to message", "error", err)
 		return fmt.Errorf("failed to reply to message: %w", err)
@@ -128,7 +148,7 @@ func (s *Service) handleUserCommand(ctx context.Context, command domain.UserComm
 			Username: "bot",
 			Name:     "InfraGPT Bot",
 		},
-		MessageText:  "I received your message and stored it in the conversation history!",
+		MessageText:  agentResponse.ResponseText,
 		IsBotMessage: true,
 	}
 

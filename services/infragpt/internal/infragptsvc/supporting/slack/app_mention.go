@@ -24,8 +24,6 @@ func (s *Slack) handleAppMention(ctx context.Context, teamID string, event *slac
 	if err != nil {
 		slog.Error("Error getting channel info", "error", err, "channelID", event.Channel)
 	} else {
-		slog.Info("Creating new channel entry for app mention", "teamID", teamID, "channelID", event.Channel, "channelName", channelInfo.Name)
-
 		err = s.channelRepository.AddChannel(ctx, teamID, event.Channel, channelInfo.Name)
 		if err != nil {
 			slog.Error("Error adding channel to DB", "error", err, "teamID", teamID, "channelID", event.Channel)

@@ -87,16 +87,10 @@ SELECT message_id, conversation_id, slack_message_ts, sender_user_id, sender_use
 FROM messages
 WHERE conversation_id = $1
 ORDER BY created_at ASC
-LIMIT $2
 `
 
-type GetConversationHistoryParams struct {
-	ConversationID uuid.UUID `json:"conversation_id"`
-	Limit          int32     `json:"limit"`
-}
-
-func (q *Queries) GetConversationHistory(ctx context.Context, arg GetConversationHistoryParams) ([]Message, error) {
-	rows, err := q.query(ctx, q.getConversationHistoryStmt, getConversationHistory, arg.ConversationID, arg.Limit)
+func (q *Queries) GetConversationHistory(ctx context.Context, conversationID uuid.UUID) ([]Message, error) {
+	rows, err := q.query(ctx, q.getConversationHistoryStmt, getConversationHistory, conversationID)
 	if err != nil {
 		return nil, err
 	}

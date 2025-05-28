@@ -7,6 +7,7 @@ import (
 	"github.com/priyanshujain/infragpt/services/infragpt/infragptapi"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/postgresconfig"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/agent"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/postgres"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/slack"
 	"golang.org/x/sync/errgroup"
@@ -63,6 +64,7 @@ func main() {
 		IntegrationRepository:    db,
 		ConversationRepository:   db,
 		ChannelRepository:        db,
+		AgentService:             agent.NewDumbClient(),
 	}
 
 	svc, err := svcConfig.New(ctx)

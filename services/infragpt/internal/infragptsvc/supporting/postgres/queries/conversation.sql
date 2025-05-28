@@ -28,8 +28,7 @@ WHERE conversation_id = $1 AND slack_message_ts = $2 AND sender_user_id = $3;
 SELECT message_id, conversation_id, slack_message_ts, sender_user_id, sender_username, sender_email, sender_name, message_text, is_bot_message, created_at
 FROM messages
 WHERE conversation_id = $1
-ORDER BY created_at ASC
-LIMIT $2;
+ORDER BY created_at ASC;
 
 -- name: GetConversationHistoryDesc :many
 SELECT message_id, conversation_id, slack_message_ts, sender_user_id, sender_username, sender_email, sender_name, message_text, is_bot_message, created_at

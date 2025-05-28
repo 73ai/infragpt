@@ -14,7 +14,7 @@ type Querier interface {
 	AddChannel(ctx context.Context, arg AddChannelParams) error
 	CreateConversation(ctx context.Context, arg CreateConversationParams) (Conversation, error)
 	GetConversationByThread(ctx context.Context, arg GetConversationByThreadParams) (Conversation, error)
-	GetConversationHistory(ctx context.Context, arg GetConversationHistoryParams) ([]Message, error)
+	GetConversationHistory(ctx context.Context, conversationID uuid.UUID) ([]Message, error)
 	GetConversationHistoryDesc(ctx context.Context, arg GetConversationHistoryDescParams) ([]Message, error)
 	GetMonitoredChannels(ctx context.Context, teamID string) ([]Channel, error)
 	IsChannelMonitored(ctx context.Context, arg IsChannelMonitoredParams) (bool, error)
