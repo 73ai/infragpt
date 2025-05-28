@@ -30,6 +30,8 @@ type Service interface {
 	Integrations(context.Context, IntegrationsQuery) ([]Integration, error)
 
 	CompleteSlackIntegration(context.Context, CompleteSlackIntegrationCommand) error
+
+	SendReply(context.Context, SendReplyCommand) error
 }
 
 type IntegrationsQuery struct {
@@ -39,4 +41,9 @@ type IntegrationsQuery struct {
 type CompleteSlackIntegrationCommand struct {
 	BusinessID string
 	Code       string
+}
+
+type SendReplyCommand struct {
+	ConversationID string
+	Message        string
 }

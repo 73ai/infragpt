@@ -11,6 +11,17 @@ import (
 )
 
 type Querier interface {
+	AddChannel(ctx context.Context, arg AddChannelParams) error
+	CreateConversation(ctx context.Context, arg CreateConversationParams) (Conversation, error)
+	GetConversationByThread(ctx context.Context, arg GetConversationByThreadParams) (Conversation, error)
+	GetConversationHistory(ctx context.Context, conversationID uuid.UUID) ([]Message, error)
+	GetConversationHistoryDesc(ctx context.Context, arg GetConversationHistoryDescParams) ([]Message, error)
+	GetMonitoredChannels(ctx context.Context, teamID string) ([]Channel, error)
+	IsChannelMonitored(ctx context.Context, arg IsChannelMonitoredParams) (bool, error)
+	MessageBySlackTS(ctx context.Context, arg MessageBySlackTSParams) (Message, error)
+	SetChannelMonitoring(ctx context.Context, arg SetChannelMonitoringParams) error
+	StoreMessage(ctx context.Context, arg StoreMessageParams) (Message, error)
+	UpdateConversationTimestamp(ctx context.Context, conversationID uuid.UUID) error
 	integrations(ctx context.Context, businessID uuid.UUID) ([]Integration, error)
 	saveIntegration(ctx context.Context, arg saveIntegrationParams) error
 	saveSlackToken(ctx context.Context, arg saveSlackTokenParams) error

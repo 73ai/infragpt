@@ -26,6 +26,7 @@ type httpHandler struct {
 
 func (h *httpHandler) init() {
 	h.HandleFunc("GET /slack", h.completeSlackAuthentication)
+	h.HandleFunc("POST /reply", h.sendReply)
 }
 
 func (h *httpHandler) completeSlackAuthentication(w http.ResponseWriter, r *http.Request) {
@@ -41,6 +42,26 @@ func (h *httpHandler) completeSlackAuthentication(w http.ResponseWriter, r *http
 		})
 		if err != nil {
 			slog.Error("error in complete slack authentication", "err", err)
+			return response{}, err
+		}
+		return response{}, nil
+	})(w, r)
+}
+
+func (h *httpHandler) sendReply(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		ConversationID string `json:"conversation_id"`
+		Message        string `json:"message"`
+	}
+	type response struct{}
+
+	ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
+		err := h.svc.SendReply(ctx, infragpt.SendReplyCommand{
+			ConversationID: req.ConversationID,
+			Message:        req.Message,
+		})
+		if err != nil {
+			slog.Error("error sending reply", "err", err)
 			return response{}, err
 		}
 		return response{}, nil

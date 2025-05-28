@@ -7,6 +7,7 @@ import (
 	"github.com/priyanshujain/infragpt/services/infragpt/infragptapi"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/postgresconfig"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/agent"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/postgres"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/slack"
 	"golang.org/x/sync/errgroup"
@@ -36,6 +37,7 @@ func main() {
 
 	type Config struct {
 		Port     int                   `yaml:"port"`
+		GrpcPort int                   `yaml:"grpc_port"`
 		Slack    slack.Config          `mapstructure:"slack"`
 		Database postgresconfig.Config `mapstructure:"database"`
 	}
@@ -51,6 +53,7 @@ func main() {
 		panic(fmt.Errorf("error connecting to database: %w", err))
 	}
 	slackConfig.WorkSpaceTokenRepository = db
+	slackConfig.ChannelRepository = db
 
 	sr, err := slackConfig.New(ctx)
 	if err != nil {
@@ -58,8 +61,11 @@ func main() {
 	}
 
 	svcConfig := infragptsvc.Config{
-		SlackGateway:          sr,
-		IntegrationRepository: db,
+		SlackGateway:             sr,
+		IntegrationRepository:    db,
+		ConversationRepository:   db,
+		ChannelRepository:        db,
+		AgentService:             agent.NewDumbClient(),
 	}
 
 	svc, err := svcConfig.New(ctx)
@@ -93,6 +99,22 @@ func main() {
 		}
 		slog.Error("autopayd: http server failed", "error", err)
 		return fmt.Errorf("http server failed: %w", err)
+	})
+
+	grpcServer := infragptapi.NewGRPCServer(svc)
+	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%d", c.GrpcPort))
+	if err != nil {
+		panic(fmt.Errorf("error creating grpc listener: %w", err))
+	}
+
+	g.Go(func() error {
+		slog.Info("infragpt: grpc server starting", "port", c.GrpcPort)
+		err = grpcServer.Serve(grpcListener)
+		if err != nil {
+			slog.Error("infragpt: grpc server failed", "error", err)
+			return fmt.Errorf("grpc server failed: %w", err)
+		}
+		return nil
 	})
 
 	if err := g.Wait(); err != nil {

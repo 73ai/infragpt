@@ -16,6 +16,8 @@ type InfraGPTDB struct {
 
 var _ domain.WorkSpaceTokenRepository = (*InfraGPTDB)(nil)
 var _ domain.IntegrationRepository = (*InfraGPTDB)(nil)
+var _ domain.ConversationRepository = (*InfraGPTDB)(nil)
+var _ domain.ChannelRepository = (*InfraGPTDB)(nil)
 
 func (i InfraGPTDB) SaveToken(ctx context.Context, teamID, token string) error {
 	err := i.saveSlackToken(ctx, saveSlackTokenParams{

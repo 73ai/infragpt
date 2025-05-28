@@ -11,11 +11,12 @@ import (
 )
 
 type Slack struct {
-	clientID        string
-	clientSecret    string
-	client          *slack.Client
-	socketClient    *socketmode.Client
-	tokenRepository domain.WorkSpaceTokenRepository
+	clientID          string
+	clientSecret      string
+	client            *slack.Client
+	socketClient      *socketmode.Client
+	tokenRepository   domain.WorkSpaceTokenRepository
+	channelRepository domain.ChannelRepository
 }
 
 // TODO: Advanced token security via token rotation
@@ -40,11 +41,11 @@ func (s *Slack) CompleteAuthentication(ctx context.Context, code string) (string
 	return oauthV2Response.Team.ID, nil
 }
 
-func (s *Slack) SubscribeAppMentioned(ctx context.Context, f func(ctx context.Context, command domain.UserCommand) error) error {
+func (s *Slack) SubscribeAllMessages(ctx context.Context, f func(ctx context.Context, command domain.UserCommand) error) error {
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		if err := s.subscribe(ctx, f); err != nil {
-			return fmt.Errorf("failed to subscribe to app mentioned user: %w", err)
+			return fmt.Errorf("failed to subscribe to all messages: %w", err)
 		}
 		return nil
 	})

@@ -250,8 +250,8 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db DBTX
-	tx *sql.Tx
+	db                                 DBTX
+	tx                                 *sql.Tx
 	createDeviceStmt                   *sql.Stmt
 	createEmailVerificationStmt        *sql.Stmt
 	createRefreshTokenStmt             *sql.Stmt

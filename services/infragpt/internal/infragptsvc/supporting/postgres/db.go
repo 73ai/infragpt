@@ -24,6 +24,39 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.addChannelStmt, err = db.PrepareContext(ctx, addChannel); err != nil {
+		return nil, fmt.Errorf("error preparing query AddChannel: %w", err)
+	}
+	if q.createConversationStmt, err = db.PrepareContext(ctx, createConversation); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateConversation: %w", err)
+	}
+	if q.getConversationByThreadStmt, err = db.PrepareContext(ctx, getConversationByThread); err != nil {
+		return nil, fmt.Errorf("error preparing query GetConversationByThread: %w", err)
+	}
+	if q.getConversationHistoryStmt, err = db.PrepareContext(ctx, getConversationHistory); err != nil {
+		return nil, fmt.Errorf("error preparing query GetConversationHistory: %w", err)
+	}
+	if q.getConversationHistoryDescStmt, err = db.PrepareContext(ctx, getConversationHistoryDesc); err != nil {
+		return nil, fmt.Errorf("error preparing query GetConversationHistoryDesc: %w", err)
+	}
+	if q.getMonitoredChannelsStmt, err = db.PrepareContext(ctx, getMonitoredChannels); err != nil {
+		return nil, fmt.Errorf("error preparing query GetMonitoredChannels: %w", err)
+	}
+	if q.isChannelMonitoredStmt, err = db.PrepareContext(ctx, isChannelMonitored); err != nil {
+		return nil, fmt.Errorf("error preparing query IsChannelMonitored: %w", err)
+	}
+	if q.messageBySlackTSStmt, err = db.PrepareContext(ctx, messageBySlackTS); err != nil {
+		return nil, fmt.Errorf("error preparing query MessageBySlackTS: %w", err)
+	}
+	if q.setChannelMonitoringStmt, err = db.PrepareContext(ctx, setChannelMonitoring); err != nil {
+		return nil, fmt.Errorf("error preparing query SetChannelMonitoring: %w", err)
+	}
+	if q.storeMessageStmt, err = db.PrepareContext(ctx, storeMessage); err != nil {
+		return nil, fmt.Errorf("error preparing query StoreMessage: %w", err)
+	}
+	if q.updateConversationTimestampStmt, err = db.PrepareContext(ctx, updateConversationTimestamp); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateConversationTimestamp: %w", err)
+	}
 	if q.integrationsStmt, err = db.PrepareContext(ctx, integrations); err != nil {
 		return nil, fmt.Errorf("error preparing query integrations: %w", err)
 	}
@@ -41,6 +74,61 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.addChannelStmt != nil {
+		if cerr := q.addChannelStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addChannelStmt: %w", cerr)
+		}
+	}
+	if q.createConversationStmt != nil {
+		if cerr := q.createConversationStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createConversationStmt: %w", cerr)
+		}
+	}
+	if q.getConversationByThreadStmt != nil {
+		if cerr := q.getConversationByThreadStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getConversationByThreadStmt: %w", cerr)
+		}
+	}
+	if q.getConversationHistoryStmt != nil {
+		if cerr := q.getConversationHistoryStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getConversationHistoryStmt: %w", cerr)
+		}
+	}
+	if q.getConversationHistoryDescStmt != nil {
+		if cerr := q.getConversationHistoryDescStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getConversationHistoryDescStmt: %w", cerr)
+		}
+	}
+	if q.getMonitoredChannelsStmt != nil {
+		if cerr := q.getMonitoredChannelsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getMonitoredChannelsStmt: %w", cerr)
+		}
+	}
+	if q.isChannelMonitoredStmt != nil {
+		if cerr := q.isChannelMonitoredStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing isChannelMonitoredStmt: %w", cerr)
+		}
+	}
+	if q.messageBySlackTSStmt != nil {
+		if cerr := q.messageBySlackTSStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing messageBySlackTSStmt: %w", cerr)
+		}
+	}
+	if q.setChannelMonitoringStmt != nil {
+		if cerr := q.setChannelMonitoringStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing setChannelMonitoringStmt: %w", cerr)
+		}
+	}
+	if q.storeMessageStmt != nil {
+		if cerr := q.storeMessageStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing storeMessageStmt: %w", cerr)
+		}
+	}
+	if q.updateConversationTimestampStmt != nil {
+		if cerr := q.updateConversationTimestampStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateConversationTimestampStmt: %w", cerr)
+		}
+	}
 	if q.integrationsStmt != nil {
 		if cerr := q.integrationsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing integrationsStmt: %w", cerr)
@@ -98,21 +186,43 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                  DBTX
-	tx                  *sql.Tx
-	integrationsStmt    *sql.Stmt
-	saveIntegrationStmt *sql.Stmt
-	saveSlackTokenStmt  *sql.Stmt
-	slackTokenStmt      *sql.Stmt
+	db                              DBTX
+	tx                              *sql.Tx
+	addChannelStmt                  *sql.Stmt
+	createConversationStmt          *sql.Stmt
+	getConversationByThreadStmt     *sql.Stmt
+	getConversationHistoryStmt      *sql.Stmt
+	getConversationHistoryDescStmt  *sql.Stmt
+	getMonitoredChannelsStmt        *sql.Stmt
+	isChannelMonitoredStmt          *sql.Stmt
+	messageBySlackTSStmt            *sql.Stmt
+	setChannelMonitoringStmt        *sql.Stmt
+	storeMessageStmt                *sql.Stmt
+	updateConversationTimestampStmt *sql.Stmt
+	integrationsStmt                *sql.Stmt
+	saveIntegrationStmt             *sql.Stmt
+	saveSlackTokenStmt              *sql.Stmt
+	slackTokenStmt                  *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                  tx,
-		tx:                  tx,
-		integrationsStmt:    q.integrationsStmt,
-		saveIntegrationStmt: q.saveIntegrationStmt,
-		saveSlackTokenStmt:  q.saveSlackTokenStmt,
-		slackTokenStmt:      q.slackTokenStmt,
+		db:                              tx,
+		tx:                              tx,
+		addChannelStmt:                  q.addChannelStmt,
+		createConversationStmt:          q.createConversationStmt,
+		getConversationByThreadStmt:     q.getConversationByThreadStmt,
+		getConversationHistoryStmt:      q.getConversationHistoryStmt,
+		getConversationHistoryDescStmt:  q.getConversationHistoryDescStmt,
+		getMonitoredChannelsStmt:        q.getMonitoredChannelsStmt,
+		isChannelMonitoredStmt:          q.isChannelMonitoredStmt,
+		messageBySlackTSStmt:            q.messageBySlackTSStmt,
+		setChannelMonitoringStmt:        q.setChannelMonitoringStmt,
+		storeMessageStmt:                q.storeMessageStmt,
+		updateConversationTimestampStmt: q.updateConversationTimestampStmt,
+		integrationsStmt:                q.integrationsStmt,
+		saveIntegrationStmt:             q.saveIntegrationStmt,
+		saveSlackTokenStmt:              q.saveSlackTokenStmt,
+		slackTokenStmt:                  q.slackTokenStmt,
 	}
 }
