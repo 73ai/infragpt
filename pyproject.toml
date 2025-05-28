@@ -34,3 +34,8 @@ include = ["infragpt", "llm"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = "requirements.txt" }
+
+[tool.uv.workspace]
+members = [
+    "services/agent",
+]
