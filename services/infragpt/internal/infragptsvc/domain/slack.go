@@ -85,6 +85,7 @@ type WorkSpaceTokenRepository interface {
 
 type ConversationRepository interface {
 	GetConversationByThread(ctx context.Context, teamID, channelID, threadTS string) (Conversation, error)
+	Conversation(ctx context.Context, conversationID uuid.UUID) (Conversation, error)
 	CreateConversation(ctx context.Context, teamID, channelID, threadTS string) (Conversation, error)
 	StoreMessage(ctx context.Context, conversationID uuid.UUID, message Message) (Message, error)
 	MessageBySlackTS(ctx context.Context, conversationID uuid.UUID, senderID, slackMessageTS string) (Message, error)

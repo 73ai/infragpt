@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
 	"log/slog"
@@ -57,6 +58,50 @@ func (s *Service) CompleteSlackIntegration(ctx context.Context, command infragpt
 }
 
 var _ infragpt.Service = (*Service)(nil)
+
+func (s *Service) SendReply(ctx context.Context, command infragpt.SendReplyCommand) error {
+	conversationID, err := uuid.Parse(command.ConversationID)
+	if err != nil {
+		return fmt.Errorf("invalid conversation ID: %w", err)
+	}
+
+	conversation, err := s.conversationRepository.Conversation(ctx, conversationID)
+	if err != nil {
+		return fmt.Errorf("failed to get conversation: %w", err)
+	}
+
+	thread := domain.SlackThread{
+		Message:  "",
+		Channel:  conversation.ChannelID,
+		ThreadTS: conversation.ThreadTS,
+		TeamID:   conversation.TeamID,
+	}
+
+	err = s.slackGateway.ReplyMessage(ctx, thread, command.Message)
+	if err != nil {
+		return fmt.Errorf("failed to send reply: %w", err)
+	}
+
+	botMessage := domain.Message{
+		ConversationID: conversationID,
+		SlackMessageTS: fmt.Sprintf("%d", time.Now().UnixNano()),
+		Sender: domain.SlackUser{
+			ID:       "bot",
+			Username: "bot",
+			Name:     "InfraGPT Bot",
+		},
+		MessageText:  command.Message,
+		IsBotMessage: true,
+	}
+
+	_, err = s.conversationRepository.StoreMessage(ctx, conversationID, botMessage)
+	if err != nil {
+		slog.Error("Failed to store bot message", "error", err)
+		return fmt.Errorf("failed to store bot message: %w", err)
+	}
+
+	return nil
+}
 
 func (s *Service) SubscribeSlackNotifications(ctx context.Context) error {
 	if err := s.slackGateway.SubscribeAllMessages(ctx, s.handleUserCommand); err != nil {
@@ -124,37 +169,9 @@ func (s *Service) handleUserCommand(ctx context.Context, command domain.UserComm
 		PastMessages: pastMessages,
 	}
 
-	agentResponse, err := s.agentService.ProcessMessage(ctx, agentRequest)
+	_, err = s.agentService.ProcessMessage(ctx, agentRequest)
 	if err != nil {
 		slog.Error("Failed to process message with agent service", "error", err)
-		agentResponse = domain.AgentResponse{
-			ResponseText: "Agent service unavailable",
-			Success:      false,
-			ErrorMessage: err.Error(),
-		}
-	}
-
-	err = s.slackGateway.ReplyMessage(ctx, command.Thread, agentResponse.ResponseText)
-	if err != nil {
-		slog.Error("Failed to reply to message", "error", err)
-		return fmt.Errorf("failed to reply to message: %w", err)
-	}
-
-	botMessage := domain.Message{
-		ConversationID: conversation.ID,
-		SlackMessageTS: fmt.Sprintf("%d", time.Now().UnixNano()),
-		Sender: domain.SlackUser{
-			ID:       "bot",
-			Username: "bot",
-			Name:     "InfraGPT Bot",
-		},
-		MessageText:  agentResponse.ResponseText,
-		IsBotMessage: true,
-	}
-
-	_, err = s.conversationRepository.StoreMessage(ctx, conversation.ID, botMessage)
-	if err != nil {
-		slog.Error("Failed to store bot response", "error", err)
 	}
 
 	return nil

@@ -37,6 +37,7 @@ func main() {
 
 	type Config struct {
 		Port     int                   `yaml:"port"`
+		GrpcPort int                   `yaml:"grpc_port"`
 		Slack    slack.Config          `mapstructure:"slack"`
 		Database postgresconfig.Config `mapstructure:"database"`
 	}
@@ -98,6 +99,22 @@ func main() {
 		}
 		slog.Error("autopayd: http server failed", "error", err)
 		return fmt.Errorf("http server failed: %w", err)
+	})
+
+	grpcServer := infragptapi.NewGRPCServer(svc)
+	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%d", c.GrpcPort))
+	if err != nil {
+		panic(fmt.Errorf("error creating grpc listener: %w", err))
+	}
+
+	g.Go(func() error {
+		slog.Info("infragpt: grpc server starting", "port", c.GrpcPort)
+		err = grpcServer.Serve(grpcListener)
+		if err != nil {
+			slog.Error("infragpt: grpc server failed", "error", err)
+			return fmt.Errorf("grpc server failed: %w", err)
+		}
+		return nil
 	})
 
 	if err := g.Wait(); err != nil {
