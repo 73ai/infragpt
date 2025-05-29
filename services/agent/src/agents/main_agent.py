@@ -7,17 +7,21 @@ from src.agents.conversation import ConversationAgent
 from src.agents.rca import RCAAgent
 from src.models.agent import AgentResponse
 from src.models.context import AgentContext
+from src.llm import LiteLLMClient
 
 
 class MainAgent(BaseAgent):
     """Main orchestrator agent that routes requests to sub-agents."""
     
-    def __init__(self):
+    def __init__(self, llm_client: LiteLLMClient = None):
         super().__init__(AgentType.MAIN)
         
-        # Initialize sub-agents
-        self.conversation_agent = ConversationAgent()
-        self.rca_agent = RCAAgent()
+        # Initialize shared LLM client
+        self.llm_client = llm_client or LiteLLMClient()
+        
+        # Initialize sub-agents with shared LLM client
+        self.conversation_agent = ConversationAgent(self.llm_client)
+        self.rca_agent = RCAAgent(self.llm_client)
         
         # Create agent registry
         self.sub_agents: List[BaseAgent] = [

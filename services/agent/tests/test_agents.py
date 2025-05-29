@@ -93,7 +93,7 @@ class TestRCAAgent:
         
         assert response.success is True
         assert response.agent_type == "rca"
-        assert "HTTP Error Analysis" in response.response_text
+        assert "## Issue Analysis" in response.response_text
         assert response.confidence > 0
 
 

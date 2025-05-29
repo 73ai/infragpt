@@ -31,7 +31,7 @@ class Settings(BaseSettings):
         description="API key for LiteLLM (OpenAI, etc.)"
     )
     default_model: str = Field(
-        default="gpt-3.5-turbo", 
+        default="gpt-4o", 
         description="Default LLM model to use"
     )
     

@@ -6,13 +6,15 @@ from typing import Optional
 from src.agents.main_agent import MainAgent
 from src.models.agent import AgentRequest, AgentResponse
 from src.models.context import AgentContext
+from src.llm import LiteLLMClient
 
 
 class AgentSystem:
     """Central system for managing and coordinating all agents."""
     
-    def __init__(self):
+    def __init__(self, llm_client: LiteLLMClient = None):
         self.logger = logging.getLogger(__name__)
+        self.llm_client = llm_client or LiteLLMClient()
         self.main_agent: Optional[MainAgent] = None
         self._initialized = False
     
@@ -25,8 +27,8 @@ class AgentSystem:
         try:
             self.logger.info("Initializing agent system...")
             
-            # Create main agent (which creates sub-agents)
-            self.main_agent = MainAgent()
+            # Create main agent with shared LLM client (which creates sub-agents)
+            self.main_agent = MainAgent(self.llm_client)
             
             self._initialized = True
             self.logger.info("Agent system initialized successfully")

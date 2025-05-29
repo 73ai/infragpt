@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package agent;
 
-option go_package = "github.com/priyanshujain/infragpt/services/agent/proto";
+option go_package = "./proto;agent";
 
 // Agent service for processing messages and generating intelligent responses
 service AgentService {
