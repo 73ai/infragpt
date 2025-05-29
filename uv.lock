@@ -11,6 +11,7 @@ resolution-markers = [
 members = [
     "infragpt",
     "infragpt-agent",
+    "infragptapi",
 ]
 
 [[package]]
@@ -913,6 +914,7 @@ dependencies = [
     { name = "grpcio" },
     { name = "grpcio-reflection" },
     { name = "grpcio-tools" },
+    { name = "infragptapi" },
     { name = "langchain" },
     { name = "litellm" },
     { name = "pydantic" },
@@ -943,6 +945,7 @@ requires-dist = [
     { name = "grpcio" },
     { name = "grpcio-reflection" },
     { name = "grpcio-tools" },
+    { name = "infragptapi", editable = "services/infragpt/infragptapi/client/python" },
     { name = "isort", marker = "extra == 'dev'" },
     { name = "langchain" },
     { name = "litellm" },
@@ -960,6 +963,21 @@ provides-extras = ["dev"]
 dev = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "pytest-asyncio", specifier = ">=0.21.1" },
+]
+
+[[package]]
+name = "infragptapi"
+version = "1.0.0"
+source = { editable = "services/infragpt/infragptapi/client/python" }
+dependencies = [
+    { name = "grpcio" },
+    { name = "grpcio-tools" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "grpcio", specifier = ">=1.50.0" },
+    { name = "grpcio-tools", specifier = ">=1.50.0" },
 ]
 
 [[package]]
