@@ -7,9 +7,11 @@ import (
 	"github.com/priyanshujain/infragpt/services/infragpt/infragptapi"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/postgresconfig"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/agent"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/postgres"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/slack"
+	agentclient "github.com/priyanshujain/infragpt/services/agent/src/client/go"
 	"golang.org/x/sync/errgroup"
 	"log"
 	"log/slog"
@@ -40,6 +42,7 @@ func main() {
 		GrpcPort int                   `yaml:"grpc_port"`
 		Slack    slack.Config          `mapstructure:"slack"`
 		Database postgresconfig.Config `mapstructure:"database"`
+		Agent    agentclient.Config    `mapstructure:"agent"`
 	}
 
 	var c Config
@@ -60,12 +63,22 @@ func main() {
 		panic(fmt.Errorf("error connecting to slack: %w", err))
 	}
 
+	// Create agent service with config from YAML
+	var agentService domain.AgentService
+	agentClient, err := agent.NewClient(&c.Agent)
+	if err != nil {
+		log.Printf("Failed to create agent client, falling back to DumbClient: %v", err)
+		agentService = agent.NewDumbClient()
+	} else {
+		agentService = agentClient
+	}
+
 	svcConfig := infragptsvc.Config{
 		SlackGateway:             sr,
 		IntegrationRepository:    db,
 		ConversationRepository:   db,
 		ChannelRepository:        db,
-		AgentService:             agent.NewDumbClient(),
+		AgentService:             agentService,
 	}
 
 	svc, err := svcConfig.New(ctx)
