@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
 )
@@ -61,7 +62,7 @@ func (db *InfraGPTDB) StoreMessage(ctx context.Context, conversationID uuid.UUID
 	if message.Sender.Name != "" {
 		senderName = sql.NullString{String: message.Sender.Name, Valid: true}
 	}
-	
+
 	dbMessage, err := db.Querier.StoreMessage(ctx, StoreMessageParams{
 		ConversationID: conversationID,
 		SlackMessageTs: message.SlackMessageTS,
@@ -145,6 +146,25 @@ func (db *InfraGPTDB) MessageBySlackTS(ctx context.Context, conversationID uuid.
 		MessageText:  dbMessage.MessageText,
 		IsBotMessage: dbMessage.IsBotMessage,
 		CreatedAt:    dbMessage.CreatedAt,
+	}, nil
+}
+
+func (db *InfraGPTDB) Conversation(ctx context.Context, conversationID uuid.UUID) (domain.Conversation, error) {
+	dbConversation, err := db.Querier.Conversation(ctx, conversationID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Conversation{}, sql.ErrNoRows
+		}
+		return domain.Conversation{}, fmt.Errorf("failed to get conversation: %w", err)
+	}
+
+	return domain.Conversation{
+		ID:        dbConversation.ConversationID,
+		TeamID:    dbConversation.TeamID,
+		ChannelID: dbConversation.ChannelID,
+		ThreadTS:  dbConversation.ThreadTs,
+		CreatedAt: dbConversation.CreatedAt,
+		UpdatedAt: dbConversation.UpdatedAt,
 	}, nil
 }
 

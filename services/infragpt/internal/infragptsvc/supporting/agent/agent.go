@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/priyanshujain/infragpt/services/agent/src/client/go"
+	agent "github.com/priyanshujain/infragpt/services/agent/src/client/go"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
 )
 
@@ -65,12 +65,6 @@ func (c *Client) Close() error {
 
 // convertToAgentRequest converts domain.AgentRequest to agent client request
 func (c *Client) convertToAgentRequest(req domain.AgentRequest) (agent.AgentRequest, error) {
-	// Build conversation ID from conversation data
-	conversationID := fmt.Sprintf("%s_%s_%s",
-		req.Conversation.TeamID,
-		req.Conversation.ChannelID,
-		req.Conversation.ThreadTS)
-
 	// Convert past messages to string array
 	var pastMessages []string
 	for _, msg := range req.PastMessages {
@@ -78,7 +72,7 @@ func (c *Client) convertToAgentRequest(req domain.AgentRequest) (agent.AgentRequ
 	}
 
 	return agent.AgentRequest{
-		ConversationId: conversationID,
+		ConversationId: req.Message.ConversationID.String(),
 		CurrentMessage: req.Message.MessageText,
 		PastMessages:   pastMessages,
 		UserId:         req.Message.Sender.Name,

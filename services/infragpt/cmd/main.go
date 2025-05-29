@@ -4,6 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"log/slog"
+	"net"
+	"net/http"
+	"os"
+	"time"
+
+	agentclient "github.com/priyanshujain/infragpt/services/agent/src/client/go"
 	"github.com/priyanshujain/infragpt/services/infragpt/infragptapi"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/postgresconfig"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc"
@@ -11,13 +19,7 @@ import (
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/agent"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/postgres"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/slack"
-	agentclient "github.com/priyanshujain/infragpt/services/agent/src/client/go"
 	"golang.org/x/sync/errgroup"
-	"log"
-	"log/slog"
-	"net"
-	"net/http"
-	"os"
 
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/yaml.v3"
@@ -38,8 +40,8 @@ func main() {
 	}
 
 	type Config struct {
-		Port     int                   `yaml:"port"`
-		GrpcPort int                   `yaml:"grpc_port"`
+		Port     int                   `mapstructure:"port"`
+		GrpcPort int                   `mapstructure:"grpc_port"`
 		Slack    slack.Config          `mapstructure:"slack"`
 		Database postgresconfig.Config `mapstructure:"database"`
 		Agent    agentclient.Config    `mapstructure:"agent"`
@@ -65,20 +67,21 @@ func main() {
 
 	// Create agent service with config from YAML
 	var agentService domain.AgentService
+	c.Agent.Timeout = 5 * 60 * time.Second
+	c.Agent.ConnectTimeout = 10 * time.Second
 	agentClient, err := agent.NewClient(&c.Agent)
 	if err != nil {
 		log.Printf("Failed to create agent client, falling back to DumbClient: %v", err)
-		agentService = agent.NewDumbClient()
 	} else {
 		agentService = agentClient
 	}
 
 	svcConfig := infragptsvc.Config{
-		SlackGateway:             sr,
-		IntegrationRepository:    db,
-		ConversationRepository:   db,
-		ChannelRepository:        db,
-		AgentService:             agentService,
+		SlackGateway:           sr,
+		IntegrationRepository:  db,
+		ConversationRepository: db,
+		ChannelRepository:      db,
+		AgentService:           agentService,
 	}
 
 	svc, err := svcConfig.New(ctx)

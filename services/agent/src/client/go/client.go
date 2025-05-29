@@ -22,9 +22,9 @@ type Client struct {
 // Config holds configuration for the agent client
 type Config struct {
 	Endpoint       string        `mapstructure:"endpoint"`
-	Timeout        time.Duration `mapstructure:"timeout"`
+	Timeout        time.Duration `mapstructure:"-"`
 	RetryAttempts  int           `mapstructure:"retry_attempts"`
-	ConnectTimeout time.Duration `mapstructure:"connect_timeout"`
+	ConnectTimeout time.Duration `mapstructure:"-"`
 }
 
 // DefaultConfig returns a default configuration
