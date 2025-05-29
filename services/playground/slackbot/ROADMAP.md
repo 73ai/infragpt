@@ -1,2 +1,0 @@
-- Get email of the user who is asking for the access so that we can determine who is this user
-- Github integration with this so we can read ops repo
