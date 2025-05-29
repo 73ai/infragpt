@@ -1,0 +1,165 @@
+# InfraGPT Agent Service
+
+The InfraGPT Agent Service is an AI-powered infrastructure management agent that provides intelligent processing capabilities for DevOps workflows. It serves as the core processing engine for the larger InfraGPT ecosystem.
+
+## Features
+
+- **Dual Server Architecture**: FastAPI for health checks and gRPC for agent processing
+- **Intelligent Agent System**: Main orchestrator with conversation and RCA sub-agents
+- **Health Monitoring**: Comprehensive health, readiness, and liveness checks
+- **Structured Logging**: Using structlog for clear, structured logging
+- **Environment Configuration**: Flexible configuration via environment variables
+- **Production Ready**: Docker support with health checks
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.9+
+- UV package manager
+- Docker (optional)
+
+### Local Development
+
+1. **Clone and setup**:
+   ```bash
+   cd services/agent
+   cp .env.example .env  # Edit with your configuration
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   uv sync --dev
+   ```
+
+3. **Run the service**:
+   ```bash
+   uv run python main.py
+   ```
+
+4. **Run tests**:
+   ```bash
+   uv run python -m pytest tests/ -v
+   ```
+
+### Docker Development
+
+1. **Build the image**:
+   ```bash
+   docker build -t infragpt-agent .
+   ```
+
+2. **Run the container**:
+   ```bash
+   docker run -p 8000:8000 -p 50051:50051 infragpt-agent
+   ```
+
+## Service Endpoints
+
+### HTTP (FastAPI) - Port 8000
+
+- `GET /health/` - Basic health check
+- `GET /health/ready` - Readiness check (for K8s)
+- `GET /health/live` - Liveness check (for K8s)
+
+### gRPC - Port 50051
+
+- `ProcessMessage` - Main agent processing endpoint
+
+## Agent System
+
+The service implements a sophisticated agent system with intelligent routing:
+
+### Main Agent (Orchestrator)
+- Routes requests to the most appropriate sub-agent
+- Manages the overall conversation flow
+- Handles fallback scenarios
+
+### Conversation Agent
+- Handles general user interactions
+- Provides helpful responses for questions and greetings
+- Falls back for requests that don't require technical analysis
+
+### RCA Agent
+- Performs root cause analysis for technical issues
+- Categorizes issues (connectivity, performance, application errors, HTTP errors)
+- Provides structured analysis and recommended next steps
+
+## Configuration
+
+Configure the service using environment variables with the `AGENT_` prefix:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AGENT_HOST` | `0.0.0.0` | Host to bind the service |
+| `AGENT_HTTP_PORT` | `8000` | FastAPI HTTP port |
+| `AGENT_GRPC_PORT` | `50051` | gRPC port |
+| `AGENT_DEBUG` | `false` | Enable debug mode |
+| `AGENT_LOG_LEVEL` | `INFO` | Logging level |
+
+See `.env.example` for a complete list of configuration options.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                 Agent Service                           │
+│                                                         │
+│  ┌─────────────┐              ┌─────────────┐          │
+│  │  FastAPI    │              │    gRPC     │          │
+│  │   Server    │              │   Server    │          │
+│  │             │              │             │          │
+│  │ - Health    │              │ - Agent     │          │
+│  │ - Metrics   │              │   System    │          │
+│  │ - Admin     │              │ - Process   │          │
+│  └─────────────┘              │   Message   │          │
+│         │                     └─────────────┘          │
+│         │                            │                 │
+│         └────────────┬───────────────┘                 │
+│                      │                                 │
+│              ┌─────────────┐                           │
+│              │    Main     │                           │
+│              │    Agent    │                           │
+│              │             │                           │
+│              └──────┬──────┘                           │
+│                     │                                  │
+│        ┌────────────┼────────────┐                     │
+│        │            │            │                     │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐               │
+│  │Conversation│ │   RCA    │ │  Future  │               │
+│  │   Agent    │ │  Agent   │ │  Agents  │               │
+│  └──────────┘ └──────────┘ └──────────┘               │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Development Status
+
+**Phase 1 Complete: Service Foundation**
+- [x] Basic project structure
+- [x] FastAPI + gRPC dual server setup
+- [x] Configuration management
+- [x] Health checks and monitoring
+- [x] Docker support
+- [x] Basic tests
+
+**Phase 2 Complete: Agent Framework**
+- [x] Base agent classes and interfaces
+- [x] Main orchestrator agent
+- [x] Conversation sub-agent with rule-based responses
+- [x] RCA sub-agent with structured analysis
+- [x] Agent registry and routing system
+- [x] Full gRPC integration with agent system
+- [x] Comprehensive test suite
+
+**Next Phase: LLM Integration & Tools**
+- [ ] LiteLLM client integration
+- [ ] Tool system with LangChain
+- [ ] MCP server integration
+- [ ] Enhanced agent capabilities
+
+## Contributing
+
+1. Make sure all tests pass: `uv run python -m pytest`
+2. Follow the existing code style
+3. Add tests for new functionality
+4. Update documentation as needed

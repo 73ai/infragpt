@@ -30,6 +30,25 @@ func (q *Queries) AddChannel(ctx context.Context, arg AddChannelParams) error {
 	return err
 }
 
+const conversation = `-- name: Conversation :one
+SELECT conversation_id, team_id, channel_id, thread_ts, created_at, updated_at from conversations
+WHERE conversation_id = $1
+`
+
+func (q *Queries) Conversation(ctx context.Context, conversationID uuid.UUID) (Conversation, error) {
+	row := q.queryRow(ctx, q.conversationStmt, conversation, conversationID)
+	var i Conversation
+	err := row.Scan(
+		&i.ConversationID,
+		&i.TeamID,
+		&i.ChannelID,
+		&i.ThreadTs,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createConversation = `-- name: CreateConversation :one
 INSERT INTO conversations (team_id, channel_id, thread_ts)
 VALUES ($1, $2, $3)

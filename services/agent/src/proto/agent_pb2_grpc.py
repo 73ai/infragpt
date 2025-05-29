@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from . import infragpt_pb2 as infragpt__pb2
+from . import agent_pb2 as agent__pb2
 
 GRPC_GENERATED_VERSION = '1.71.0'
 GRPC_VERSION = grpc.__version__
@@ -18,15 +18,16 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in infragpt_pb2_grpc.py depends on'
+        + f' but the generated code in agent_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
     )
 
 
-class InfraGPTServiceStub(object):
-    """Missing associated documentation comment in .proto file."""
+class AgentServiceStub(object):
+    """Agent service for processing messages and generating intelligent responses
+    """
 
     def __init__(self, channel):
         """Constructor.
@@ -34,43 +35,46 @@ class InfraGPTServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.SendReply = channel.unary_unary(
-                '/infragpt.InfraGPTService/SendReply',
-                request_serializer=infragpt__pb2.SendReplyCommand.SerializeToString,
-                response_deserializer=infragpt__pb2.Status.FromString,
+        self.ProcessMessage = channel.unary_unary(
+                '/agent.AgentService/ProcessMessage',
+                request_serializer=agent__pb2.AgentRequest.SerializeToString,
+                response_deserializer=agent__pb2.AgentResponse.FromString,
                 _registered_method=True)
 
 
-class InfraGPTServiceServicer(object):
-    """Missing associated documentation comment in .proto file."""
+class AgentServiceServicer(object):
+    """Agent service for processing messages and generating intelligent responses
+    """
 
-    def SendReply(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+    def ProcessMessage(self, request, context):
+        """Process a message and return an intelligent response
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_InfraGPTServiceServicer_to_server(servicer, server):
+def add_AgentServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'SendReply': grpc.unary_unary_rpc_method_handler(
-                    servicer.SendReply,
-                    request_deserializer=infragpt__pb2.SendReplyCommand.FromString,
-                    response_serializer=infragpt__pb2.Status.SerializeToString,
+            'ProcessMessage': grpc.unary_unary_rpc_method_handler(
+                    servicer.ProcessMessage,
+                    request_deserializer=agent__pb2.AgentRequest.FromString,
+                    response_serializer=agent__pb2.AgentResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'infragpt.InfraGPTService', rpc_method_handlers)
+            'agent.AgentService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('infragpt.InfraGPTService', rpc_method_handlers)
+    server.add_registered_method_handlers('agent.AgentService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class InfraGPTService(object):
-    """Missing associated documentation comment in .proto file."""
+class AgentService(object):
+    """Agent service for processing messages and generating intelligent responses
+    """
 
     @staticmethod
-    def SendReply(request,
+    def ProcessMessage(request,
             target,
             options=(),
             channel_credentials=None,
@@ -83,9 +87,9 @@ class InfraGPTService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/infragpt.InfraGPTService/SendReply',
-            infragpt__pb2.SendReplyCommand.SerializeToString,
-            infragpt__pb2.Status.FromString,
+            '/agent.AgentService/ProcessMessage',
+            agent__pb2.AgentRequest.SerializeToString,
+            agent__pb2.AgentResponse.FromString,
             options,
             channel_credentials,
             insecure,

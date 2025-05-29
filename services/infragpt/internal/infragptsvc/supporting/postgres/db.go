@@ -27,6 +27,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addChannelStmt, err = db.PrepareContext(ctx, addChannel); err != nil {
 		return nil, fmt.Errorf("error preparing query AddChannel: %w", err)
 	}
+	if q.conversationStmt, err = db.PrepareContext(ctx, conversation); err != nil {
+		return nil, fmt.Errorf("error preparing query Conversation: %w", err)
+	}
 	if q.createConversationStmt, err = db.PrepareContext(ctx, createConversation); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateConversation: %w", err)
 	}
@@ -77,6 +80,11 @@ func (q *Queries) Close() error {
 	if q.addChannelStmt != nil {
 		if cerr := q.addChannelStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addChannelStmt: %w", cerr)
+		}
+	}
+	if q.conversationStmt != nil {
+		if cerr := q.conversationStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing conversationStmt: %w", cerr)
 		}
 	}
 	if q.createConversationStmt != nil {
@@ -189,6 +197,7 @@ type Queries struct {
 	db                              DBTX
 	tx                              *sql.Tx
 	addChannelStmt                  *sql.Stmt
+	conversationStmt                *sql.Stmt
 	createConversationStmt          *sql.Stmt
 	getConversationByThreadStmt     *sql.Stmt
 	getConversationHistoryStmt      *sql.Stmt
@@ -210,6 +219,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		db:                              tx,
 		tx:                              tx,
 		addChannelStmt:                  q.addChannelStmt,
+		conversationStmt:                q.conversationStmt,
 		createConversationStmt:          q.createConversationStmt,
 		getConversationByThreadStmt:     q.getConversationByThreadStmt,
 		getConversationHistoryStmt:      q.getConversationHistoryStmt,

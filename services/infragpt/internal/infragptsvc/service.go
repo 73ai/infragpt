@@ -5,11 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
-	"log/slog"
-	"time"
 )
 
 type Service struct {
@@ -60,6 +61,7 @@ func (s *Service) CompleteSlackIntegration(ctx context.Context, command infragpt
 var _ infragpt.Service = (*Service)(nil)
 
 func (s *Service) SendReply(ctx context.Context, command infragpt.SendReplyCommand) error {
+	slog.Info("Sending reply to Slack", "conversationID", command.ConversationID, "message", command.Message)
 	conversationID, err := uuid.Parse(command.ConversationID)
 	if err != nil {
 		return fmt.Errorf("invalid conversation ID: %w", err)

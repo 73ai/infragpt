@@ -57,3 +57,7 @@ WHERE team_id = $1 AND is_monitored = true;
 SELECT COALESCE(is_monitored, false) as is_monitored
 FROM channels
 WHERE team_id = $1 AND channel_id = $2;
+
+-- name: Conversation :one
+SELECT * from conversations
+WHERE conversation_id = $1;

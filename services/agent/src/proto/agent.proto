@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package agent;
+
+option go_package = "./proto;agent";
+
+// Agent service for processing messages and generating intelligent responses
+service AgentService {
+  // Process a message and return an intelligent response
+  rpc ProcessMessage(AgentRequest) returns (AgentResponse);
+}
+
+// Request to process a message
+message AgentRequest {
+  // Unique identifier for the conversation thread
+  string conversation_id = 1;
+  
+  // The current message to process
+  string current_message = 2;
+  
+  // List of previous messages in the conversation for context
+  repeated string past_messages = 3;
+  
+  // Additional context information (JSON string)
+  string context = 4;
+  
+  // Optional: User ID for personalization
+  string user_id = 5;
+  
+  // Optional: Channel/workspace information
+  string channel_id = 6;
+}
+
+// Response from the agent
+message AgentResponse {
+  // Whether the processing was successful
+  bool success = 1;
+  
+  // The generated response text
+  string response_text = 2;
+  
+  // Error message if processing failed
+  string error_message = 3;
+  
+  // Optional: Type of agent that processed the request
+  string agent_type = 4;
+  
+  // Optional: Confidence score (0.0 to 1.0)
+  float confidence = 5;
+  
+  // Optional: List of tools used in processing
+  repeated string tools_used = 6;
+}

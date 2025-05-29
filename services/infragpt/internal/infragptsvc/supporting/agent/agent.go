@@ -2,20 +2,80 @@ package agent
 
 import (
 	"context"
+	"fmt"
+	"log"
 
+	agent "github.com/priyanshujain/infragpt/services/agent/src/client/go"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
 )
 
-type DumbClient struct{}
-
-func NewDumbClient() *DumbClient {
-	return &DumbClient{}
+// Client wraps the agent gRPC client to implement domain.AgentService
+type Client struct {
+	agentClient *agent.Client
 }
 
-func (c *DumbClient) ProcessMessage(ctx context.Context, request domain.AgentRequest) (domain.AgentResponse, error) {
+// NewClient creates a new agent client that connects to the Python agent service
+func NewClient(config *agent.Config) (*Client, error) {
+	client, err := agent.NewClient(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create agent client: %w", err)
+	}
+
+	return &Client{
+		agentClient: client,
+	}, nil
+}
+
+// ProcessMessage implements domain.AgentService interface
+func (c *Client) ProcessMessage(ctx context.Context, request domain.AgentRequest) (domain.AgentResponse, error) {
+	// Convert domain models to agent protobuf models
+	agentReq, err := c.convertToAgentRequest(request)
+	if err != nil {
+		return domain.AgentResponse{
+			Success:      false,
+			ErrorMessage: fmt.Sprintf("failed to convert request: %v", err),
+		}, nil
+	}
+
+	// Call the Python agent service
+	resp, err := c.agentClient.ProcessMessage(ctx, agentReq)
+	if err != nil {
+		log.Printf("Agent service error: %v", err)
+		return domain.AgentResponse{
+			Success:      false,
+			ErrorMessage: fmt.Sprintf("agent service unavailable: %v", err),
+		}, nil
+	}
+
+	// Convert response back to domain model
 	return domain.AgentResponse{
-		ResponseText: "Hello, this is a dummy response from the agent.",
-		Success:      true,
-		ErrorMessage: "",
+		ResponseText: resp.ResponseText,
+		Success:      resp.Success,
+		ErrorMessage: resp.ErrorMessage,
+	}, nil
+}
+
+// Close closes the connection to the agent service
+func (c *Client) Close() error {
+	if c.agentClient != nil {
+		return c.agentClient.Close()
+	}
+	return nil
+}
+
+// convertToAgentRequest converts domain.AgentRequest to agent client request
+func (c *Client) convertToAgentRequest(req domain.AgentRequest) (agent.AgentRequest, error) {
+	// Convert past messages to string array
+	var pastMessages []string
+	for _, msg := range req.PastMessages {
+		pastMessages = append(pastMessages, msg.MessageText)
+	}
+
+	return agent.AgentRequest{
+		ConversationId: req.Message.ConversationID.String(),
+		CurrentMessage: req.Message.MessageText,
+		PastMessages:   pastMessages,
+		UserId:         req.Message.Sender.Name,
+		ChannelId:      req.Conversation.ChannelID,
 	}, nil
 }

@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	AddChannel(ctx context.Context, arg AddChannelParams) error
+	Conversation(ctx context.Context, conversationID uuid.UUID) (Conversation, error)
 	CreateConversation(ctx context.Context, arg CreateConversationParams) (Conversation, error)
 	GetConversationByThread(ctx context.Context, arg GetConversationByThreadParams) (Conversation, error)
 	GetConversationHistory(ctx context.Context, conversationID uuid.UUID) ([]Message, error)

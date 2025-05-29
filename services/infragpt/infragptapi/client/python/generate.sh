@@ -21,6 +21,9 @@ python3 -m grpc_tools.protoc \
     --grpc_python_out=infragptapi/generated \
     ../../proto/infragpt.proto
 
+
+sed -i '' 's/^import infragpt_pb2/from . import infragpt_pb2/' infragptapi/generated/infragpt_pb2_grpc.py
+
 echo "✅ Python gRPC client generated successfully!"
 echo "Generated files:"
 echo "  - infragptapi/generated/infragpt_pb2.py"
