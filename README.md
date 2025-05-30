@@ -1,170 +1,126 @@
-# InfraGPT - Your devops co-pilot 🤖 on Terminal
+# InfraGPT - AI-Powered Infrastructure Management Platform 🤖
 
-InfraGPT lets you interactively generate and execute infrastructure commands using large language models (LLMs) in your terminal.
-InfraGPT works best with OpenAI GPT-4o and Anthropic Claude Sonet models.
+InfraGPT is a multi-service platform that provides AI-powered infrastructure management through Slack integration. The system consists of multiple services that work together to deliver intelligent DevOps workflows.
 
 ![PyPI](https://img.shields.io/pypi/v/infragpt)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/priyanshujain/infragpt/deploy.yml)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/priyanshujain/infragpt/publish.yml)
 
-[![asciicast](https://asciinema.org/a/w4YKOCP5zcYF0bSlZ2JSLczs8.svg)](https://asciinema.org/a/w4YKOCP5zcYF0bSlZ2JSLczs8)
+## Platform Architecture
 
-## Features
+InfraGPT consists of four main services:
 
-- **Infrastructure Commands**: Generate and execute infrastructure commands using natural language
-- **Slackbot**: Integrate InfraGPT with Slack to generate commands from messages and take actions (coming soon)
+### 1. 🖥️ CLI Tool (`/cli/`)
+**Language**: Python  
+**Purpose**: Interactive terminal interface for infrastructure command generation
 
-## Installation
+- Natural language to Google Cloud commands conversion
+- Interactive mode with command history
+- Support for OpenAI GPT-4o and Anthropic Claude models
+- Install with: `pipx install infragpt`
 
-### Using pip
+[**📖 CLI Documentation**](cli/README.md)
 
-Using pip to install packages system-wide is [not recommended](https://peps.python.org/pep-0668/).
-pip is a general-purpose package installer for both libraries and apps with no environment isolation. pipx is made specifically for application installation, as it adds isolation yet still makes the apps available in your shell: pipx creates an isolated environment for each application and its associated packages.
+### 2. 🤖 Agent Service (`/services/agent/`)
+**Language**: Python  
+**Purpose**: AI-powered message processing and response generation
 
-pipx does not ship with pip, but installing it is often an important part of bootstrapping your system.
+- Multi-agent framework with LLM integration
+- Conversation management and RCA analysis
+- FastAPI + gRPC dual server architecture
+- Integration with InfraGPT core service
 
-Instead, install InfraGPT using `pipx` in the next section.
+### 3. 🌐 Core Service (`/services/infragpt/`)
+**Language**: Go  
+**Purpose**: Main Slack bot and infrastructure management service
 
-### Using pipx
+- Slack Socket Mode integration
+- PostgreSQL-backed persistence
+- GitHub PR management
+- Terraform code generation
+- Clean architecture with domain/infrastructure layers
 
-```
-# Install pipx if you don't have it
-pip install --user pipx
-pipx ensurepath
+### 4. 🖼️ Web Application (`/services/app/`)
+**Language**: TypeScript/React  
+**Purpose**: Web client interface for InfraGPT platform
 
-# Install infragpt
+- Modern React with Vite and TypeScript
+- Radix UI components with Tailwind CSS
+- Authentication via Clerk
+- Real-time integration with platform services
+
+## Quick Start
+
+### CLI Tool (Most Common Entry Point)
+
+```bash
+# Install using pipx (recommended)
 pipx install infragpt
-```
 
-### From Source
-
-1. Clone the repository:
-   ```
-   git clone https://github.com/priyanshujain/infragpt.git
-   cd infragpt
-   ```
-
-2. Install in development mode:
-   ```
-   pip install -e .
-   ```
-
-## Credentials Management
-
-InfraGPT requires API keys to work. There are three ways to provide credentials, in order of priority:
-
-### 1. Command Line Parameters
-
-```bash
-# Using OpenAI GPT-4o
-infragpt --model gpt4o --api-key "your-openai-api-key"
-
-# Using Anthropic Claude
-infragpt --model claude --api-key "your-anthropic-api-key"
-```
-
-### 2. Configuration File
-
-InfraGPT stores credentials in `~/.config/infragpt/config.yaml` and uses them automatically on subsequent runs. This file is created:
-- When you provide credentials interactively
-- Automatically on first run if environment variables are available
-- When you use command line parameters
-
-### 3. Environment Variables
-
-Set one or more of these environment variables:
-
-```bash
-# For OpenAI GPT-4o
-export OPENAI_API_KEY="your-openai-api-key"
-
-# For Anthropic Claude
-export ANTHROPIC_API_KEY="your-anthropic-api-key"
-
-# Optionally specify the model
-export INFRAGPT_MODEL="gpt4o"  # or "claude"
-```
-
-**Model Selection Rules**:
-- If both API keys are set, InfraGPT uses OpenAI by default unless specified otherwise
-- If only one API key is set, the corresponding model is used automatically
-- If a model is explicitly selected (via command line or INFRAGPT_MODEL), the corresponding API key must be available
-
-When environment variables are available, InfraGPT will automatically save the detected model and API key to the configuration file for future use.
-
-If no credentials are found from any of these sources, if an empty API key is detected, or if an invalid API key is provided, InfraGPT will prompt you to select a model and enter your API key interactively at startup, before accepting any commands.
-
-**API Key Validation:**
-- The application validates API keys by making a small test request to the service provider
-- When entering credentials interactively, API keys are validated immediately
-- Invalid keys from environment variables or the config file are detected at startup
-- The system will continue prompting until valid credentials are provided
-- All validated credentials are automatically saved to the config file
-
-## Usage
-
-Launch InfraGPT in interactive mode:
-
-```
+# Launch interactive mode
 infragpt
-```
 
-Once in interactive mode, enter natural language prompts at the prompt:
-
-```
+# Example usage
 > create a new VM instance called test-vm in us-central1 with 2 CPUs
 ```
 
-Specify the model to use:
+### Full Platform Development
 
-```
-infragpt --model claude
-```
+```bash
+# Clone the repository
+git clone https://github.com/priyanshujain/infragpt.git
+cd infragpt
 
-Use keyboard shortcuts in interactive mode:
-- `Ctrl+D` to exit the application
-- `Ctrl+C` to clear the current input and start a new prompt
-
-### Command History
-
-View your recent command history:
-
-```
-infragpt history
+# Run individual services (see service-specific READMEs)
+# - CLI: see cli/README.md
+# - Agent: see services/agent/README.md  
+# - Core: see services/infragpt/README.md
+# - Web: see services/app/README.md
 ```
 
-Limit the number of entries:
+## Integration Flow
 
-```
-infragpt history --limit 20
-```
+The services work together in this message flow:
+1. User posts in Slack channel or uses CLI
+2. InfraGPT Core Service receives requests via Socket Mode
+3. Core Service calls Agent Service via gRPC for AI processing
+4. Agent Service processes with LLM intelligence
+5. Responses flow back through the system to Slack or CLI
 
-Filter by interaction type:
+## Features
 
-```
-infragpt history --type command_execution
-```
+- **🗣️ Natural Language Processing**: Convert natural language to infrastructure commands
+- **🔗 Slack Integration**: Seamless Slack bot for team collaboration
+- **🧠 Multi-Agent AI**: Intelligent routing and specialized agent responses
+- **📊 Web Dashboard**: Modern web interface for platform management
+- **🏗️ Infrastructure as Code**: Generate Terraform and other IaC
+- **📈 Analytics**: Track usage and infrastructure changes
+- **🔐 Enterprise Security**: Authentication, authorization, and audit trails
 
-Export your history to a file:
+## Service Documentation
 
-```
-infragpt history --export history.jsonl
-```
+Each service has its own detailed documentation:
 
-## Example Commands
+- **[CLI Documentation](cli/README.md)** - Terminal interface, installation, and usage
+- **[Agent Service](services/agent/README.md)** - AI processing and multi-agent framework
+- **[Core Service](services/infragpt/README.md)** - Slack integration and main API
+- **[Web Application](services/app/README.md)** - React frontend and UI components
 
-- "Create a new GKE cluster with 3 nodes in us-central1"
-- "List all storage buckets"
-- "Create a Cloud SQL MySQL instance named 'mydb' in us-west1"
-- "Set up a load balancer for my instance group 'web-servers'"
+## Development
 
-## Options
+Each service can be developed independently with its own toolchain:
 
-### Interactive Mode Options
-- `--model`, `-m`: Choose the LLM model (gpt4o or claude)
-- `--api-key`, `-k`: Provide an API key for the selected model
-- `--verbose`, `-v`: Enable verbose output
+- **CLI**: Python with uv package manager
+- **Agent**: Python with FastAPI and gRPC
+- **Core**: Go with clean architecture patterns
+- **Web**: TypeScript/React with Vite
+
+See individual service READMEs for specific development setup instructions.
 
 ## Contributing
 
 For information on how to contribute to InfraGPT, including development setup, release process, and CI/CD configuration, please see the [CONTRIBUTING.md](CONTRIBUTING.md) file.
+
+## License
+
+This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) file for details.
