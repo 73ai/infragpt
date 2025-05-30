@@ -27,10 +27,10 @@ dynamic = ["dependencies"]
 Homepage = "https://github.com/priyanshujain/infragpt"
 
 [project.scripts]
-infragpt = "infragpt.cli:cli"
+infragpt = "cli.cli:cli"
 
 [tool.setuptools.packages.find]
-include = ["infragpt", "llm"]
+include = ["cli", "llm"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = "requirements.txt" }
