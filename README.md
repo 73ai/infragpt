@@ -77,6 +77,33 @@ Main Slack bot and infrastructure management service
 - Terraform code generation
 - Clean architecture with domain/infrastructure layers
 
+
+```mermaid
+  graph TD
+
+  subgraph Core Services
+    GoInfraGPT[Go InfraGPT<br>Service]
+    PythonAgent[Python Agent<br>Service]
+    GoInfraGPT <--> |gRPC| PythonAgent
+  end
+
+  PythonAgent --> MainAgent["Main Agent<br>(Orchestrator)"]
+
+  MainAgent --> ConversationAgent[Conversation<br>Agent]
+  MainAgent --> RCAAagent[RCA<br>Agent]
+  MainAgent --> FutureAgents[Future<br>Agents]
+
+  ConversationAgent --> ToolManager
+  RCAAagent --> ToolManager
+  FutureAgents --> ToolManager
+
+  ToolManager["Tool Manager<br>(Unified)"]
+
+  ToolManager --> LangChain["LangChain<br>Tools"]
+  ToolManager --> MCP["MCP Servers<br>(kubectl-ai,<br>gcloud, github)"]
+  ToolManager --> CustomTools[Custom<br>Tools]
+```
+
 ### 4. Web Application (`/services/app/`)
 Web client interface for InfraGPT platform
 
@@ -84,7 +111,6 @@ Web client interface for InfraGPT platform
 - Radix UI components with Tailwind CSS
 - Authentication via Clerk
 - Real-time integration with platform services
-
 ## Contributing
 
 For information on how to contribute to InfraGPT, including development setup, release process, and CI/CD configuration, please see the [CONTRIBUTING.md](CONTRIBUTING.md) file.
