@@ -6,7 +6,10 @@
 
 InfraGPT is an AI SRE Copilot for the Cloud that provides infrastructure management agents through Slack integration. The system consists of multiple services that work together to deliver intelligent DevOps workflows.
 
-![InfraGPT Demo](docs/assets/slack-chat.png)
+
+<img src="docs/assets/slack-chat.png" style="max-width: 500px; height: auto;">
+
+<img src="docs/assets//slack-cost-optimization-alert.png" style="max-width: 500px; height: auto;">
 
 ## WorkFlow
 
