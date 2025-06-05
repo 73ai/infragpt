@@ -1,4 +1,4 @@
-# bw-app
+# InfraGPT WebApp
 
 This is the repository for the InfraGPT client application(web and desktop).
 
