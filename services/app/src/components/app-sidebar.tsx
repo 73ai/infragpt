@@ -67,7 +67,7 @@ const AppSidebar = observer(({ ...props }: React.ComponentProps<typeof Sidebar>)
       </SidebarContent>
       <SidebarFooter>
         {isOffline && (
-          <span className="text-sm text-yellow-600 bg-yellow-100 px-2 py-1 rounded text-center">
+          <span role="status" aria-live="polite" className="text-sm text-yellow-600 bg-yellow-100 px-2 py-1 rounded text-center">
             Offline Mode
           </span>
         )}
