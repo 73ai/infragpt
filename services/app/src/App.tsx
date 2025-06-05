@@ -35,6 +35,16 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/integrations"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <MainPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
         {/* Redirect root to dashboard */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         {/* Catch all route - 404 */}

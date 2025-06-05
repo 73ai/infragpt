@@ -1,23 +1,22 @@
 "use client"
 
-import * as React from "react"
+import { useEffect, useState } from "react";
+import { observer } from "mobx-react-lite";
 import {
   BookOpen,
-  Bot,
   Frame,
   Map,
-  SquareTerminal,
-} from "lucide-react"
+} from "lucide-react";
 
-import { NavMain } from "@/components/nav-main"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from "@/components/nav-main";
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 // This is sample data.
 const data = {
@@ -29,18 +28,9 @@ const data = {
       isActive: true,
     },
     {
-      title: "Playground",
-      url: "/playground",
-      icon: SquareTerminal,
-    },
-    {
-      title: "Models",
-      url: "/models",
-      icon: Bot,
-    },
-    {
       title: "Documentation",
-      url: "/docs",
+      url: "https://docs.infragpt.io",
+      external: true,
       icon: BookOpen,
     },
     {
@@ -51,7 +41,23 @@ const data = {
   ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+const AppSidebar = observer(({ ...props }: React.ComponentProps<typeof Sidebar>) => {
+
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -60,9 +66,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter>
+        {isOffline && (
+          <span className="text-sm text-yellow-600 bg-yellow-100 px-2 py-1 rounded text-center">
+            Offline Mode
+          </span>
+        )}
         <NavUser />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )
-}
+})
+
+export { AppSidebar };

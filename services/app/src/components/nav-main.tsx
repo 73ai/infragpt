@@ -16,6 +16,7 @@ export function NavMain({
   items: {
     title: string
     url: string
+    external?: boolean
     icon?: LucideIcon
     isActive?: boolean
     items?: {
@@ -34,7 +35,7 @@ export function NavMain({
       <SidebarMenu>
         {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-            <a href={item.url}>
+            <a href={item.url} target={item.external ? "_blank" : undefined} rel={item.external ? "noopener noreferrer" : undefined}>
               <SidebarMenuButton tooltip={item.title} isActive={item.isActive}>
                 {item.icon && <item.icon />}
                 <span>{item.title}</span>
