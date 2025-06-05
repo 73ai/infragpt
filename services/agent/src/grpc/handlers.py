@@ -7,6 +7,7 @@ import grpc
 
 from src.proto import agent_pb2, agent_pb2_grpc
 from src.models.agent import AgentRequest, AgentResponse
+from src.models.context import Message
 from src.config.settings import Settings
 from src.agents import AgentSystem
 from src.integrations import ReplyHandler
@@ -83,10 +84,20 @@ class AgentServiceHandler(agent_pb2_grpc.AgentServiceServicer):
     
     def _convert_request(self, pb_request: agent_pb2.AgentRequest) -> AgentRequest:
         """Convert protobuf request to internal model."""
+        # Convert protobuf messages to internal Message objects
+        past_messages = []
+        for pb_msg in pb_request.past_messages:
+            past_messages.append(Message(
+                message_id=pb_msg.message_id,
+                content=pb_msg.content,
+                sender=pb_msg.sender,
+                timestamp=pb_msg.timestamp
+            ))
+        
         return AgentRequest(
             conversation_id=pb_request.conversation_id,
             current_message=pb_request.current_message,
-            past_messages=list(pb_request.past_messages),
+            past_messages=past_messages,
             context=pb_request.context,
             user_id=pb_request.user_id if pb_request.user_id else None,
             channel_id=pb_request.channel_id if pb_request.channel_id else None

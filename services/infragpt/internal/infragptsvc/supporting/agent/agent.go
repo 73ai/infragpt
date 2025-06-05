@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	agent "github.com/priyanshujain/infragpt/services/agent/src/client/go"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
@@ -65,10 +66,21 @@ func (c *Client) Close() error {
 
 // convertToAgentRequest converts domain.AgentRequest to agent client request
 func (c *Client) convertToAgentRequest(req domain.AgentRequest) (agent.AgentRequest, error) {
-	// Convert past messages to string array
-	var pastMessages []string
+	// Convert past messages to Message objects
+	var pastMessages []*agent.Message
 	for _, msg := range req.PastMessages {
-		pastMessages = append(pastMessages, msg.MessageText)
+		// Determine sender format: "agent" for bot messages, "user/{user_id}" for users
+		sender := fmt.Sprintf("user/%s", msg.Sender.ID)
+		if msg.IsBotMessage {
+			sender = "agent"
+		}
+
+		pastMessages = append(pastMessages, &agent.Message{
+			MessageId: msg.ID.String(),
+			Content:   msg.MessageText,
+			Sender:    sender,
+			Timestamp: msg.CreatedAt.Format(time.RFC3339),
+		})
 	}
 
 	return agent.AgentRequest{

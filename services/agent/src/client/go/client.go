@@ -12,6 +12,9 @@ import (
 	pb "github.com/priyanshujain/infragpt/services/agent/src/client/go/proto"
 )
 
+// Message is an alias for the protobuf Message type for convenience
+type Message = pb.Message
+
 // Client provides a client interface to the agent gRPC service
 type Client struct {
 	conn   *grpc.ClientConn
@@ -73,7 +76,7 @@ func NewClient(config *Config) (*Client, error) {
 type AgentRequest struct {
 	ConversationId string
 	CurrentMessage string
-	PastMessages   []string
+	PastMessages   []*pb.Message
 	Context        string
 	UserId         string
 	ChannelId      string
