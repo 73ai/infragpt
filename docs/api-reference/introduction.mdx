@@ -1,0 +1,59 @@
+---
+title: 'API Reference'
+description: 'InfraGPT Core Service API documentation'
+---
+
+## Overview
+
+The InfraGPT Core Service provides REST and gRPC APIs for infrastructure management through Slack integration. The service handles user authentication, Slack events, and coordinates with the Agent Service for AI-powered responses.
+
+## Architecture
+
+The Core Service is built with:
+- **Go** - High-performance backend service
+- **PostgreSQL** - Data persistence and session management
+- **gRPC** - Communication with Agent Service
+- **Slack Socket Mode** - Real-time Slack integration
+
+## Service Endpoints
+
+<CardGroup cols={2}>
+  <Card
+    title="Health Check"
+    icon="heart-pulse"
+    href="/api-reference/core/health"
+  >
+    Service health and status endpoints
+  </Card>
+  <Card
+    title="Slack Events"
+    icon="slack"
+    href="/api-reference/core/slack"
+  >
+    Slack app mention and message handling
+  </Card>
+</CardGroup>
+
+## Authentication
+
+The service uses multiple authentication methods:
+
+### Slack Authentication
+- **Socket Mode Token** - For real-time Slack connection
+- **Bot Token** - For Slack API operations
+
+### Database Authentication
+- **PostgreSQL** - Connection string with credentials
+- **Session Management** - User session tracking
+
+### Agent Service Communication
+- **gRPC** - Secure service-to-service communication
+- **Internal Network** - Services communicate over internal network
+
+## Data Models
+
+### Core Entities
+- **User** - Slack user information and preferences
+- **Channel** - Slack channel configuration
+- **Conversation** - Message threads and context
+- **Integration** - External service connections
