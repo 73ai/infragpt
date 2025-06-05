@@ -5,7 +5,7 @@ from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 
 @dataclass
-class Message:
+class Message(BaseModel):
     """Represents a message in the conversation."""
     
     message_id: str = Field(..., description="Unique identifier for this message")

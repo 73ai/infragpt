@@ -20,7 +20,7 @@ python -m grpc_tools.protoc \
 # Fix imports in the generated gRPC file
 echo "Fixing import paths in generated files..."
 if [ -f "$SCRIPT_DIR/agent_pb2_grpc.py" ]; then
-    sed -i '' 's/import agent_pb2 as agent__pb2/from . import agent_pb2 as agent__pb2/' "$SCRIPT_DIR/agent_pb2_grpc.py"
+    sed -i.bak 's/import agent_pb2 as agent__pb2/from . import agent_pb2 as agent__pb2/' "$SCRIPT_DIR/agent_pb2_grpc.py"
 fi
 
 echo "✓ Python protobuf code generated"
