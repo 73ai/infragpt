@@ -2,6 +2,7 @@
 
 from typing import List, Optional
 from pydantic import BaseModel, Field
+from src.models.context import Message
 
 
 class AgentRequest(BaseModel):
@@ -9,7 +10,7 @@ class AgentRequest(BaseModel):
     
     conversation_id: str = Field(..., description="Unique identifier for the conversation thread")
     current_message: str = Field(..., description="The current message to process")
-    past_messages: List[str] = Field(default_factory=list, description="Previous messages in the conversation")
+    past_messages: List[Message] = Field(default_factory=list, description="Previous messages in the conversation")
     context: str = Field(default="", description="Additional context information")
     user_id: Optional[str] = Field(default=None, description="User ID for personalization")
     channel_id: Optional[str] = Field(default=None, description="Channel/workspace information")

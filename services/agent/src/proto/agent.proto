@@ -10,6 +10,21 @@ service AgentService {
   rpc ProcessMessage(AgentRequest) returns (AgentResponse);
 }
 
+// Represents a message in the conversation
+message Message {
+  // Unique identifier for this message
+  string message_id = 1;
+  
+  // Content of the message
+  string content = 2;
+  
+  // Sender: 'agent' or 'user/{user_id}'
+  string sender = 3;
+  
+  // ISO 8601 timestamp
+  string timestamp = 4;
+}
+
 // Request to process a message
 message AgentRequest {
   // Unique identifier for the conversation thread
@@ -19,7 +34,7 @@ message AgentRequest {
   string current_message = 2;
   
   // List of previous messages in the conversation for context
-  repeated string past_messages = 3;
+  repeated Message past_messages = 3;
   
   // Additional context information (JSON string)
   string context = 4;

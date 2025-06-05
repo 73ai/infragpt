@@ -21,6 +21,79 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Represents a message in the conversation
+type Message struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unique identifier for this message
+	MessageId string `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	// Content of the message
+	Content string `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	// Sender: 'agent' or 'user/{user_id}'
+	Sender string `protobuf:"bytes,3,opt,name=sender,proto3" json:"sender,omitempty"`
+	// ISO 8601 timestamp
+	Timestamp     string `protobuf:"bytes,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Message) Reset() {
+	*x = Message{}
+	mi := &file_agent_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Message) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Message) ProtoMessage() {}
+
+func (x *Message) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Message.ProtoReflect.Descriptor instead.
+func (*Message) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Message) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *Message) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *Message) GetSender() string {
+	if x != nil {
+		return x.Sender
+	}
+	return ""
+}
+
+func (x *Message) GetTimestamp() string {
+	if x != nil {
+		return x.Timestamp
+	}
+	return ""
+}
+
 // Request to process a message
 type AgentRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -29,7 +102,7 @@ type AgentRequest struct {
 	// The current message to process
 	CurrentMessage string `protobuf:"bytes,2,opt,name=current_message,json=currentMessage,proto3" json:"current_message,omitempty"`
 	// List of previous messages in the conversation for context
-	PastMessages []string `protobuf:"bytes,3,rep,name=past_messages,json=pastMessages,proto3" json:"past_messages,omitempty"`
+	PastMessages []*Message `protobuf:"bytes,3,rep,name=past_messages,json=pastMessages,proto3" json:"past_messages,omitempty"`
 	// Additional context information (JSON string)
 	Context string `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
 	// Optional: User ID for personalization
@@ -42,7 +115,7 @@ type AgentRequest struct {
 
 func (x *AgentRequest) Reset() {
 	*x = AgentRequest{}
-	mi := &file_agent_proto_msgTypes[0]
+	mi := &file_agent_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -54,7 +127,7 @@ func (x *AgentRequest) String() string {
 func (*AgentRequest) ProtoMessage() {}
 
 func (x *AgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[0]
+	mi := &file_agent_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -67,7 +140,7 @@ func (x *AgentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentRequest.ProtoReflect.Descriptor instead.
 func (*AgentRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{0}
+	return file_agent_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *AgentRequest) GetConversationId() string {
@@ -84,7 +157,7 @@ func (x *AgentRequest) GetCurrentMessage() string {
 	return ""
 }
 
-func (x *AgentRequest) GetPastMessages() []string {
+func (x *AgentRequest) GetPastMessages() []*Message {
 	if x != nil {
 		return x.PastMessages
 	}
@@ -133,7 +206,7 @@ type AgentResponse struct {
 
 func (x *AgentResponse) Reset() {
 	*x = AgentResponse{}
-	mi := &file_agent_proto_msgTypes[1]
+	mi := &file_agent_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -145,7 +218,7 @@ func (x *AgentResponse) String() string {
 func (*AgentResponse) ProtoMessage() {}
 
 func (x *AgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[1]
+	mi := &file_agent_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -158,7 +231,7 @@ func (x *AgentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentResponse.ProtoReflect.Descriptor instead.
 func (*AgentResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{1}
+	return file_agent_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *AgentResponse) GetSuccess() bool {
@@ -207,11 +280,17 @@ var File_agent_proto protoreflect.FileDescriptor
 
 const file_agent_proto_rawDesc = "" +
 	"\n" +
-	"\vagent.proto\x12\x05agent\"\xd7\x01\n" +
+	"\vagent.proto\x12\x05agent\"x\n" +
+	"\aMessage\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x18\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\x12\x16\n" +
+	"\x06sender\x18\x03 \x01(\tR\x06sender\x12\x1c\n" +
+	"\ttimestamp\x18\x04 \x01(\tR\ttimestamp\"\xe7\x01\n" +
 	"\fAgentRequest\x12'\n" +
 	"\x0fconversation_id\x18\x01 \x01(\tR\x0econversationId\x12'\n" +
-	"\x0fcurrent_message\x18\x02 \x01(\tR\x0ecurrentMessage\x12#\n" +
-	"\rpast_messages\x18\x03 \x03(\tR\fpastMessages\x12\x18\n" +
+	"\x0fcurrent_message\x18\x02 \x01(\tR\x0ecurrentMessage\x123\n" +
+	"\rpast_messages\x18\x03 \x03(\v2\x0e.agent.MessageR\fpastMessages\x12\x18\n" +
 	"\acontext\x18\x04 \x01(\tR\acontext\x12\x17\n" +
 	"\auser_id\x18\x05 \x01(\tR\x06userId\x12\x1d\n" +
 	"\n" +
@@ -242,19 +321,21 @@ func file_agent_proto_rawDescGZIP() []byte {
 	return file_agent_proto_rawDescData
 }
 
-var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_agent_proto_goTypes = []any{
-	(*AgentRequest)(nil),  // 0: agent.AgentRequest
-	(*AgentResponse)(nil), // 1: agent.AgentResponse
+	(*Message)(nil),       // 0: agent.Message
+	(*AgentRequest)(nil),  // 1: agent.AgentRequest
+	(*AgentResponse)(nil), // 2: agent.AgentResponse
 }
 var file_agent_proto_depIdxs = []int32{
-	0, // 0: agent.AgentService.ProcessMessage:input_type -> agent.AgentRequest
-	1, // 1: agent.AgentService.ProcessMessage:output_type -> agent.AgentResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: agent.AgentRequest.past_messages:type_name -> agent.Message
+	1, // 1: agent.AgentService.ProcessMessage:input_type -> agent.AgentRequest
+	2, // 2: agent.AgentService.ProcessMessage:output_type -> agent.AgentResponse
+	2, // [2:3] is the sub-list for method output_type
+	1, // [1:2] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_agent_proto_init() }
@@ -268,7 +349,7 @@ func file_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_proto_rawDesc), len(file_agent_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
