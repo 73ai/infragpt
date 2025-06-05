@@ -1,0 +1,97 @@
+---
+title: 'Quick Start'
+description: 'Get started with InfraGPT in under 5 minutes'
+---
+
+## CLI Installation
+
+The easiest way to get started with InfraGPT is through the CLI tool.
+
+### Install with pipx (Recommended)
+
+```bash
+# Install using pipx
+pipx install infragpt
+
+# Launch interactive mode
+infragpt
+```
+
+### Install with pip
+
+```bash
+# Install using pip
+pip install infragpt
+
+# Launch interactive mode
+infragpt
+```
+
+## Configuration
+
+### API Keys
+
+InfraGPT supports multiple LLM providers. Set your API key as an environment variable:
+
+<AccordionGroup>
+  <Accordion icon="key" title="OpenAI (GPT-4o)">
+    ```bash
+    export OPENAI_API_KEY="your-openai-api-key"
+    infragpt --model openai
+    ```
+  </Accordion>
+  <Accordion icon="key" title="Anthropic (Claude)">
+    ```bash
+    export ANTHROPIC_API_KEY="your-anthropic-api-key"
+    infragpt --model anthropic
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Basic Usage
+
+### Interactive Mode
+
+Launch InfraGPT and start using natural language:
+
+```bash
+infragpt
+```
+
+Example queries:
+```
+> create a new VM instance called test-vm in us-central1 with 2 CPUs
+> list all storage buckets in my project
+> show me the status of my kubernetes cluster
+```
+
+<img src="/assets/infragpt.gif" alt="CLI Demo" style={{ maxWidth: "600px", height: "auto" }} />
+
+## Slack Integration
+
+For team collaboration, set up the Slack bot:
+
+1. **Deploy the Core Service** - Follow the [development guide](/development) to deploy the Go service
+2. **Configure Slack App** - Create a Slack app with Socket Mode enabled
+3. **Set Environment Variables** - Configure your Slack tokens and database connection
+
+<img src="/assets/slack-chat.png" alt="Slack Integration" style={{ maxWidth: "500px", height: "auto" }} />
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Development Setup"
+    icon="code"
+    href="/development"
+  >
+    Set up your development environment to contribute or customize InfraGPT
+  </Card>
+  <Card
+    title="API Reference"
+    icon="book"
+    href="/api-reference/introduction"
+  >
+    Explore the API documentation for the core services
+  </Card>
+</CardGroup>

@@ -1,0 +1,84 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "InfraGPT",
+  "colors": {
+    "primary": "#0023C4",
+    "light": "#1E40AF",
+    "dark": "#1E3A8A"
+  },
+  "favicon": "/favicon.ico",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "index",
+              "quickstart",
+              "development"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/services"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core Service",
+            "pages": [
+              "api-reference/introduction"
+            ]
+          },
+          {
+            "group": "Agent Service",
+            "pages": [
+              "api-reference/agent/conversation",
+              "api-reference/agent/rca"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/priyanshujain/infragpt",
+          "icon": "github"
+        },
+        {
+          "anchor": "CLI Tool",
+          "href": "https://pypi.org/project/infragpt/",
+          "icon": "terminal"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/priyanshujain/infragpt"
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/priyanshujain/infragpt"
+    }
+  }
+}

@@ -1,0 +1,85 @@
+---
+title: Introduction
+description: "AI SRE Copilot for the Cloud - Infrastructure management agents through Slack integration"
+---
+
+<img
+  className="block dark:hidden"
+  src="/assets/logo.svg"
+  alt="InfraGPT Logo"
+  style={{ maxWidth: "300px", height: "auto", margin: "0 auto" }}
+/>
+<img
+  className="hidden dark:block"
+  src="/assets/logo.svg"
+  alt="InfraGPT Logo"
+  style={{ maxWidth: "300px", height: "auto", margin: "0 auto" }}
+/>
+
+InfraGPT is an AI SRE Copilot for the Cloud that provides infrastructure management agents through Slack integration. The system consists of multiple services that work together to deliver intelligent DevOps workflows.
+
+<img src="/assets/slack-chat.png" alt="Slack Chat Interface" style={{ maxWidth: "500px", height: "auto" }} />
+
+## Features
+
+- **🗣️ Natural Language Processing**: Convert natural language to infrastructure commands
+- **🔗 Slack Integration**: Seamless Slack bot for team collaboration
+- **🧠 Multi-Agent AI**: Intelligent routing and specialized agent responses
+- **📊 Web Dashboard**: Modern web interface for platform management
+- **🏗️ Infrastructure as Code**: Generate Terraform and other IaC
+- **📈 Monitoring**: Track usage and infrastructure changes
+- **🔐 Enterprise Security**: Authentication, authorization, and audit trails
+
+## Get Started
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick Start"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Install InfraGPT CLI and start using natural language for infrastructure commands
+  </Card>
+  <Card
+    title="Development Setup"
+    icon="code"
+    href="/development"
+  >
+    Set up your development environment to contribute to InfraGPT
+  </Card>
+</CardGroup>
+
+## Platform Components
+
+<CardGroup cols={3}>
+  <Card
+    title="CLI Tool"
+    icon="terminal"
+    href="https://pypi.org/project/infragpt/"
+  >
+    Interactive terminal interface with natural language queries
+  </Card>
+  <Card
+    title="Slack Bot"
+    icon="slack"
+    href="/api-reference/introduction"
+  >
+    Core service for Slack integration and infrastructure management
+  </Card>
+  <Card
+    title="Agent Framework"
+    icon="robot"
+    href="/api-reference/agent/conversation"
+  >
+    Multi-agent framework with conversation and RCA analysis
+  </Card>
+</CardGroup>
+
+## Workflow
+
+The services work together in this message flow:
+1. User posts in Slack channel or uses CLI
+2. InfraGPT Core Service receives requests via Socket Mode
+3. Core Service calls Agent Service via gRPC for AI processing
+4. Agent Service processes with LLM intelligence
+5. Responses flow back through the system to Slack or CLI
