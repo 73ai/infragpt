@@ -35,7 +35,11 @@ export function NavMain({
       <SidebarMenu>
         {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-            <a href={item.url} target={item.external ? "_blank" : undefined} rel={item.external ? "noopener noreferrer" : undefined}>
+            <a 
+              href={item.url} 
+              target={item.external ? "_blank" : undefined} 
+              rel={item.external ? "noopener noreferrer" : undefined} 
+              aria-label={item.external ? `${item.title} (opens in new tab)` : undefined}>
               <SidebarMenuButton tooltip={item.title} isActive={item.isActive}>
                 {item.icon && <item.icon />}
                 <span>{item.title}</span>
