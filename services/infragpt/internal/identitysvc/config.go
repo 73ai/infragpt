@@ -1,33 +1,26 @@
 package identitysvc
 
 import (
-	"github.com/priyanshujain/infragpt/services/infragpt/identity"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"
+	"database/sql"
+
+	"github.com/priyanshujain/infragpt/services/infragpt"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/supporting/postgres"
 )
 
 type Config struct {
-	domain.SessionRepository
-	domain.UserRepository
-	EmailService
-	TokenManager
+	Clerk ClerkConfig `mapstructure:"clerk"`
 }
 
-func (c Config) New() identity.Service {
-	if c.SessionRepository == nil {
-		panic("SessionRepository is nil")
-	}
-	if c.UserRepository == nil {
-		panic("UserRepository is nil")
-	}
-	if c.EmailService == nil {
-		panic("EmailService is nil")
-	}
+type ClerkConfig struct {
+	WebhookSecret  string `mapstructure:"webhook_secret"`
+	PublishableKey string `mapstructure:"publishable_key"`
+}
 
-	s := &service{
-		sessionRepo:  c.SessionRepository,
-		userRepo:     c.UserRepository,
-		emailSVC:     c.EmailService,
-		tokenManager: c.TokenManager,
-	}
-	return s
+func (c Config) New(db *sql.DB) infragpt.IdentityService {
+	queries := postgres.New(db)
+	userRepo := postgres.NewUserRepository(queries)
+	organizationRepo := postgres.NewOrganizationRepository(queries)
+	memberRepo := postgres.NewMemberRepository(queries)
+
+	return New(userRepo, organizationRepo, memberRepo)
 }

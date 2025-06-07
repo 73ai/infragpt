@@ -1,0 +1,38 @@
+package domain
+
+import (
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/priyanshujain/infragpt/services/infragpt"
+)
+
+type OrganizationRepository interface {
+	Create(context.Context, Organization) error
+	OrganizationByClerkID(ctx context.Context, clerkOrgID string) (*Organization, error)
+	OrganizationsByUserClerkID(ctx context.Context, clerkUserID string) ([]*Organization, error)
+	Update(ctx context.Context, clerkOrgID string, org Organization) error
+	SetMetadata(ctx context.Context, organizationID uuid.UUID, metadata OrganizationMetadata) error
+}
+
+type Organization struct {
+	ID              uuid.UUID
+	ClerkOrgID      string
+	Name            string
+	Slug            string
+	CreatedByUserID uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	Metadata        OrganizationMetadata
+}
+
+type OrganizationMetadata struct {
+	OrganizationID     uuid.UUID
+	CompanySize        infragpt.CompanySize
+	TeamSize           infragpt.TeamSize
+	UseCases           []infragpt.UseCase
+	ObservabilityStack []infragpt.ObservabilityStack
+	CompletedAt        time.Time
+	UpdatedAt          time.Time
+}

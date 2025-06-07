@@ -14,6 +14,10 @@ type InfraGPTDB struct {
 	Querier
 }
 
+func (i *InfraGPTDB) DB() *sql.DB {
+	return i.db
+}
+
 var _ domain.WorkSpaceTokenRepository = (*InfraGPTDB)(nil)
 var _ domain.IntegrationRepository = (*InfraGPTDB)(nil)
 var _ domain.ConversationRepository = (*InfraGPTDB)(nil)

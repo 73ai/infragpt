@@ -6,71 +6,45 @@ package postgres
 
 import (
 	"database/sql"
-	"time"
 
 	"github.com/google/uuid"
 )
 
-type Device struct {
-	DeviceID          uuid.UUID `json:"device_id"`
-	UserID            uuid.UUID `json:"user_id"`
-	DeviceFingerprint string    `json:"device_fingerprint"`
-	Name              string    `json:"name"`
-	Os                string    `json:"os"`
-	Brand             string    `json:"brand"`
+type Organization struct {
+	ID              uuid.UUID     `json:"id"`
+	ClerkOrgID      string        `json:"clerk_org_id"`
+	Name            string        `json:"name"`
+	Slug            string        `json:"slug"`
+	CreatedByUserID uuid.NullUUID `json:"created_by_user_id"`
+	CreatedAt       sql.NullTime  `json:"created_at"`
+	UpdatedAt       sql.NullTime  `json:"updated_at"`
 }
 
-type EmailVerification struct {
-	VerificationID uuid.UUID `json:"verification_id"`
-	UserID         uuid.UUID `json:"user_id"`
-	Email          string    `json:"email"`
-	ExpiryAt       time.Time `json:"expiry_at"`
-	CreatedAt      time.Time `json:"created_at"`
+type OrganizationMember struct {
+	UserID         uuid.UUID    `json:"user_id"`
+	OrganizationID uuid.UUID    `json:"organization_id"`
+	ClerkUserID    string       `json:"clerk_user_id"`
+	ClerkOrgID     string       `json:"clerk_org_id"`
+	Role           string       `json:"role"`
+	JoinedAt       sql.NullTime `json:"joined_at"`
 }
 
-type GoogleStateToken struct {
-	Token     string       `json:"token"`
-	Revoked   bool         `json:"revoked"`
-	RevokedAt sql.NullTime `json:"revoked_at"`
-	ExpiresAt time.Time    `json:"expires_at"`
-	CreatedAt time.Time    `json:"created_at"`
-}
-
-type RefreshToken struct {
-	TokenID   uuid.UUID `json:"token_id"`
-	UserID    uuid.UUID `json:"user_id"`
-	SessionID uuid.UUID `json:"session_id"`
-	TokenHash string    `json:"token_hash"`
-	ExpiryAt  time.Time `json:"expiry_at"`
-	CreatedAt time.Time `json:"created_at"`
-	Revoked   bool      `json:"revoked"`
-}
-
-type ResetPassword struct {
-	ResetID   uuid.UUID `json:"reset_id"`
-	UserID    uuid.UUID `json:"user_id"`
-	ExpiryAt  time.Time `json:"expiry_at"`
-	CreatedAt time.Time `json:"created_at"`
+type OrganizationMetadatum struct {
+	OrganizationID     uuid.UUID    `json:"organization_id"`
+	CompanySize        string       `json:"company_size"`
+	TeamSize           string       `json:"team_size"`
+	UseCases           []string     `json:"use_cases"`
+	ObservabilityStack []string     `json:"observability_stack"`
+	CompletedAt        sql.NullTime `json:"completed_at"`
+	UpdatedAt          sql.NullTime `json:"updated_at"`
 }
 
 type User struct {
-	UserID          uuid.UUID `json:"user_id"`
-	Email           string    `json:"email"`
-	PasswordHash    string    `json:"password_hash"`
-	IsEmailVerified bool      `json:"is_email_verified"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
-}
-
-type UserSession struct {
-	UserID         uuid.UUID `json:"user_id"`
-	DeviceID       uuid.UUID `json:"device_id"`
-	SessionID      uuid.UUID `json:"session_id"`
-	UserAgent      string    `json:"user_agent"`
-	IpAddress      string    `json:"ip_address"`
-	IpCountryIso   string    `json:"ip_country_iso"`
-	LastActivityAt time.Time `json:"last_activity_at"`
-	CreatedAt      time.Time `json:"created_at"`
-	Timezone       string    `json:"timezone"`
-	IsExpired      bool      `json:"is_expired"`
+	ID          uuid.UUID    `json:"id"`
+	ClerkUserID string       `json:"clerk_user_id"`
+	Email       string       `json:"email"`
+	FirstName   string       `json:"first_name"`
+	LastName    string       `json:"last_name"`
+	CreatedAt   sql.NullTime `json:"created_at"`
+	UpdatedAt   sql.NullTime `json:"updated_at"`
 }

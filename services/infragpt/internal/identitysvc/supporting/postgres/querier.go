@@ -11,29 +11,21 @@ import (
 )
 
 type Querier interface {
-	CreateDevice(ctx context.Context, arg CreateDeviceParams) error
-	CreateEmailVerification(ctx context.Context, arg CreateEmailVerificationParams) error
-	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error
-	CreateResetPassword(ctx context.Context, arg CreateResetPasswordParams) error
-	CreateSession(ctx context.Context, arg CreateSessionParams) error
-	CreateStateToken(ctx context.Context, arg CreateStateTokenParams) error
+	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) error
+	CreateOrganizationMember(ctx context.Context, arg CreateOrganizationMemberParams) error
+	CreateOrganizationMetadata(ctx context.Context, arg CreateOrganizationMetadataParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
-	Device(ctx context.Context, deviceID uuid.UUID) (Device, error)
-	DevicesByUserID(ctx context.Context, userID uuid.UUID) ([]Device, error)
-	EmailVerification(ctx context.Context, verificationID uuid.UUID) (EmailVerificationRow, error)
-	MarkEmailVerificationAsExpired(ctx context.Context, verificationID uuid.UUID) error
-	MarkResetPasswordAsExpired(ctx context.Context, resetID uuid.UUID) error
-	RefreshToken(ctx context.Context, tokenID uuid.UUID) (RefreshToken, error)
-	ResetPassword(ctx context.Context, resetID uuid.UUID) (ResetPasswordRow, error)
-	RevokeRefreshToken(ctx context.Context, tokenID uuid.UUID) error
-	RevokeStateToken(ctx context.Context, token string) error
-	SetNewPassword(ctx context.Context, arg SetNewPasswordParams) error
-	StateToken(ctx context.Context, token string) (GoogleStateToken, error)
-	UserByEmail(ctx context.Context, email string) (UserByEmailRow, error)
-	UserByID(ctx context.Context, userID uuid.UUID) (User, error)
-	UserSession(ctx context.Context, sessionID uuid.UUID) (UserSession, error)
-	UserSessions(ctx context.Context, userID uuid.UUID) ([]UserSession, error)
-	VerifyEmail(ctx context.Context, userID uuid.UUID) error
+	DeleteOrganizationMemberByClerkIDs(ctx context.Context, arg DeleteOrganizationMemberByClerkIDsParams) error
+	DeleteOrganizationMetadataByOrganizationID(ctx context.Context, organizationID uuid.UUID) error
+	GetOrganizationByClerkID(ctx context.Context, clerkOrgID string) (Organization, error)
+	GetOrganizationMembersByOrganizationID(ctx context.Context, organizationID uuid.UUID) ([]OrganizationMember, error)
+	GetOrganizationMembersByUserClerkID(ctx context.Context, clerkUserID string) ([]OrganizationMember, error)
+	GetOrganizationMetadataByOrganizationID(ctx context.Context, organizationID uuid.UUID) (OrganizationMetadatum, error)
+	GetOrganizationsByUserClerkID(ctx context.Context, clerkUserID string) ([]Organization, error)
+	GetUserByClerkID(ctx context.Context, clerkUserID string) (User, error)
+	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) error
+	UpdateOrganizationMetadata(ctx context.Context, arg UpdateOrganizationMetadataParams) error
+	UpdateUser(ctx context.Context, arg UpdateUserParams) error
 }
 
 var _ Querier = (*Queries)(nil)

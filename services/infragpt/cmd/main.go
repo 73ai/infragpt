@@ -14,6 +14,7 @@ import (
 	agentclient "github.com/priyanshujain/infragpt/services/agent/src/client/go"
 	"github.com/priyanshujain/infragpt/services/infragpt/infragptapi"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/postgresconfig"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/agent"
@@ -45,6 +46,7 @@ func main() {
 		Slack    slack.Config          `mapstructure:"slack"`
 		Database postgresconfig.Config `mapstructure:"database"`
 		Agent    agentclient.Config    `mapstructure:"agent"`
+		Identity identitysvc.Config    `mapstructure:"identity"`
 	}
 
 	var c Config
@@ -59,6 +61,9 @@ func main() {
 	}
 	slackConfig.WorkSpaceTokenRepository = db
 	slackConfig.ChannelRepository = db
+
+	// Create identity service with underlying database connection
+	identityService := c.Identity.New(db.DB())
 
 	sr, err := slackConfig.New(ctx)
 	if err != nil {
@@ -103,7 +108,7 @@ func main() {
 	httpServer := &http.Server{
 		Addr:        fmt.Sprintf(":%d", c.Port),
 		BaseContext: func(net.Listener) context.Context { return ctx },
-		Handler:     infragptapi.NewHandler(svc),
+		Handler:     infragptapi.NewHandler(svc, identityService, c.Identity),
 	}
 
 	g.Go(func() error {

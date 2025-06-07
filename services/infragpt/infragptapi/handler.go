@@ -1,22 +1,26 @@
 package infragptapi
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
+	"github.com/priyanshujain/infragpt/services/infragpt/identityapi"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc"
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
-func NewHandler(svc infragpt.Service) http.Handler {
+func NewHandler(svc infragpt.Service, identityService infragpt.IdentityService, identityConfig identitysvc.Config) http.Handler {
 	h := &httpHandler{
 		svc: svc,
 	}
-	h.init()
-	return panicHandler(h)
+	h.init(identityService, identityConfig)
+	return corsHandler(loggingHandler(panicHandler(h)))
 }
 
 type httpHandler struct {
@@ -24,9 +28,21 @@ type httpHandler struct {
 	svc infragpt.Service
 }
 
-func (h *httpHandler) init() {
+func (h *httpHandler) init(identityService infragpt.IdentityService, identityConfig identitysvc.Config) {
 	h.HandleFunc("GET /slack", h.completeSlackAuthentication)
 	h.HandleFunc("POST /reply", h.sendReply)
+
+	// Identity API routes
+	identityHandler := identityapi.NewHandler(identityService)
+	clerkValidator := identityapi.NewClerkValidator(identityConfig.Clerk.WebhookSecret)
+	tokenValidator := identityapi.NewClerkTokenValidator(identityConfig.Clerk.PublishableKey)
+
+	// Webhook endpoint (no auth required)
+	h.Handle("POST /webhooks/clerk", clerkValidator.VerifyWebhookSignature(http.HandlerFunc(identityHandler.HandleClerkWebhook)))
+
+	// Protected API endpoints
+	h.Handle("POST /api/v1/organizations/get", tokenValidator.RequireAuth(http.HandlerFunc(identityHandler.GetOrganization)))
+	h.Handle("POST /api/v1/organizations/metadata/set", tokenValidator.RequireAuth(http.HandlerFunc(identityHandler.SetOrganizationMetadata)))
 }
 
 func (h *httpHandler) completeSlackAuthentication(w http.ResponseWriter, r *http.Request) {
@@ -91,6 +107,85 @@ func ApiHandlerFunc[X any, Y any](api func(
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(res)
 	}
+}
+
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+	body       *bytes.Buffer
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+func (rw *responseWriter) Write(b []byte) (int, error) {
+	if rw.body != nil && len(b) < 1024 { // Only capture small responses
+		rw.body.Write(b)
+	}
+	return rw.ResponseWriter.Write(b)
+}
+
+func loggingHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		
+		// Read and log request body
+		var requestBody []byte
+		if r.Body != nil {
+			requestBody, _ = io.ReadAll(r.Body)
+			r.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+		}
+
+		// Create response writer wrapper
+		rw := &responseWriter{
+			ResponseWriter: w,
+			statusCode:     http.StatusOK,
+			body:          &bytes.Buffer{},
+		}
+
+		// Log incoming request
+		slog.Info("Request started",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"remote_addr", r.RemoteAddr,
+			"content_length", r.ContentLength,
+			"auth_header_present", r.Header.Get("Authorization") != "",
+			"request_body", string(requestBody),
+		)
+
+		// Process request
+		h.ServeHTTP(rw, r)
+
+		// Log response
+		duration := time.Since(start)
+		slog.Info("Request completed",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status_code", rw.statusCode,
+			"duration_ms", duration.Milliseconds(),
+			"response_body", rw.body.String(),
+		)
+	})
+}
+
+func corsHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		// Handle preflight requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		h.ServeHTTP(w, r)
+	})
 }
 
 func panicHandler(h http.Handler) http.Handler {
