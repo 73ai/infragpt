@@ -13,6 +13,7 @@ import (
 
 	agentclient "github.com/priyanshujain/infragpt/services/agent/src/client/go"
 	"github.com/priyanshujain/infragpt/services/infragpt/infragptapi"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httplog"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/postgresconfig"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc"
@@ -108,7 +109,7 @@ func main() {
 	httpServer := &http.Server{
 		Addr:        fmt.Sprintf(":%d", c.Port),
 		BaseContext: func(net.Listener) context.Context { return ctx },
-		Handler:     infragptapi.NewHandler(svc, identityService, c.Identity),
+		Handler:     httplog.Middleware(true)(infragptapi.NewHandler(svc, identityService, c.Identity)),
 	}
 
 	g.Go(func() error {

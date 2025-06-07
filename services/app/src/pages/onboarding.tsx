@@ -46,6 +46,7 @@ export default function OnboardingPage() {
                     cardBox: "shadow-none border-0",
                   }
                 }}
+                hideSlug={true}
               />
             </CardContent>
           </Card>

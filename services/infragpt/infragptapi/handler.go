@@ -1,7 +1,6 @@
 package infragptapi
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"github.com/google/uuid"
@@ -12,7 +11,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"time"
 )
 
 func NewHandler(svc infragpt.Service, identityService infragpt.IdentityService, identityConfig identitysvc.Config) http.Handler {
@@ -20,7 +18,7 @@ func NewHandler(svc infragpt.Service, identityService infragpt.IdentityService, 
 		svc: svc,
 	}
 	h.init(identityService, identityConfig)
-	return corsHandler(loggingHandler(panicHandler(h)))
+	return corsHandler(panicHandler(h))
 }
 
 type httpHandler struct {
@@ -109,66 +107,6 @@ func ApiHandlerFunc[X any, Y any](api func(
 	}
 }
 
-type responseWriter struct {
-	http.ResponseWriter
-	statusCode int
-	body       *bytes.Buffer
-}
-
-func (rw *responseWriter) WriteHeader(code int) {
-	rw.statusCode = code
-	rw.ResponseWriter.WriteHeader(code)
-}
-
-func (rw *responseWriter) Write(b []byte) (int, error) {
-	if rw.body != nil && len(b) < 1024 { // Only capture small responses
-		rw.body.Write(b)
-	}
-	return rw.ResponseWriter.Write(b)
-}
-
-func loggingHandler(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		
-		// Read and log request body
-		var requestBody []byte
-		if r.Body != nil {
-			requestBody, _ = io.ReadAll(r.Body)
-			r.Body = io.NopCloser(bytes.NewBuffer(requestBody))
-		}
-
-		// Create response writer wrapper
-		rw := &responseWriter{
-			ResponseWriter: w,
-			statusCode:     http.StatusOK,
-			body:          &bytes.Buffer{},
-		}
-
-		// Log incoming request
-		slog.Info("Request started",
-			"method", r.Method,
-			"path", r.URL.Path,
-			"remote_addr", r.RemoteAddr,
-			"content_length", r.ContentLength,
-			"auth_header_present", r.Header.Get("Authorization") != "",
-			"request_body", string(requestBody),
-		)
-
-		// Process request
-		h.ServeHTTP(rw, r)
-
-		// Log response
-		duration := time.Since(start)
-		slog.Info("Request completed",
-			"method", r.Method,
-			"path", r.URL.Path,
-			"status_code", rw.statusCode,
-			"duration_ms", duration.Milliseconds(),
-			"response_body", rw.body.String(),
-		)
-	})
-}
 
 func corsHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
