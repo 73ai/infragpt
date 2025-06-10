@@ -123,9 +123,6 @@ The application communicates with the InfraGPT Go backend service:
 // API Client Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
-// Available Endpoints
-GET  /api/v1/organizations/get          // Get organization details
-POST /api/v1/organizations/metadata/set // Set organization metadata
 ```
 
 ### Authentication Flow
