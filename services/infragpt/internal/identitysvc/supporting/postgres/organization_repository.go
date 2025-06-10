@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
@@ -9,12 +11,14 @@ import (
 )
 
 type organizationRepository struct {
+	db      *sql.DB
 	queries *Queries
 }
 
-func NewOrganizationRepository(queries *Queries) domain.OrganizationRepository {
+func NewOrganizationRepository(sqlDB *sql.DB) domain.OrganizationRepository {
 	return &organizationRepository{
-		queries: queries,
+		db:      sqlDB,
+		queries: New(sqlDB),
 	}
 }
 
@@ -155,6 +159,33 @@ func (r *organizationRepository) SetMetadata(ctx context.Context, organizationID
 }
 
 func (r *organizationRepository) DeleteByClerkID(ctx context.Context, clerkOrgID string) error {
-	err := r.queries.DeleteOrganizationByClerkID(ctx, clerkOrgID)
-	return err
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer tx.Rollback()
+	qtx := r.queries.WithTx(tx)
+
+	org, err := qtx.GetOrganizationByClerkID(ctx, clerkOrgID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("organization with clerk_org_id %s not found", clerkOrgID)
+		}
+		return fmt.Errorf("error fetching organization: %w", err)
+	}
+	err = qtx.DeleteOrganizationMetadataByOrganizationID(ctx, org.ID)
+	if err != nil {
+		return fmt.Errorf("error deleting organization metadata: %w", err)
+	}
+	err = qtx.DeleteOrganizationByClerkID(ctx, clerkOrgID)
+	if err != nil {
+		return fmt.Errorf("error deleting organization: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
+	return nil
 }

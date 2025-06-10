@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"
@@ -11,9 +12,9 @@ type memberRepository struct {
 	queries *Queries
 }
 
-func NewMemberRepository(queries *Queries) domain.MemberRepository {
+func NewMemberRepository(sqlDB *sql.DB) domain.MemberRepository {
 	return &memberRepository{
-		queries: queries,
+		queries: New(sqlDB),
 	}
 }
 

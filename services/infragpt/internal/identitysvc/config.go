@@ -13,10 +13,9 @@ type Config struct {
 }
 
 func (c Config) New(db *sql.DB) *service {
-	queries := postgres.New(db)
-	userRepo := postgres.NewUserRepository(queries)
-	organizationRepo := postgres.NewOrganizationRepository(queries)
-	memberRepo := postgres.NewMemberRepository(queries)
+	userRepo := postgres.NewUserRepository(db)
+	organizationRepo := postgres.NewOrganizationRepository(db)
+	memberRepo := postgres.NewMemberRepository(db)
 
 	return &service{
 		userRepo:         userRepo,

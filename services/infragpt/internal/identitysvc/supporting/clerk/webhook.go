@@ -89,14 +89,20 @@ func (wh *webhookHandler) handler() func(w http.ResponseWriter, r *http.Request)
 			return response{}, wh.handleUserCreated(ctx, r.Data)
 		case "user.updated":
 			return response{}, wh.handleUserUpdated(ctx, r.Data)
+		case "user.deleted":
+			return response{}, wh.handleUserDeleted(ctx, r.Data)
 		case "organization.created":
 			return response{}, wh.handleOrganizationCreated(ctx, r.Data)
 		case "organization.updated":
 			return response{}, wh.handleOrganizationUpdated(ctx, r.Data)
+		case "organization.deleted":
+			return response{}, wh.handleOrganizationDeleted(ctx, r.Data)
 		case "organizationMembership.created":
 			return response{}, wh.handleOrganizationMemberAdded(ctx, r.Data)
 		case "organizationMembership.deleted":
 			return response{}, wh.handleOrganizationMemberRemoved(ctx, r.Data)
+		case "organizationMembership.updated":
+			return response{}, wh.handleOrganizationMemberUpdated(ctx, r.Data)
 		default:
 			return response{}, fmt.Errorf("unsupported webhook event type: %s", r.Type)
 		}
@@ -145,6 +151,19 @@ func (wh *webhookHandler) handleUserUpdated(ctx context.Context, data json.RawMe
 	return wh.callbackHandlerFunc(ctx, event)
 }
 
+func (wh *webhookHandler) handleUserDeleted(ctx context.Context, data json.RawMessage) error {
+	var user user
+	if err := json.Unmarshal(data, &user); err != nil {
+		return fmt.Errorf("failed to unmarshal user data: %w", err)
+	}
+
+	event := infragpt.UserDeletedEvent{
+		ClerkUserID: user.ID,
+	}
+
+	return wh.callbackHandlerFunc(ctx, event)
+}
+
 func (wh *webhookHandler) handleOrganizationCreated(ctx context.Context, data json.RawMessage) error {
 	var org organization
 	if err := json.Unmarshal(data, &org); err != nil {
@@ -176,6 +195,19 @@ func (wh *webhookHandler) handleOrganizationUpdated(ctx context.Context, data js
 	return wh.callbackHandlerFunc(ctx, event)
 }
 
+func (wh *webhookHandler) handleOrganizationDeleted(ctx context.Context, data json.RawMessage) error {
+	var org organization
+	if err := json.Unmarshal(data, &org); err != nil {
+		return fmt.Errorf("failed to unmarshal organization data: %w", err)
+	}
+
+	event := infragpt.OrganizationDeletedEvent{
+		ClerkOrgID: org.ID,
+	}
+
+	return wh.callbackHandlerFunc(ctx, event)
+}
+
 func (wh *webhookHandler) handleOrganizationMemberAdded(ctx context.Context, data json.RawMessage) error {
 	var membership organizationMembership
 	if err := json.Unmarshal(data, &membership); err != nil {
@@ -200,6 +232,21 @@ func (wh *webhookHandler) handleOrganizationMemberRemoved(ctx context.Context, d
 	event := infragpt.OrganizationMemberDeletedEvent{
 		ClerkUserID: membership.PublicUserData.UserID,
 		ClerkOrgID:  membership.Organization.ID,
+	}
+
+	return wh.callbackHandlerFunc(ctx, event)
+}
+
+func (wh *webhookHandler) handleOrganizationMemberUpdated(ctx context.Context, data json.RawMessage) error {
+	var membership organizationMembership
+	if err := json.Unmarshal(data, &membership); err != nil {
+		return fmt.Errorf("failed to unmarshal membership data: %w", err)
+	}
+
+	event := infragpt.OrganizationMemberUpdatedEvent{
+		ClerkUserID: membership.PublicUserData.UserID,
+		ClerkOrgID:  membership.Organization.ID,
+		Role:        membership.Role,
 	}
 
 	return wh.callbackHandlerFunc(ctx, event)

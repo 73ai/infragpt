@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"
 )
@@ -10,9 +11,9 @@ type userRepository struct {
 	queries *Queries
 }
 
-func NewUserRepository(queries *Queries) domain.UserRepository {
+func NewUserRepository(sqlDB *sql.DB) domain.UserRepository {
 	return &userRepository{
-		queries: queries,
+		queries: New(sqlDB),
 	}
 }
 
