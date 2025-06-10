@@ -97,7 +97,7 @@ func (s *service) reconcileOrganizationCreated(ctx context.Context, event infrag
 
 	err = s.organizationRepo.Create(ctx, org)
 	if err != nil {
-		return err
+		return fmt.Errorf("organization created: %w", err)
 	}
 
 	member := domain.OrganizationMember{

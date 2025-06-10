@@ -34,7 +34,7 @@ func (r *organizationRepository) Create(ctx context.Context, org domain.Organiza
 func (r *organizationRepository) OrganizationByClerkID(ctx context.Context, clerkOrgID string) (*domain.Organization, error) {
 	org, err := r.queries.GetOrganizationByClerkID(ctx, clerkOrgID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("organization by clerk id: %w", err)
 	}
 
 	result := &domain.Organization{

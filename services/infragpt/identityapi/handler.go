@@ -18,8 +18,8 @@ type httpHandler struct {
 }
 
 func (h *httpHandler) init() {
-	h.HandleFunc("/identity/organization", h.organization())
-	h.HandleFunc("/identity/organization/set-metadata", h.setOrganizationMetadata())
+	h.HandleFunc("/identity/organization/", h.organization())
+	h.HandleFunc("/identity/organization/set-metadata/", h.setOrganizationMetadata())
 }
 
 func NewHandler(identityService infragpt.IdentityService,
