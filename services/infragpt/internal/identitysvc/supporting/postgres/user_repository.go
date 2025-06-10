@@ -50,3 +50,7 @@ func (r *userRepository) Update(ctx context.Context, clerkUserID string, user do
 		LastName:    user.LastName,
 	})
 }
+
+func (r *userRepository) DeleteByClerkID(ctx context.Context, clerkUserID string) error {
+	return r.queries.DeleteUserByClerkID(ctx, clerkUserID)
+}

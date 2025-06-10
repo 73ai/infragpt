@@ -70,6 +70,12 @@ type UserCommand struct {
 	MessageType MessageType
 }
 
+type SlackIntegration struct {
+	TeamID    string
+	TeamName  string
+	BotUserID string
+}
+
 type SlackGateway interface {
 	CompleteAuthentication(ctx context.Context, code string) (projectID string, err error)
 

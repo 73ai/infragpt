@@ -3,20 +3,26 @@ package slack
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"strings"
+
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
-	"log/slog"
-	"strings"
 )
 
 func (s *Slack) handleChannelMessage(ctx context.Context, teamID string, event *slackevents.MessageEvent, handler func(context.Context, domain.UserCommand) error) error {
-	if event.BotID != "" {
-		return nil
-	}
+	slog.Info("Handling channel message event", "teamID", teamID, "channelID", event.Channel, "user", event.User, "text", event.Text, "bot", event.BotID, "subType", event.SubType, "threadTS", event.ThreadTimeStamp,
+		"e", event)
+	// NOTE: This is a workaround for the bot user ID that is used in testing datadog bot.
+	if event.BotID != "B090TCWJFDW" {
+		if event.BotID != "" {
+			return nil
+		}
 
-	if event.SubType != "" {
-		return nil
+		if event.SubType != "" {
+			return nil
+		}
 	}
 
 	teamToken, err := s.tokenRepository.GetToken(ctx, teamID)

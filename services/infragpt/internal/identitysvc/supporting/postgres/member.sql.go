@@ -121,3 +121,20 @@ func (q *Queries) GetOrganizationMembersByUserClerkID(ctx context.Context, clerk
 	}
 	return items, nil
 }
+
+const updateOrganizationMemberByClerkIDs = `-- name: UpdateOrganizationMemberByClerkIDs :exec
+UPDATE organization_members
+SET role = $3
+WHERE clerk_user_id = $1 AND clerk_org_id = $2
+`
+
+type UpdateOrganizationMemberByClerkIDsParams struct {
+	ClerkUserID string `json:"clerk_user_id"`
+	ClerkOrgID  string `json:"clerk_org_id"`
+	Role        string `json:"role"`
+}
+
+func (q *Queries) UpdateOrganizationMemberByClerkIDs(ctx context.Context, arg UpdateOrganizationMemberByClerkIDsParams) error {
+	_, err := q.exec(ctx, q.updateOrganizationMemberByClerkIDsStmt, updateOrganizationMemberByClerkIDs, arg.ClerkUserID, arg.ClerkOrgID, arg.Role)
+	return err
+}

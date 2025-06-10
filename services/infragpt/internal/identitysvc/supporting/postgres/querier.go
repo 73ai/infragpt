@@ -15,8 +15,10 @@ type Querier interface {
 	CreateOrganizationMember(ctx context.Context, arg CreateOrganizationMemberParams) error
 	CreateOrganizationMetadata(ctx context.Context, arg CreateOrganizationMetadataParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
+	DeleteOrganizationByClerkID(ctx context.Context, clerkOrgID string) error
 	DeleteOrganizationMemberByClerkIDs(ctx context.Context, arg DeleteOrganizationMemberByClerkIDsParams) error
 	DeleteOrganizationMetadataByOrganizationID(ctx context.Context, organizationID uuid.UUID) error
+	DeleteUserByClerkID(ctx context.Context, clerkUserID string) error
 	GetOrganizationByClerkID(ctx context.Context, clerkOrgID string) (Organization, error)
 	GetOrganizationMembersByOrganizationID(ctx context.Context, organizationID uuid.UUID) ([]OrganizationMember, error)
 	GetOrganizationMembersByUserClerkID(ctx context.Context, clerkUserID string) ([]OrganizationMember, error)
@@ -24,6 +26,7 @@ type Querier interface {
 	GetOrganizationsByUserClerkID(ctx context.Context, clerkUserID string) ([]Organization, error)
 	GetUserByClerkID(ctx context.Context, clerkUserID string) (User, error)
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) error
+	UpdateOrganizationMemberByClerkIDs(ctx context.Context, arg UpdateOrganizationMemberByClerkIDsParams) error
 	UpdateOrganizationMetadata(ctx context.Context, arg UpdateOrganizationMetadataParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) error
 }

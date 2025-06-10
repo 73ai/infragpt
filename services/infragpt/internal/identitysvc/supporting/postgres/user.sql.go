@@ -31,6 +31,16 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 	return err
 }
 
+const deleteUserByClerkID = `-- name: DeleteUserByClerkID :exec
+DELETE FROM users
+WHERE clerk_user_id = $1
+`
+
+func (q *Queries) DeleteUserByClerkID(ctx context.Context, clerkUserID string) error {
+	_, err := q.exec(ctx, q.deleteUserByClerkIDStmt, deleteUserByClerkID, clerkUserID)
+	return err
+}
+
 const getUserByClerkID = `-- name: GetUserByClerkID :one
 SELECT id, clerk_user_id, email, first_name, last_name, created_at, updated_at
 FROM users

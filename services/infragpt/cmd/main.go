@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/priyanshujain/infragpt/services/infragpt/identityapi"
 	"log"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	agentclient "github.com/priyanshujain/infragpt/services/agent/src/client/go"
@@ -44,6 +46,7 @@ func main() {
 	type Config struct {
 		Port     int                   `mapstructure:"port"`
 		GrpcPort int                   `mapstructure:"grpc_port"`
+		HttpLog  bool                  `mapstructure:"http_log"`
 		Slack    slack.Config          `mapstructure:"slack"`
 		Database postgresconfig.Config `mapstructure:"database"`
 		Agent    agentclient.Config    `mapstructure:"agent"`
@@ -106,10 +109,26 @@ func main() {
 		return nil
 	})
 
+	coreAPIHandler := infragptapi.NewHandler(svc)
+	identityAPIHandler := identityapi.NewHandler(identityService)
+
+	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Info("infragpt: http server panic", "recover", r)
+			}
+		}()
+		if strings.HasPrefix(r.URL.Path, "/identity/") {
+			identityAPIHandler.ServeHTTP(w, r)
+			return
+		}
+		coreAPIHandler.ServeHTTP(w, r)
+	})
+
 	httpServer := &http.Server{
 		Addr:        fmt.Sprintf(":%d", c.Port),
 		BaseContext: func(net.Listener) context.Context { return ctx },
-		Handler:     httplog.Middleware(true)(infragptapi.NewHandler(svc, identityService, c.Identity)),
+		Handler:     httplog.Middleware(c.HttpLog)(httpHandler),
 	}
 
 	g.Go(func() error {

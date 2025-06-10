@@ -75,3 +75,11 @@ func (r *memberRepository) MembersByUserClerkID(ctx context.Context, clerkUserID
 
 	return result, nil
 }
+
+func (r *memberRepository) UpdateByClerkIDs(ctx context.Context, clerkUserID string, clerkOrgID string, role string) error {
+	return r.queries.UpdateOrganizationMemberByClerkIDs(ctx, UpdateOrganizationMemberByClerkIDsParams{
+		ClerkUserID: clerkUserID,
+		ClerkOrgID:  clerkOrgID,
+		Role:        role,
+	})
+}

@@ -163,7 +163,6 @@ go vet ./...                  # Static analysis
 ### Database Management
 ```bash
 sqlc generate                 # Generate Go code from SQL queries
-./migrations/run_migration.sh # Run database migrations
 ```
 
 ### Dependencies

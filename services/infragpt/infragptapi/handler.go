@@ -5,19 +5,17 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
-	"github.com/priyanshujain/infragpt/services/infragpt/identityapi"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc"
 	"io"
 	"log/slog"
 	"net/http"
 )
 
-func NewHandler(svc infragpt.Service, identityService infragpt.IdentityService, identityConfig identitysvc.Config) http.Handler {
+func NewHandler(svc infragpt.Service) http.Handler {
 	h := &httpHandler{
 		svc: svc,
 	}
-	h.init(identityService, identityConfig)
+	h.init()
 	return corsHandler(panicHandler(h))
 }
 
@@ -26,21 +24,9 @@ type httpHandler struct {
 	svc infragpt.Service
 }
 
-func (h *httpHandler) init(identityService infragpt.IdentityService, identityConfig identitysvc.Config) {
+func (h *httpHandler) init() {
 	h.HandleFunc("GET /slack", h.completeSlackAuthentication)
 	h.HandleFunc("POST /reply", h.sendReply)
-
-	// Identity API routes
-	identityHandler := identityapi.NewHandler(identityService)
-	clerkValidator := identityapi.NewClerkValidator(identityConfig.Clerk.WebhookSecret)
-	tokenValidator := identityapi.NewClerkTokenValidator(identityConfig.Clerk.PublishableKey)
-
-	// Webhook endpoint (no auth required)
-	h.Handle("POST /webhooks/clerk", clerkValidator.VerifyWebhookSignature(http.HandlerFunc(identityHandler.HandleClerkWebhook)))
-
-	// Protected API endpoints
-	h.Handle("POST /api/v1/organizations/get", tokenValidator.RequireAuth(http.HandlerFunc(identityHandler.GetOrganization)))
-	h.Handle("POST /api/v1/organizations/metadata/set", tokenValidator.RequireAuth(http.HandlerFunc(identityHandler.SetOrganizationMetadata)))
 }
 
 func (h *httpHandler) completeSlackAuthentication(w http.ResponseWriter, r *http.Request) {
@@ -106,7 +92,6 @@ func ApiHandlerFunc[X any, Y any](api func(
 		_ = json.NewEncoder(w).Encode(res)
 	}
 }
-
 
 func corsHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

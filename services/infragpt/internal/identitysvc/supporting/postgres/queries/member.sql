@@ -15,3 +15,8 @@ WHERE organization_id = $1;
 SELECT user_id, organization_id, clerk_user_id, clerk_org_id, role, joined_at
 FROM organization_members
 WHERE clerk_user_id = $1;
+
+-- name: UpdateOrganizationMemberByClerkIDs :exec
+UPDATE organization_members
+SET role = $3
+WHERE clerk_user_id = $1 AND clerk_org_id = $2;

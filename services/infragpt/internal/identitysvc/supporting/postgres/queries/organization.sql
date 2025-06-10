@@ -17,3 +17,7 @@ WHERE om.clerk_user_id = $1;
 UPDATE organizations
 SET name = $2, slug = $3, updated_at = NOW()
 WHERE clerk_org_id = $1;
+
+-- name: DeleteOrganizationByClerkID :exec
+DELETE FROM organizations
+WHERE clerk_org_id = $1;

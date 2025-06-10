@@ -12,6 +12,7 @@ type MemberRepository interface {
 	DeleteByClerkIDs(ctx context.Context, clerkUserID string, clerkOrgID string) error
 	MembersByOrganizationID(ctx context.Context, organizationID uuid.UUID) ([]*OrganizationMember, error)
 	MembersByUserClerkID(ctx context.Context, clerkUserID string) ([]*OrganizationMember, error)
+	UpdateByClerkIDs(ctx context.Context, clerkUserID string, clerkOrgID string, role string) error
 }
 
 type OrganizationMember struct {

@@ -36,11 +36,17 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
+	if q.deleteOrganizationByClerkIDStmt, err = db.PrepareContext(ctx, deleteOrganizationByClerkID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteOrganizationByClerkID: %w", err)
+	}
 	if q.deleteOrganizationMemberByClerkIDsStmt, err = db.PrepareContext(ctx, deleteOrganizationMemberByClerkIDs); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteOrganizationMemberByClerkIDs: %w", err)
 	}
 	if q.deleteOrganizationMetadataByOrganizationIDStmt, err = db.PrepareContext(ctx, deleteOrganizationMetadataByOrganizationID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteOrganizationMetadataByOrganizationID: %w", err)
+	}
+	if q.deleteUserByClerkIDStmt, err = db.PrepareContext(ctx, deleteUserByClerkID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteUserByClerkID: %w", err)
 	}
 	if q.getOrganizationByClerkIDStmt, err = db.PrepareContext(ctx, getOrganizationByClerkID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetOrganizationByClerkID: %w", err)
@@ -62,6 +68,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.updateOrganizationStmt, err = db.PrepareContext(ctx, updateOrganization); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateOrganization: %w", err)
+	}
+	if q.updateOrganizationMemberByClerkIDsStmt, err = db.PrepareContext(ctx, updateOrganizationMemberByClerkIDs); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateOrganizationMemberByClerkIDs: %w", err)
 	}
 	if q.updateOrganizationMetadataStmt, err = db.PrepareContext(ctx, updateOrganizationMetadata); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateOrganizationMetadata: %w", err)
@@ -94,6 +103,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
 		}
 	}
+	if q.deleteOrganizationByClerkIDStmt != nil {
+		if cerr := q.deleteOrganizationByClerkIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteOrganizationByClerkIDStmt: %w", cerr)
+		}
+	}
 	if q.deleteOrganizationMemberByClerkIDsStmt != nil {
 		if cerr := q.deleteOrganizationMemberByClerkIDsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteOrganizationMemberByClerkIDsStmt: %w", cerr)
@@ -102,6 +116,11 @@ func (q *Queries) Close() error {
 	if q.deleteOrganizationMetadataByOrganizationIDStmt != nil {
 		if cerr := q.deleteOrganizationMetadataByOrganizationIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteOrganizationMetadataByOrganizationIDStmt: %w", cerr)
+		}
+	}
+	if q.deleteUserByClerkIDStmt != nil {
+		if cerr := q.deleteUserByClerkIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteUserByClerkIDStmt: %w", cerr)
 		}
 	}
 	if q.getOrganizationByClerkIDStmt != nil {
@@ -137,6 +156,11 @@ func (q *Queries) Close() error {
 	if q.updateOrganizationStmt != nil {
 		if cerr := q.updateOrganizationStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateOrganizationStmt: %w", cerr)
+		}
+	}
+	if q.updateOrganizationMemberByClerkIDsStmt != nil {
+		if cerr := q.updateOrganizationMemberByClerkIDsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateOrganizationMemberByClerkIDsStmt: %w", cerr)
 		}
 	}
 	if q.updateOrganizationMetadataStmt != nil {
@@ -192,8 +216,10 @@ type Queries struct {
 	createOrganizationMemberStmt                   *sql.Stmt
 	createOrganizationMetadataStmt                 *sql.Stmt
 	createUserStmt                                 *sql.Stmt
+	deleteOrganizationByClerkIDStmt                *sql.Stmt
 	deleteOrganizationMemberByClerkIDsStmt         *sql.Stmt
 	deleteOrganizationMetadataByOrganizationIDStmt *sql.Stmt
+	deleteUserByClerkIDStmt                        *sql.Stmt
 	getOrganizationByClerkIDStmt                   *sql.Stmt
 	getOrganizationMembersByOrganizationIDStmt     *sql.Stmt
 	getOrganizationMembersByUserClerkIDStmt        *sql.Stmt
@@ -201,6 +227,7 @@ type Queries struct {
 	getOrganizationsByUserClerkIDStmt              *sql.Stmt
 	getUserByClerkIDStmt                           *sql.Stmt
 	updateOrganizationStmt                         *sql.Stmt
+	updateOrganizationMemberByClerkIDsStmt         *sql.Stmt
 	updateOrganizationMetadataStmt                 *sql.Stmt
 	updateUserStmt                                 *sql.Stmt
 }
@@ -213,8 +240,10 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		createOrganizationMemberStmt:           q.createOrganizationMemberStmt,
 		createOrganizationMetadataStmt:         q.createOrganizationMetadataStmt,
 		createUserStmt:                         q.createUserStmt,
+		deleteOrganizationByClerkIDStmt:        q.deleteOrganizationByClerkIDStmt,
 		deleteOrganizationMemberByClerkIDsStmt: q.deleteOrganizationMemberByClerkIDsStmt,
 		deleteOrganizationMetadataByOrganizationIDStmt: q.deleteOrganizationMetadataByOrganizationIDStmt,
+		deleteUserByClerkIDStmt:                        q.deleteUserByClerkIDStmt,
 		getOrganizationByClerkIDStmt:                   q.getOrganizationByClerkIDStmt,
 		getOrganizationMembersByOrganizationIDStmt:     q.getOrganizationMembersByOrganizationIDStmt,
 		getOrganizationMembersByUserClerkIDStmt:        q.getOrganizationMembersByUserClerkIDStmt,
@@ -222,6 +251,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getOrganizationsByUserClerkIDStmt:              q.getOrganizationsByUserClerkIDStmt,
 		getUserByClerkIDStmt:                           q.getUserByClerkIDStmt,
 		updateOrganizationStmt:                         q.updateOrganizationStmt,
+		updateOrganizationMemberByClerkIDsStmt:         q.updateOrganizationMemberByClerkIDsStmt,
 		updateOrganizationMetadataStmt:                 q.updateOrganizationMetadataStmt,
 		updateUserStmt:                                 q.updateUserStmt,
 	}

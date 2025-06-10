@@ -75,3 +75,17 @@ func (r *memberRepository) MembersByUserClerkID(ctx context.Context, clerkUserID
 
 	return result, nil
 }
+
+func (r *memberRepository) UpdateByClerkIDs(ctx context.Context, clerkUserID string, clerkOrgID string, role string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	key := fmt.Sprintf("%s:%s", clerkUserID, clerkOrgID)
+	if member, exists := r.members[key]; exists {
+		member.Role = role
+		r.members[key] = member
+		return nil
+	}
+
+	return fmt.Errorf("member relationship not found for user %s in org %s", clerkUserID, clerkOrgID)
+}

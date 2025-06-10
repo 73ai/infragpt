@@ -67,7 +67,7 @@ func (cv *ClerkValidator) verifySignature(signature, timestamp, msgId string, bo
 	if err != nil {
 		return false
 	}
-	
+
 	now := time.Now().Unix()
 	if now-ts > 300 { // 5 minutes
 		return false
@@ -87,24 +87,24 @@ func (cv *ClerkValidator) verifySignature(signature, timestamp, msgId string, bo
 
 	// Parse signature header (format: "v1,g=signature1 v1,g=signature2")
 	signatures := strings.Split(signature, " ")
-	
+
 	for _, sig := range signatures {
 		if strings.HasPrefix(sig, "v1,") {
 			sigPart := strings.TrimPrefix(sig, "v1,")
 			expectedSig := cv.generateSignature(timestamp, msgId, body, secretBytes)
-			
+
 			// Decode the signature from the header
 			headerSig, err := base64.StdEncoding.DecodeString(sigPart)
 			if err != nil {
 				continue
 			}
-			
+
 			if hmac.Equal(headerSig, expectedSig) {
 				return true
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -142,7 +142,7 @@ func (ctv *ClerkTokenValidator) ValidateClerkToken(ctx context.Context, token st
 	// Mock validation - in production, validate with Clerk's JWT
 	return &ClerkTokenClaims{
 		UserID: "user_mock",
-		OrgID:  "org_mock", 
+		OrgID:  "org_mock",
 		Role:   "admin",
 	}, nil
 }
@@ -171,22 +171,4 @@ func (ctv *ClerkTokenValidator) RequireAuth(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), "clerk_claims", claims)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-func (ctv *ClerkTokenValidator) RequireOnboarding(identityService interface{}) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			claims, ok := r.Context().Value("clerk_claims").(*ClerkTokenClaims)
-			if !ok {
-				http.Error(w, "Missing authentication context", http.StatusUnauthorized)
-				return
-			}
-
-			// TODO: Check if onboarding is complete using identityService
-			// For now, allow all requests
-			_ = claims
-
-			next.ServeHTTP(w, r)
-		})
-	}
 }

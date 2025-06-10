@@ -11,3 +11,7 @@ WHERE clerk_user_id = $1;
 UPDATE users
 SET email = $2, first_name = $3, last_name = $4, updated_at = NOW()
 WHERE clerk_user_id = $1;
+
+-- name: DeleteUserByClerkID :exec
+DELETE FROM users
+WHERE clerk_user_id = $1;

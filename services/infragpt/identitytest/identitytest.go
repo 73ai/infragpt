@@ -30,7 +30,7 @@ func Ensure(t *testing.T, f fixture) {
 		t.Run("full workflow with metadata", func(t *testing.T) {
 			ctx := context.Background()
 			svc := f.Service()
-			
+
 			// 1. Create user
 			userEvent := infragpt.UserCreatedEvent{
 				ClerkUserID: "user_workflow123",
@@ -42,7 +42,7 @@ func Ensure(t *testing.T, f fixture) {
 			if err != nil {
 				t.Fatalf("failed to create user: %v", err)
 			}
-			
+
 			// 2. Create organization
 			orgEvent := infragpt.OrganizationCreatedEvent{
 				ClerkOrgID:      "org_workflow123",
@@ -54,18 +54,18 @@ func Ensure(t *testing.T, f fixture) {
 			if err != nil {
 				t.Fatalf("failed to create organization: %v", err)
 			}
-			
+
 			// 3. Get organization without metadata
 			query := infragpt.OrganizationQuery{ClerkOrgID: "org_workflow123"}
 			org, err := svc.Organization(ctx, query)
 			if err != nil {
 				t.Fatalf("failed to get organization: %v", err)
 			}
-			
+
 			if org.Name != "Test Org" {
 				t.Errorf("expected org name 'Test Org', got '%s'", org.Name)
 			}
-			
+
 			// 4. Set metadata
 			cmd := infragpt.OrganizationMetadataCommand{
 				OrganizationID:     org.ID,
@@ -78,24 +78,24 @@ func Ensure(t *testing.T, f fixture) {
 			if err != nil {
 				t.Fatalf("failed to set metadata: %v", err)
 			}
-			
+
 			// 5. Get organization with metadata
 			org, err = svc.Organization(ctx, query)
 			if err != nil {
 				t.Fatalf("failed to get organization with metadata: %v", err)
 			}
-			
+
 			if org.Metadata.CompanySize != infragpt.CompanySizeStartup {
 				t.Errorf("expected company size '%s', got '%s'", infragpt.CompanySizeStartup, org.Metadata.CompanySize)
 			}
-			
+
 			if len(org.Metadata.UseCases) != 1 || org.Metadata.UseCases[0] != infragpt.UseCaseInfrastructureMonitoring {
 				t.Errorf("expected use cases [%s], got %v", infragpt.UseCaseInfrastructureMonitoring, org.Metadata.UseCases)
 			}
 		})
 	})
 
-	t.Run("SetOrganizationMetadata", func(t *testing.T) {
+	t.Run("setOrganizationMetadata", func(t *testing.T) {
 		t.Run("sets metadata successfully", func(t *testing.T) {
 			t.Skip("skipping - needs organization setup")
 		})

@@ -101,3 +101,33 @@ func (r *organizationRepository) SetMetadata(ctx context.Context, organizationID
 	r.metadata[organizationID] = metadata
 	return nil
 }
+
+func (r *organizationRepository) DeleteByClerkID(ctx context.Context, clerkOrgID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, exists := r.orgs[clerkOrgID]; !exists {
+		return fmt.Errorf("organization with clerk_org_id %s not found", clerkOrgID)
+	}
+
+	delete(r.orgs, clerkOrgID)
+
+	// Remove metadata and members associated with the organization
+	for orgID, metadata := range r.metadata {
+		if metadata.OrganizationID.String() == clerkOrgID {
+			delete(r.metadata, orgID)
+			break
+		}
+	}
+
+	for userClerkID, orgIDs := range r.members {
+		for i, orgID := range orgIDs {
+			if orgID.String() == clerkOrgID {
+				r.members[userClerkID] = append(orgIDs[:i], orgIDs[i+1:]...)
+				break
+			}
+		}
+	}
+
+	return nil
+}

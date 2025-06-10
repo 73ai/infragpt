@@ -3,6 +3,8 @@ package identityapi
 import (
 	"context"
 	"encoding/json"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -10,17 +12,23 @@ import (
 	"github.com/priyanshujain/infragpt/services/infragpt"
 )
 
-type Handler struct {
-	identityService infragpt.IdentityService
+type httpHandler struct {
+	http.ServeMux
+	svc infragpt.IdentityService
 }
 
-func NewHandler(identityService infragpt.IdentityService) *Handler {
-	return &Handler{
-		identityService: identityService,
+func (h *httpHandler) init() {
+	h.HandleFunc("/identity/organization", h.organization())
+	h.HandleFunc("/identity/organization/set-metadata", h.setOrganizationMetadata())
+}
+
+func NewHandler(identityService infragpt.IdentityService) http.Handler {
+	return &httpHandler{
+		svc: identityService,
 	}
 }
 
-func (h *Handler) GetOrganization(w http.ResponseWriter, r *http.Request) {
+func (h *httpHandler) organization() func(w http.ResponseWriter, r *http.Request) {
 	type request struct {
 		ClerkOrgID string `json:"clerk_org_id"`
 	}
@@ -39,12 +47,12 @@ func (h *Handler) GetOrganization(w http.ResponseWriter, r *http.Request) {
 		} `json:"metadata"`
 	}
 
-	ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
+	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
 		query := infragpt.OrganizationQuery{
 			ClerkOrgID: req.ClerkOrgID,
 		}
 
-		org, err := h.identityService.Organization(ctx, query)
+		org, err := h.svc.Organization(ctx, query)
 		if err != nil {
 			return response{}, err
 		}
@@ -81,10 +89,10 @@ func (h *Handler) GetOrganization(w http.ResponseWriter, r *http.Request) {
 		}
 
 		return resp, nil
-	})(w, r)
+	})
 }
 
-func (h *Handler) SetOrganizationMetadata(w http.ResponseWriter, r *http.Request) {
+func (h *httpHandler) setOrganizationMetadata() func(w http.ResponseWriter, r *http.Request) {
 	type request struct {
 		OrganizationID     string   `json:"organization_id"`
 		CompanySize        string   `json:"company_size"`
@@ -94,7 +102,7 @@ func (h *Handler) SetOrganizationMetadata(w http.ResponseWriter, r *http.Request
 	}
 	type response struct{}
 
-	ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
+	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
 		orgID, err := uuid.Parse(req.OrganizationID)
 		if err != nil {
 			return response{}, err
@@ -118,30 +126,33 @@ func (h *Handler) SetOrganizationMetadata(w http.ResponseWriter, r *http.Request
 			ObservabilityStack: stack,
 		}
 
-		err = h.identityService.SetOrganizationMetadata(ctx, cmd)
+		err = h.svc.SetOrganizationMetadata(ctx, cmd)
 		return response{}, err
-	})(w, r)
+	})
 }
 
-func ApiHandlerFunc[T any, R any](handler func(context.Context, T) (R, error)) http.HandlerFunc {
+func ApiHandlerFunc[T any, R any](handler func(context.Context, T) (R, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		var req T
+		var request T
 		if r.Method == http.MethodPost && r.Body != nil {
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 				http.Error(w, "Invalid JSON", http.StatusBadRequest)
 				return
 			}
 		}
 
-		response, err := handler(ctx, req)
+		response, err := handler(ctx, request)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			slog.Error("error in identity api handler", "path", r.URL, "request", request, "err", err)
+			var httpError = httperrors.From(err)
+			w.WriteHeader(httpError.HttpStatus)
+			_ = json.NewEncoder(w).Encode(httpError)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(response)
 	}
 }

@@ -7,28 +7,44 @@ import (
 	"github.com/google/uuid"
 )
 
-type IdentityService interface {
-	SubscribeUserCreated(context.Context, UserCreatedEvent) error
-	SubscribeUserUpdated(context.Context, UserUpdatedEvent) error
-	SubscribeOrganizationCreated(context.Context, OrganizationCreatedEvent) error
-	SubscribeOrganizationUpdated(context.Context, OrganizationUpdatedEvent) error
-	SubscribeOrganizationMemberAdded(context.Context, OrganizationMemberAddedEvent) error
-	SubscribeOrganizationMemberRemoved(context.Context, OrganizationMemberRemovedEvent) error
-
-	SetOrganizationMetadata(context.Context, OrganizationMetadataCommand) error
-	Organization(context.Context, OrganizationQuery) (Organization, error)
+type User struct {
+	ID          uuid.UUID
+	ClerkUserID string
+	Email       string
+	FirstName   string
+	LastName    string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
-type OrganizationMetadataCommand struct {
+type Organization struct {
+	ID              uuid.UUID
+	ClerkOrgID      string
+	Name            string
+	Slug            string
+	CreatedByUserID uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	Metadata        OrganizationMetadata
+}
+
+type OrganizationMetadata struct {
 	OrganizationID     uuid.UUID
 	CompanySize        CompanySize
 	TeamSize           TeamSize
 	UseCases           []UseCase
 	ObservabilityStack []ObservabilityStack
+	CompletedAt        time.Time
+	UpdatedAt          time.Time
 }
 
-type OrganizationQuery struct {
-	ClerkOrgID string
+type OrganizationMember struct {
+	UserID         uuid.UUID
+	OrganizationID uuid.UUID
+	ClerkUserID    string
+	ClerkOrgID     string
+	Role           string
+	JoinedAt       time.Time
 }
 
 type CompanySize string
@@ -82,6 +98,33 @@ const (
 	ObservabilityStackOther                 ObservabilityStack = "other"
 )
 
+type IdentityService interface {
+	SubscribeUserCreated(context.Context, UserCreatedEvent) error
+	SubscribeUserUpdated(context.Context, UserUpdatedEvent) error
+	SubscribeUserDeleted(context.Context, UserDeletedEvent) error
+	SubscribeOrganizationCreated(context.Context, OrganizationCreatedEvent) error
+	SubscribeOrganizationUpdated(context.Context, OrganizationUpdatedEvent) error
+	SubscribeOrganizationDeleted(context.Context, OrganizationDeletedEvent) error
+	SubscribeOrganizationMemberAdded(context.Context, OrganizationMemberAddedEvent) error
+	SubscribeOrganizationMemberUpdated(context.Context, OrganizationMemberUpdatedEvent) error
+	SubscribeOrganizationMemberDeleted(context.Context, OrganizationMemberDeletedEvent) error
+
+	SetOrganizationMetadata(context.Context, OrganizationMetadataCommand) error
+	Organization(context.Context, OrganizationQuery) (Organization, error)
+}
+
+type OrganizationMetadataCommand struct {
+	OrganizationID     uuid.UUID
+	CompanySize        CompanySize
+	TeamSize           TeamSize
+	UseCases           []UseCase
+	ObservabilityStack []ObservabilityStack
+}
+
+type OrganizationQuery struct {
+	ClerkOrgID string
+}
+
 type UserCreatedEvent struct {
 	ClerkUserID string
 	Email       string
@@ -115,47 +158,21 @@ type OrganizationMemberAddedEvent struct {
 	Role        string
 }
 
-type OrganizationMemberRemovedEvent struct {
+type OrganizationMemberDeletedEvent struct {
 	ClerkUserID string
 	ClerkOrgID  string
 }
 
-type User struct {
-	ID          uuid.UUID
+type OrganizationMemberUpdatedEvent struct {
 	ClerkUserID string
-	Email       string
-	FirstName   string
-	LastName    string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ClerkOrgID  string
+	Role        string
 }
 
-type Organization struct {
-	ID              uuid.UUID
-	ClerkOrgID      string
-	Name            string
-	Slug            string
-	CreatedByUserID uuid.UUID
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	Metadata        OrganizationMetadata
+type UserDeletedEvent struct {
+	ClerkUserID string
 }
 
-type OrganizationMetadata struct {
-	OrganizationID     uuid.UUID
-	CompanySize        CompanySize
-	TeamSize           TeamSize
-	UseCases           []UseCase
-	ObservabilityStack []ObservabilityStack
-	CompletedAt        time.Time
-	UpdatedAt          time.Time
-}
-
-type OrganizationMember struct {
-	UserID         uuid.UUID
-	OrganizationID uuid.UUID
-	ClerkUserID    string
-	ClerkOrgID     string
-	Role           string
-	JoinedAt       time.Time
+type OrganizationDeletedEvent struct {
+	ClerkOrgID string
 }

@@ -153,3 +153,8 @@ func (r *organizationRepository) SetMetadata(ctx context.Context, organizationID
 		ObservabilityStack: stack,
 	})
 }
+
+func (r *organizationRepository) DeleteByClerkID(ctx context.Context, clerkOrgID string) error {
+	err := r.queries.DeleteOrganizationByClerkID(ctx, clerkOrgID)
+	return err
+}

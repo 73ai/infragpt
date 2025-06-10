@@ -11,6 +11,7 @@ type UserRepository interface {
 	Create(context.Context, User) error
 	UserByClerkID(ctx context.Context, clerkUserID string) (*User, error)
 	Update(ctx context.Context, clerkUserID string, user User) error
+	DeleteByClerkID(ctx context.Context, clerkUserID string) error
 }
 
 type User struct {

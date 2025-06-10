@@ -14,6 +14,7 @@ type OrganizationRepository interface {
 	OrganizationsByUserClerkID(ctx context.Context, clerkUserID string) ([]*Organization, error)
 	Update(ctx context.Context, clerkOrgID string, org Organization) error
 	SetMetadata(ctx context.Context, organizationID uuid.UUID, metadata OrganizationMetadata) error
+	DeleteByClerkID(ctx context.Context, clerkOrgID string) error
 }
 
 type Organization struct {
