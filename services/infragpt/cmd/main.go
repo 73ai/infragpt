@@ -69,6 +69,8 @@ func main() {
 	// Create identity service with underlying database connection
 	identityService := c.Identity.New(db.DB())
 
+	authMiddleware := c.Identity.Clerk.NewAuthMiddleware()
+
 	sr, err := slackConfig.New(ctx)
 	if err != nil {
 		panic(fmt.Errorf("error connecting to slack: %w", err))
@@ -110,7 +112,7 @@ func main() {
 	})
 
 	coreAPIHandler := infragptapi.NewHandler(svc)
-	identityAPIHandler := identityapi.NewHandler(identityService)
+	identityAPIHandler := identityapi.NewHandler(identityService, authMiddleware)
 
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -128,7 +130,7 @@ func main() {
 	httpServer := &http.Server{
 		Addr:        fmt.Sprintf(":%d", c.Port),
 		BaseContext: func(net.Listener) context.Context { return ctx },
-		Handler:     httplog.Middleware(c.HttpLog)(httpHandler),
+		Handler:     httplog.Middleware(c.HttpLog)(corsHandler(httpHandler)),
 	}
 
 	g.Go(func() error {
@@ -161,4 +163,22 @@ func main() {
 	if err := g.Wait(); err != nil {
 		panic(fmt.Errorf("error waiting for server to finish: %w", err))
 	}
+}
+
+func corsHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		// Handle preflight requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		h.ServeHTTP(w, r)
+	})
 }

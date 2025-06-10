@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
+	svix "github.com/svix/svix-webhooks/go"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/priyanshujain/infragpt/services/infragpt"
 )
@@ -45,10 +48,16 @@ type webhookHandler struct {
 
 type webhookServerConfig struct {
 	port                int
+	webhookSecret       string
 	callbackHandlerFunc func(ctx context.Context, event any) error
 }
 
 func (c webhookServerConfig) startWebhookServer(ctx context.Context) error {
+	wh, err := svix.NewWebhook(c.webhookSecret)
+	if err != nil {
+		panic(fmt.Errorf("error creating svix webhook: %w", err))
+	}
+
 	h := &webhookHandler{
 		callbackHandlerFunc: c.callbackHandlerFunc,
 	}
@@ -57,17 +66,17 @@ func (c webhookServerConfig) startWebhookServer(ctx context.Context) error {
 	httpServer := &http.Server{
 		Addr:        fmt.Sprintf(":%d", c.port),
 		BaseContext: func(net.Listener) context.Context { return ctx },
-		Handler:     panicHandler(h),
+		Handler:     panicMiddleware(webhookValidationMiddleware(wh, h)),
 	}
 
 	return httpServer.ListenAndServe()
 }
 
-func (h *webhookHandler) init() {
-	h.HandleFunc("/webhooks/clerk", h.handler())
+func (wh *webhookHandler) init() {
+	wh.HandleFunc("/webhooks/clerk", wh.handler())
 }
 
-func (h *webhookHandler) handler() func(w http.ResponseWriter, r *http.Request) {
+func (wh *webhookHandler) handler() func(w http.ResponseWriter, r *http.Request) {
 	type request struct {
 		Type string          `json:"type"`
 		Data json.RawMessage `json:"data"`
@@ -77,24 +86,24 @@ func (h *webhookHandler) handler() func(w http.ResponseWriter, r *http.Request) 
 	return ApiHandlerFunc(func(ctx context.Context, r request) (response, error) {
 		switch r.Type {
 		case "user.created":
-			return response{}, h.handleUserCreated(ctx, r.Data)
+			return response{}, wh.handleUserCreated(ctx, r.Data)
 		case "user.updated":
-			return response{}, h.handleUserUpdated(ctx, r.Data)
+			return response{}, wh.handleUserUpdated(ctx, r.Data)
 		case "organization.created":
-			return response{}, h.handleOrganizationCreated(ctx, r.Data)
+			return response{}, wh.handleOrganizationCreated(ctx, r.Data)
 		case "organization.updated":
-			return response{}, h.handleOrganizationUpdated(ctx, r.Data)
+			return response{}, wh.handleOrganizationUpdated(ctx, r.Data)
 		case "organizationMembership.created":
-			return response{}, h.handleOrganizationMemberAdded(ctx, r.Data)
+			return response{}, wh.handleOrganizationMemberAdded(ctx, r.Data)
 		case "organizationMembership.deleted":
-			return response{}, h.handleOrganizationMemberRemoved(ctx, r.Data)
+			return response{}, wh.handleOrganizationMemberRemoved(ctx, r.Data)
 		default:
 			return response{}, fmt.Errorf("unsupported webhook event type: %s", r.Type)
 		}
 	})
 }
 
-func (h *webhookHandler) handleUserCreated(ctx context.Context, data json.RawMessage) error {
+func (wh *webhookHandler) handleUserCreated(ctx context.Context, data json.RawMessage) error {
 	var user user
 	if err := json.Unmarshal(data, &user); err != nil {
 		return fmt.Errorf("failed to unmarshal user data: %w", err)
@@ -112,10 +121,10 @@ func (h *webhookHandler) handleUserCreated(ctx context.Context, data json.RawMes
 		LastName:    user.LastName,
 	}
 
-	return h.callbackHandlerFunc(ctx, event)
+	return wh.callbackHandlerFunc(ctx, event)
 }
 
-func (h *webhookHandler) handleUserUpdated(ctx context.Context, data json.RawMessage) error {
+func (wh *webhookHandler) handleUserUpdated(ctx context.Context, data json.RawMessage) error {
 	var user user
 	if err := json.Unmarshal(data, &user); err != nil {
 		return fmt.Errorf("failed to unmarshal user data: %w", err)
@@ -133,10 +142,10 @@ func (h *webhookHandler) handleUserUpdated(ctx context.Context, data json.RawMes
 		LastName:    user.LastName,
 	}
 
-	return h.callbackHandlerFunc(ctx, event)
+	return wh.callbackHandlerFunc(ctx, event)
 }
 
-func (h *webhookHandler) handleOrganizationCreated(ctx context.Context, data json.RawMessage) error {
+func (wh *webhookHandler) handleOrganizationCreated(ctx context.Context, data json.RawMessage) error {
 	var org organization
 	if err := json.Unmarshal(data, &org); err != nil {
 		return fmt.Errorf("failed to unmarshal organization data: %w", err)
@@ -149,10 +158,10 @@ func (h *webhookHandler) handleOrganizationCreated(ctx context.Context, data jso
 		CreatedByUserID: org.CreatedBy,
 	}
 
-	return h.callbackHandlerFunc(ctx, event)
+	return wh.callbackHandlerFunc(ctx, event)
 }
 
-func (h *webhookHandler) handleOrganizationUpdated(ctx context.Context, data json.RawMessage) error {
+func (wh *webhookHandler) handleOrganizationUpdated(ctx context.Context, data json.RawMessage) error {
 	var org organization
 	if err := json.Unmarshal(data, &org); err != nil {
 		return fmt.Errorf("failed to unmarshal organization data: %w", err)
@@ -164,10 +173,10 @@ func (h *webhookHandler) handleOrganizationUpdated(ctx context.Context, data jso
 		Slug:       org.Slug,
 	}
 
-	return h.callbackHandlerFunc(ctx, event)
+	return wh.callbackHandlerFunc(ctx, event)
 }
 
-func (h *webhookHandler) handleOrganizationMemberAdded(ctx context.Context, data json.RawMessage) error {
+func (wh *webhookHandler) handleOrganizationMemberAdded(ctx context.Context, data json.RawMessage) error {
 	var membership organizationMembership
 	if err := json.Unmarshal(data, &membership); err != nil {
 		return fmt.Errorf("failed to unmarshal membership data: %w", err)
@@ -179,10 +188,10 @@ func (h *webhookHandler) handleOrganizationMemberAdded(ctx context.Context, data
 		Role:        membership.Role,
 	}
 
-	return h.callbackHandlerFunc(ctx, event)
+	return wh.callbackHandlerFunc(ctx, event)
 }
 
-func (h *webhookHandler) handleOrganizationMemberRemoved(ctx context.Context, data json.RawMessage) error {
+func (wh *webhookHandler) handleOrganizationMemberRemoved(ctx context.Context, data json.RawMessage) error {
 	var membership organizationMembership
 	if err := json.Unmarshal(data, &membership); err != nil {
 		return fmt.Errorf("failed to unmarshal membership data: %w", err)
@@ -193,7 +202,7 @@ func (h *webhookHandler) handleOrganizationMemberRemoved(ctx context.Context, da
 		ClerkOrgID:  membership.Organization.ID,
 	}
 
-	return h.callbackHandlerFunc(ctx, event)
+	return wh.callbackHandlerFunc(ctx, event)
 }
 
 func ApiHandlerFunc[T any, R any](handler func(context.Context, T) (R, error)) func(http.ResponseWriter, *http.Request) {
@@ -222,7 +231,7 @@ func ApiHandlerFunc[T any, R any](handler func(context.Context, T) (R, error)) f
 	}
 }
 
-func panicHandler(h http.Handler) http.Handler {
+func panicMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if r := recover(); r != nil {
@@ -231,5 +240,26 @@ func panicHandler(h http.Handler) http.Handler {
 			}
 		}()
 		h.ServeHTTP(w, r)
+	})
+}
+
+func webhookValidationMiddleware(webhook *svix.Webhook, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read request body", http.StatusBadRequest)
+			return
+		}
+
+		err = webhook.Verify(body, r.Header)
+		if err != nil {
+			http.Error(w, "Invalid webhook signature", http.StatusUnauthorized)
+			return
+		}
+
+		// Restore body for downstream handlers
+		r.Body = io.NopCloser(strings.NewReader(string(body)))
+
+		next.ServeHTTP(w, r)
 	})
 }

@@ -22,10 +22,14 @@ func (h *httpHandler) init() {
 	h.HandleFunc("/identity/organization/set-metadata", h.setOrganizationMetadata())
 }
 
-func NewHandler(identityService infragpt.IdentityService) http.Handler {
-	return &httpHandler{
+func NewHandler(identityService infragpt.IdentityService,
+	authMiddleware func(handler http.Handler) http.Handler) http.Handler {
+	h := &httpHandler{
 		svc: identityService,
 	}
+
+	h.init()
+	return authMiddleware(h)
 }
 
 func (h *httpHandler) organization() func(w http.ResponseWriter, r *http.Request) {
