@@ -16,7 +16,7 @@ func NewHandler(svc infragpt.Service) http.Handler {
 		svc: svc,
 	}
 	h.init()
-	return panicHandler(h)
+	return h
 }
 
 type httpHandler struct {
@@ -91,16 +91,4 @@ func ApiHandlerFunc[X any, Y any](api func(
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(res)
 	}
-}
-
-func panicHandler(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("infragpt: panic while handling http request", "recover", r)
-				w.WriteHeader(http.StatusInternalServerError)
-			}
-		}()
-		h.ServeHTTP(w, r)
-	})
 }

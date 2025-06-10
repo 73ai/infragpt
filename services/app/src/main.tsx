@@ -13,7 +13,20 @@ if (!PUBLISHABLE_KEY) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} signInUrl='/login' signUpUrl='/signup'>
+    <ClerkProvider 
+      publishableKey={PUBLISHABLE_KEY} 
+      signInUrl='/login' 
+      signUpUrl='/signup'
+      appearance={{
+        layout: {
+          socialButtonsVariant: "iconButton",
+        },
+        elements: {
+          formButtonPrimary: "bg-primary hover:bg-primary/90",
+          card: "shadow-none border border-border",
+        },
+      }}
+    >
       <App />
     </ClerkProvider>
   </React.StrictMode>,

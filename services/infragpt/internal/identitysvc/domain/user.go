@@ -2,22 +2,24 @@ package domain
 
 import (
 	"context"
+	"time"
+
+	"github.com/google/uuid"
 )
 
-type User struct {
-	UserID       string
-	Email        string
-	PasswordHash string
+type UserRepository interface {
+	Create(context.Context, User) error
+	UserByClerkID(ctx context.Context, clerkUserID string) (*User, error)
+	Update(ctx context.Context, clerkUserID string, user User) error
+	DeleteByClerkID(ctx context.Context, clerkUserID string) error
 }
 
-type UserRepository interface {
-	CreateUser(ctx context.Context, user User) (verificationID string, err error)
-	UserByEmail(ctx context.Context, email string) (User, error)
-
-	VerifyUserEmail(ctx context.Context, verificationID string) error
-	RequestResetPassword(ctx context.Context, userID string) (resetID string, err error)
-
-	ValidateResetPasswordToken(ctx context.Context, resetID string) error
-
-	ResetPassword(ctx context.Context, token, password string) error
+type User struct {
+	ID          uuid.UUID
+	ClerkUserID string
+	Email       string
+	FirstName   string
+	LastName    string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }

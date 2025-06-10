@@ -1,0 +1,29 @@
+log_level: "info"
+
+port: 8080
+
+grpc_port: 9090
+
+http_log: true
+
+slack:
+  client_id: "x"
+  client_secret: "x"
+  app_token: "x"
+
+database:
+  host: "x"
+  port: x
+  db_name: "x"
+  user: "x"
+  password: "x"
+
+agent:
+  endpoint: "[::]:50051"
+  retry_attempts: 3
+
+identity:
+  clerk:
+    port: 8085
+    webhook_secret: "x"
+    secret_key: "x"

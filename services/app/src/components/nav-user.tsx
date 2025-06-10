@@ -34,7 +34,7 @@ export const NavUser = observer(() => {
 
   const { user } = useUser()
   const { signOut } = useAuth()
-  const { openUserProfile } = useClerk()
+  const { openUserProfile, openOrganizationProfile } = useClerk()
 
   const { isMobile } = useSidebar()
 
@@ -83,6 +83,10 @@ export const NavUser = observer(() => {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => openOrganizationProfile()}>
+                <BadgeCheck />
+                Organization
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => openUserProfile()}>
                 <BadgeCheck />
                 Account

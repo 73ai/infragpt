@@ -2,366 +2,216 @@ package identitysvc
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
-	"strings"
-	"time"
-
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"
-
 	"github.com/google/uuid"
-	"github.com/priyanshujain/infragpt/services/infragpt/identity"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/priyanshujain/infragpt/services/infragpt"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"
 )
 
 type service struct {
-	sessionRepo       domain.SessionRepository
-	userRepo          domain.UserRepository
-	emailSVC          EmailService
-	tokenManager      TokenManager
-	googleAuthGateway domain.GoogleAuthGateway
+	userRepo         domain.UserRepository
+	organizationRepo domain.OrganizationRepository
+	memberRepo       domain.MemberRepository
+	authService      domain.AuthService
 }
 
-var _ identity.Service = (*service)(nil)
+func (s *service) Subscribe(ctx context.Context) error {
+	return s.authService.Subscribe(ctx, func(ctx context.Context, event any) error {
+		switch e := event.(type) {
+		case infragpt.UserCreatedEvent:
+			return s.reconcileUserCreated(ctx, e)
+		case infragpt.UserUpdatedEvent:
+			return s.reconcileUserUpdated(ctx, e)
+		case infragpt.UserDeletedEvent:
+			return s.reconcileUserDeleted(ctx, e)
+		case infragpt.OrganizationCreatedEvent:
+			return s.reconcileOrganizationCreated(ctx, e)
+		case infragpt.OrganizationUpdatedEvent:
+			return s.reconcileOrganizationUpdated(ctx, e)
+		case infragpt.OrganizationDeletedEvent:
+			return s.reconcileOrganizationDeleted(ctx, e)
+		case infragpt.OrganizationMemberAddedEvent:
+			return s.reconcileOrganizationMemberAdded(ctx, e)
+		case infragpt.OrganizationMemberUpdatedEvent:
+			return s.reconcileOrganizationMemberUpdated(ctx, e)
+		case infragpt.OrganizationMemberDeletedEvent:
+			return s.reconcileOrganizationMemberDeleted(ctx, e)
+		default:
+			return fmt.Errorf("unknown event type: %T", e)
+		}
 
-func (s service) CreateUser(ctx context.Context, cmd identity.CreateUserCommand) (identity.Credentials, error) {
-	if err := ValidateEmail(cmd.Email); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate email: %w", err)
-	}
-	if err := ValidatePassword(cmd.Password); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate password: %w", err)
-	}
-	if err := ValidateIP(cmd.IP); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate ip: %w", err)
-	}
-	if err := ValidateUserAgent(cmd.UserAgent); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate user agent: %w", err)
-	}
-	if err := ValidateTimezone(cmd.Timezone); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate timezone: %w", err)
-	}
-	if err := ValidateOS(cmd.OS); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate os: %w", err)
-	}
-	if err := ValidateDeviceFingerprint(cmd.DeviceFingerprint); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate device fingerprint: %w", err)
-	}
-
-	if cmd.Brand == "" {
-		cmd.Brand = "Unknown Brand"
-	}
-
-	// TODO: move this bcrypt hash to the repository
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(cmd.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return identity.Credentials{}, fmt.Errorf("hash password: %w", err)
-	}
-
-	uid := newUserID()
-	verificationID, err := s.userRepo.CreateUser(ctx, domain.User{
-		UserID:       uid,
-		Email:        cmd.Email,
-		PasswordHash: string(hashedPassword),
 	})
-	if err != nil {
-		return identity.Credentials{}, fmt.Errorf("create user: %w", err)
+}
+
+func (s *service) reconcileUserCreated(ctx context.Context, event infragpt.UserCreatedEvent) error {
+	user := domain.User{
+		ID:          uuid.New(),
+		ClerkUserID: event.ClerkUserID,
+		Email:       event.Email,
+		FirstName:   event.FirstName,
+		LastName:    event.LastName,
 	}
 
-	// send email verification
-	err = s.emailSVC.SendEmailVerification(ctx, cmd.Email, verificationID)
-	if err != nil {
-		return identity.Credentials{}, fmt.Errorf("send email verification: %w", err)
+	return s.userRepo.Create(ctx, user)
+}
+
+func (s *service) SubscribeUserCreated(ctx context.Context, event infragpt.UserCreatedEvent) error {
+	panic("not allowed")
+}
+
+func (s *service) reconcileUserUpdated(ctx context.Context, event infragpt.UserUpdatedEvent) error {
+	user := domain.User{
+		Email:     event.Email,
+		FirstName: event.FirstName,
+		LastName:  event.LastName,
 	}
 
-	sessionID := newSessionID()
-	credentials, err := s.sessionRepo.StartUserSession(ctx, identity.UserSession{
-		UserID:         uid,
-		SessionID:      sessionID,
-		IPAddress:      cmd.IP,
-		UserAgent:      cmd.UserAgent,
-		IPCountryISO:   cmd.IPCountryISO,
-		LastActivityAt: time.Now(),
-		Timezone:       cmd.Timezone,
-		Device: identity.UserDevice{
-			UserID:            uid,
-			DeviceFingerprint: cmd.DeviceFingerprint,
-			OS:                cmd.OS,
-			Name:              fmt.Sprintf("%s %s", cmd.Brand, cmd.OS),
-			Brand:             cmd.Brand,
+	return s.userRepo.Update(ctx, event.ClerkUserID, user)
+}
+
+func (s *service) SubscribeUserUpdated(ctx context.Context, event infragpt.UserUpdatedEvent) error {
+	panic("not allowed")
+}
+
+func (s *service) reconcileUserDeleted(ctx context.Context, event infragpt.UserDeletedEvent) error {
+	return s.userRepo.DeleteByClerkID(ctx, event.ClerkUserID)
+}
+
+func (s *service) SubscribeUserDeleted(ctx context.Context, event infragpt.UserDeletedEvent) error {
+	panic("not allowed")
+}
+
+func (s *service) reconcileOrganizationCreated(ctx context.Context, event infragpt.OrganizationCreatedEvent) error {
+	createdByUser, err := s.userRepo.UserByClerkID(ctx, event.CreatedByUserID)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	org := domain.Organization{
+		ID:              uuid.New(),
+		ClerkOrgID:      event.ClerkOrgID,
+		Name:            event.Name,
+		Slug:            event.Slug,
+		CreatedByUserID: createdByUser.ID,
+	}
+
+	err = s.organizationRepo.Create(ctx, org)
+	if err != nil {
+		return fmt.Errorf("organization created: %w", err)
+	}
+
+	member := domain.OrganizationMember{
+		UserID:         createdByUser.ID,
+		OrganizationID: org.ID,
+		ClerkUserID:    event.CreatedByUserID,
+		ClerkOrgID:     event.ClerkOrgID,
+		Role:           "admin",
+	}
+
+	return s.memberRepo.Create(ctx, member)
+}
+
+func (s *service) SubscribeOrganizationCreated(ctx context.Context, event infragpt.OrganizationCreatedEvent) error {
+	panic("not allowed")
+}
+
+func (s *service) reconcileOrganizationUpdated(ctx context.Context, event infragpt.OrganizationUpdatedEvent) error {
+	org := domain.Organization{
+		Name: event.Name,
+		Slug: event.Slug,
+	}
+
+	return s.organizationRepo.Update(ctx, event.ClerkOrgID, org)
+}
+
+func (s *service) SubscribeOrganizationUpdated(ctx context.Context, event infragpt.OrganizationUpdatedEvent) error {
+	panic("not allowed")
+}
+
+func (s *service) reconcileOrganizationDeleted(ctx context.Context, event infragpt.OrganizationDeletedEvent) error {
+	return s.organizationRepo.DeleteByClerkID(ctx, event.ClerkOrgID)
+}
+
+func (s *service) SubscribeOrganizationDeleted(ctx context.Context, event infragpt.OrganizationDeletedEvent) error {
+	panic("not allowed")
+}
+
+func (s *service) reconcileOrganizationMemberAdded(ctx context.Context, event infragpt.OrganizationMemberAddedEvent) error {
+	user, err := s.userRepo.UserByClerkID(ctx, event.ClerkUserID)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	org, err := s.organizationRepo.OrganizationByClerkID(ctx, event.ClerkOrgID)
+	if err != nil {
+		return fmt.Errorf("organization not found: %w", err)
+	}
+
+	member := domain.OrganizationMember{
+		UserID:         user.ID,
+		OrganizationID: org.ID,
+		ClerkUserID:    event.ClerkUserID,
+		ClerkOrgID:     event.ClerkOrgID,
+		Role:           event.Role,
+	}
+
+	return s.memberRepo.Create(ctx, member)
+}
+
+func (s *service) SubscribeOrganizationMemberAdded(ctx context.Context, event infragpt.OrganizationMemberAddedEvent) error {
+	panic("not allowed")
+}
+
+func (s *service) reconcileOrganizationMemberUpdated(ctx context.Context, event infragpt.OrganizationMemberUpdatedEvent) error {
+	return s.memberRepo.UpdateByClerkIDs(ctx, event.ClerkUserID, event.ClerkOrgID, event.Role)
+}
+
+func (s *service) SubscribeOrganizationMemberUpdated(ctx context.Context, event infragpt.OrganizationMemberUpdatedEvent) error {
+	panic("not allowed")
+}
+
+func (s *service) reconcileOrganizationMemberDeleted(ctx context.Context, event infragpt.OrganizationMemberDeletedEvent) error {
+	return s.memberRepo.DeleteByClerkIDs(ctx, event.ClerkUserID, event.ClerkOrgID)
+}
+
+func (s *service) SubscribeOrganizationMemberDeleted(ctx context.Context, event infragpt.OrganizationMemberDeletedEvent) error {
+	panic("not allowed")
+}
+
+func (s *service) SetOrganizationMetadata(ctx context.Context, cmd infragpt.OrganizationMetadataCommand) error {
+	metadata := domain.OrganizationMetadata{
+		OrganizationID:     cmd.OrganizationID,
+		CompanySize:        cmd.CompanySize,
+		TeamSize:           cmd.TeamSize,
+		UseCases:           cmd.UseCases,
+		ObservabilityStack: cmd.ObservabilityStack,
+	}
+
+	return s.organizationRepo.SetMetadata(ctx, cmd.OrganizationID, metadata)
+}
+
+func (s *service) Organization(ctx context.Context, query infragpt.OrganizationQuery) (infragpt.Organization, error) {
+	org, err := s.organizationRepo.OrganizationByClerkID(ctx, query.ClerkOrgID)
+	if err != nil {
+		return infragpt.Organization{}, err
+	}
+
+	return infragpt.Organization{
+		ID:              org.ID,
+		ClerkOrgID:      org.ClerkOrgID,
+		Name:            org.Name,
+		Slug:            org.Slug,
+		CreatedByUserID: org.CreatedByUserID,
+		CreatedAt:       org.CreatedAt,
+		UpdatedAt:       org.UpdatedAt,
+		Metadata: infragpt.OrganizationMetadata{
+			OrganizationID:     org.Metadata.OrganizationID,
+			CompanySize:        org.Metadata.CompanySize,
+			TeamSize:           org.Metadata.TeamSize,
+			UseCases:           org.Metadata.UseCases,
+			ObservabilityStack: org.Metadata.ObservabilityStack,
+			CompletedAt:        org.Metadata.CompletedAt,
+			UpdatedAt:          org.Metadata.UpdatedAt,
 		},
-	})
-	if err != nil {
-		return identity.Credentials{}, fmt.Errorf("start user session: %w", err)
-	}
-
-	return credentials, nil
-}
-
-func (s service) Login(ctx context.Context, cmd identity.LoginCommand) (identity.Credentials, error) {
-	if err := ValidateEmail(cmd.Email); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate email: %w", err)
-	}
-	if err := ValidatePassword(cmd.Password); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate password: %w", err)
-	}
-	if err := ValidateIP(cmd.IP); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate ip: %w", err)
-	}
-	if err := ValidateUserAgent(cmd.UserAgent); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate user agent: %w", err)
-	}
-	if err := ValidateTimezone(cmd.Timezone); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate timezone: %w", err)
-	}
-	if err := ValidateOS(cmd.OS); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate os: %w", err)
-	}
-	if err := ValidateDeviceFingerprint(cmd.DeviceFingerprint); err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate device fingerprint: %w", err)
-	}
-
-	if cmd.Brand == "" {
-		cmd.Brand = "Unknown Brand"
-	}
-
-	user, err := s.userRepo.UserByEmail(ctx, cmd.Email)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return identity.Credentials{}, identity.ErrInvalidEmailOrPassword
-		}
-		return identity.Credentials{}, fmt.Errorf("get user by email: %w", err)
-	}
-
-	// TODO: move this bcrypt compare to the repository
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(cmd.Password))
-	if err != nil {
-		return identity.Credentials{}, identity.ErrInvalidEmailOrPassword
-	}
-
-	sessionID := newSessionID()
-	credentials, err := s.sessionRepo.StartUserSession(ctx, identity.UserSession{
-		UserID:         user.UserID,
-		SessionID:      sessionID,
-		IPAddress:      cmd.IP,
-		UserAgent:      cmd.UserAgent,
-		IPCountryISO:   cmd.IPCountryISO,
-		LastActivityAt: time.Now(),
-		Timezone:       cmd.Timezone,
-		Device: identity.UserDevice{
-			UserID:            user.UserID,
-			DeviceFingerprint: cmd.DeviceFingerprint,
-			OS:                cmd.OS,
-			Name:              fmt.Sprintf("%s %s", cmd.Brand, cmd.OS),
-			Brand:             cmd.Brand,
-		},
-	})
-	if err != nil {
-		return identity.Credentials{}, fmt.Errorf("start user session: %w", err)
-	}
-
-	return credentials, nil
-}
-
-func (s service) RefreshCredentials(ctx context.Context, cmd identity.RefreshCredentialsCommand) (identity.Credentials, error) {
-	if cmd.RefreshToken == "" {
-		return identity.Credentials{}, identity.ErrRefreshTokenCannotBeEmpty
-	}
-	tokenID, err := s.tokenManager.ValidateRefreshToken(cmd.RefreshToken)
-	if err != nil {
-		return identity.Credentials{}, fmt.Errorf("validate refresh token: %w", err)
-	}
-
-	creds, err := s.sessionRepo.RefreshToken(ctx, tokenID)
-	if err != nil {
-		return identity.Credentials{}, fmt.Errorf("refresh token: %w", err)
-	}
-
-	return creds, nil
-}
-
-func (s service) ValidateCredentials(ctx context.Context, query identity.ValidateCredentialsQuery) error {
-	if query.AuthorizationHeader == "" {
-		return identity.ErrAuthorizationHeaderCannotBeEmpty
-	}
-	accessToken := strings.TrimPrefix(query.AuthorizationHeader, "Bearer ")
-	if accessToken == "" {
-		return identity.ErrAccessTokenCannotBeEmpty
-	}
-
-	_, err := s.tokenManager.ValidateAccessToken(accessToken)
-	if err != nil {
-		return fmt.Errorf("validate access token: %w", err)
-	}
-
-	return nil
-}
-
-func (s service) VerifyEmail(ctx context.Context, cmd identity.VerifyEmailCommand) error {
-	if cmd.VerificationID == "" {
-		return identity.ErrEmailVerificationIDCannotBeEmpty
-	}
-	if err := s.userRepo.VerifyUserEmail(ctx, cmd.VerificationID); err != nil {
-		return fmt.Errorf("verify email: %w", err)
-	}
-
-	return nil
-}
-
-func (s service) RequestResetPassword(ctx context.Context, cmd identity.RequestResetPasswordCommand) error {
-	if cmd.Email == "" {
-		return identity.ErrEmailCannotBeEmpty
-	}
-	if err := ValidateEmail(cmd.Email); err != nil {
-		return fmt.Errorf("validate email: %w", err)
-	}
-	user, err := s.userRepo.UserByEmail(ctx, cmd.Email)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return identity.ErrEmailNotRegistered
-		}
-		return fmt.Errorf("get user by email: %w", err)
-	}
-
-	resetID, err := s.userRepo.RequestResetPassword(ctx, user.UserID)
-	if err != nil {
-		return fmt.Errorf("request password reset: %w", err)
-	}
-
-	// send reset password email
-	err = s.emailSVC.SendResetPassword(ctx, cmd.Email, resetID)
-	if err != nil {
-		return fmt.Errorf("send reset password email: %w", err)
-	}
-
-	return nil
-}
-
-func (s service) ValidateResetPasswordToken(ctx context.Context, query identity.ValidateResetPasswordTokenQuery) error {
-	if query.ResetID == "" {
-		return identity.ErrResetPasswordIDCannotBeEmpty
-	}
-	err := s.userRepo.ValidateResetPasswordToken(ctx, query.ResetID)
-	if err != nil {
-		return fmt.Errorf("validate password reset token: %w", err)
-	}
-	return nil
-}
-
-// TODO: add uuid validation check for most uuid type fields before sending to repository
-func (s service) ResetPassword(ctx context.Context, cmd identity.ResetPasswordCommand) error {
-	if cmd.ResetID == "" {
-		return identity.ErrResetPasswordIDCannotBeEmpty
-	}
-
-	if err := s.userRepo.ValidateResetPasswordToken(ctx, cmd.ResetID); err != nil {
-		return fmt.Errorf("validate password reset token: %w", err)
-	}
-	if err := ValidatePassword(cmd.Password); err != nil {
-		return fmt.Errorf("validate password: %w", err)
-	}
-	err := s.userRepo.ResetPassword(ctx, cmd.ResetID, cmd.Password)
-	if err != nil {
-		return fmt.Errorf("reset password: %w", err)
-	}
-	return nil
-}
-
-func (s service) UserSessions(ctx context.Context, query identity.UserSessionsQuery) ([]identity.UserSession, error) {
-	if query.AuthorizationHeader == "" {
-		return nil, identity.ErrAuthorizationHeaderCannotBeEmpty
-	}
-	// TODO: move this entire access token validation logic to middleware
-	accessToken := strings.TrimPrefix(query.AuthorizationHeader, "Bearer ")
-	if accessToken == "" {
-		return nil, identity.ErrAccessTokenCannotBeEmpty
-	}
-
-	sid, err := s.tokenManager.ValidateAccessToken(accessToken)
-	if err != nil {
-		return nil, fmt.Errorf("validate access token: %w", err)
-	}
-
-	session, err := s.sessionRepo.UserSession(ctx, sid)
-	if err != nil {
-		return nil, fmt.Errorf("user session: %w", err)
-	}
-	sessions, err := s.sessionRepo.UserSessions(ctx, session.UserID)
-	if err != nil {
-		return nil, fmt.Errorf("user sessions: %w", err)
-	}
-
-	return sessions, nil
-}
-
-func (s service) InitiateGoogleAuth(ctx context.Context) (string, error) {
-	url, err := s.googleAuthGateway.AuthURL(ctx)
-	if err != nil {
-		return "", fmt.Errorf("get Google Auth URL: %w", err)
-	}
-
-	return url, nil
-}
-
-func (s service) CompleteGoogleAuth(ctx context.Context, cmd identity.CompleteGoogleAuthCommand) (identity.Credentials, error) {
-	code := cmd.Code
-	state := cmd.State
-
-	if code == "" {
-		return identity.Credentials{}, identity.ErrGoogleAuthCodeCannotBeEmpty
-	}
-	if state == "" {
-		return identity.Credentials{}, identity.ErrGoogleAuthStateCannotBeEmpty
-	}
-
-	profile, err := s.googleAuthGateway.CompleteAuth(ctx, code, state)
-	if err != nil {
-		return identity.Credentials{}, fmt.Errorf("complete Google Auth: %w", err)
-	}
-
-	// check if user exists
-	user, err := s.userRepo.UserByEmail(ctx, profile.Email)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return identity.Credentials{}, fmt.Errorf("get user by email: %w", err)
-	}
-
-	if errors.Is(err, sql.ErrNoRows) {
-		// create user
-		uid := newUserID()
-		verificationID, err := s.userRepo.CreateUser(ctx, domain.User{
-			UserID: uid,
-			Email:  profile.Email,
-		})
-		if err != nil {
-			return identity.Credentials{}, fmt.Errorf("create user: %w", err)
-		}
-		// send email verification
-		err = s.userRepo.VerifyUserEmail(ctx, verificationID)
-		if err != nil {
-			return identity.Credentials{}, fmt.Errorf("email verification failed: %w", err)
-		}
-		user = domain.User{
-			UserID: uid,
-			Email:  profile.Email,
-		}
-	}
-
-	sessionID := newSessionID()
-	credentials, err := s.sessionRepo.StartUserSession(ctx, identity.UserSession{
-		UserID:    user.UserID,
-		SessionID: sessionID,
-	})
-	if err != nil {
-		return identity.Credentials{}, fmt.Errorf("start user session: %w", err)
-	}
-
-	return credentials, nil
-}
-
-func newUserID() string {
-	return uuid.New().String()
-}
-
-func newSessionID() string {
-	return uuid.New().String()
+	}, nil
 }

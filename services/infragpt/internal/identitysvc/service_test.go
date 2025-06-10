@@ -1,13 +1,12 @@
 package identitysvc_test
 
 import (
-	"github.com/priyanshujain/infragpt/services/infragpt/identity/identitytest"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/identitysvctest"
-
 	"testing"
+
+	"github.com/priyanshujain/infragpt/services/infragpt/identitytest"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/identitysvctest"
 )
 
 func TestService(t *testing.T) {
-	svc, externalActions := identitysvctest.NewServiceWithExternalActions(t)
-	identitytest.Ensure(t, svc, externalActions)
+	identitytest.Ensure(t, identitysvctest.NewConfig().Fixture())
 }

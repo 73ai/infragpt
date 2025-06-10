@@ -1,26 +1,9 @@
-create table if not exists users (
-    user_id uuid not null,
-    email varchar(255) not null,
-    password_hash text not null,
-    is_email_verified boolean not null default false,
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now(),
-    primary key (user_id)
-);
-
-create table if not exists email_verification (
-    verification_id uuid not null,
-    user_id uuid not null,
-    email varchar(255) not null,
-    expiry_at timestamptz not null,
-    created_at timestamptz not null default now(),
-    primary key (verification_id)
-);
-
-create table if not exists reset_password (
-    reset_id uuid not null,
-    user_id uuid not null,
-    expiry_at timestamptz not null,
-    created_at timestamptz not null default now(),
-    primary key (reset_id)
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    clerk_user_id VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );

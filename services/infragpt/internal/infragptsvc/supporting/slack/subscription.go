@@ -3,11 +3,11 @@ package slack
 import (
 	"context"
 	"fmt"
+	"log/slog"
+
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
 	"github.com/slack-go/slack/slackevents"
 	"github.com/slack-go/slack/socketmode"
-	"log"
-	"log/slog"
 )
 
 func (s *Slack) subscribe(ctx context.Context, handler func(context.Context, domain.UserCommand) error) error {
@@ -16,7 +16,7 @@ func (s *Slack) subscribe(ctx context.Context, handler func(context.Context, dom
 		case <-ctx.Done():
 			return nil
 		case event := <-s.socketClient.Events:
-			log.Printf("Received event type: %s", event.Type)
+			slog.Info("Received event from Slack", "type", event.Type)
 			switch event.Type {
 			case socketmode.EventTypeConnecting:
 				slog.Info("Connecting to Slack API...")
@@ -28,7 +28,7 @@ func (s *Slack) subscribe(ctx context.Context, handler func(context.Context, dom
 				s.socketClient.Ack(*event.Request)
 				payload, ok := event.Data.(slackevents.EventsAPIEvent)
 				if !ok {
-					slog.Error("Failed to cast event data to EventsAPIEvent")
+					slog.Error("Failed to cast event data to EventsAPIEvent", "msg", event.Data)
 					continue
 				}
 				err := s.handleEventAPI(ctx, payload, handler)

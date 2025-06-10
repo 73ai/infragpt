@@ -3,11 +3,12 @@ package slack
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"
 	"golang.org/x/sync/errgroup"
-	"net/http"
 )
 
 type Slack struct {
@@ -34,6 +35,7 @@ func (s *Slack) CompleteAuthentication(ctx context.Context, code string) (string
 	}
 
 	// save the access token
+	// TODO: store refresh token and handle token refresh
 	if err := s.tokenRepository.SaveToken(ctx, oauthV2Response.Team.ID, oauthV2Response.AccessToken); err != nil {
 		return "", fmt.Errorf("failed to save token: %w", err)
 	}

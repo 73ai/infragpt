@@ -24,108 +24,78 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.createDeviceStmt, err = db.PrepareContext(ctx, createDevice); err != nil {
-		return nil, fmt.Errorf("error preparing query CreateDevice: %w", err)
+	if q.createOrganizationStmt, err = db.PrepareContext(ctx, createOrganization); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateOrganization: %w", err)
 	}
-	if q.createEmailVerificationStmt, err = db.PrepareContext(ctx, createEmailVerification); err != nil {
-		return nil, fmt.Errorf("error preparing query CreateEmailVerification: %w", err)
+	if q.createOrganizationMemberStmt, err = db.PrepareContext(ctx, createOrganizationMember); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateOrganizationMember: %w", err)
 	}
-	if q.createRefreshTokenStmt, err = db.PrepareContext(ctx, createRefreshToken); err != nil {
-		return nil, fmt.Errorf("error preparing query CreateRefreshToken: %w", err)
-	}
-	if q.createResetPasswordStmt, err = db.PrepareContext(ctx, createResetPassword); err != nil {
-		return nil, fmt.Errorf("error preparing query CreateResetPassword: %w", err)
-	}
-	if q.createSessionStmt, err = db.PrepareContext(ctx, createSession); err != nil {
-		return nil, fmt.Errorf("error preparing query CreateSession: %w", err)
-	}
-	if q.createStateTokenStmt, err = db.PrepareContext(ctx, createStateToken); err != nil {
-		return nil, fmt.Errorf("error preparing query CreateStateToken: %w", err)
+	if q.createOrganizationMetadataStmt, err = db.PrepareContext(ctx, createOrganizationMetadata); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateOrganizationMetadata: %w", err)
 	}
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
-	if q.deviceStmt, err = db.PrepareContext(ctx, device); err != nil {
-		return nil, fmt.Errorf("error preparing query Device: %w", err)
+	if q.deleteOrganizationByClerkIDStmt, err = db.PrepareContext(ctx, deleteOrganizationByClerkID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteOrganizationByClerkID: %w", err)
 	}
-	if q.devicesByUserIDStmt, err = db.PrepareContext(ctx, devicesByUserID); err != nil {
-		return nil, fmt.Errorf("error preparing query DevicesByUserID: %w", err)
+	if q.deleteOrganizationMemberByClerkIDsStmt, err = db.PrepareContext(ctx, deleteOrganizationMemberByClerkIDs); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteOrganizationMemberByClerkIDs: %w", err)
 	}
-	if q.emailVerificationStmt, err = db.PrepareContext(ctx, emailVerification); err != nil {
-		return nil, fmt.Errorf("error preparing query EmailVerification: %w", err)
+	if q.deleteOrganizationMetadataByOrganizationIDStmt, err = db.PrepareContext(ctx, deleteOrganizationMetadataByOrganizationID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteOrganizationMetadataByOrganizationID: %w", err)
 	}
-	if q.markEmailVerificationAsExpiredStmt, err = db.PrepareContext(ctx, markEmailVerificationAsExpired); err != nil {
-		return nil, fmt.Errorf("error preparing query MarkEmailVerificationAsExpired: %w", err)
+	if q.deleteUserByClerkIDStmt, err = db.PrepareContext(ctx, deleteUserByClerkID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteUserByClerkID: %w", err)
 	}
-	if q.markResetPasswordAsExpiredStmt, err = db.PrepareContext(ctx, markResetPasswordAsExpired); err != nil {
-		return nil, fmt.Errorf("error preparing query MarkResetPasswordAsExpired: %w", err)
+	if q.getOrganizationByClerkIDStmt, err = db.PrepareContext(ctx, getOrganizationByClerkID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetOrganizationByClerkID: %w", err)
 	}
-	if q.refreshTokenStmt, err = db.PrepareContext(ctx, refreshToken); err != nil {
-		return nil, fmt.Errorf("error preparing query RefreshToken: %w", err)
+	if q.getOrganizationMembersByOrganizationIDStmt, err = db.PrepareContext(ctx, getOrganizationMembersByOrganizationID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetOrganizationMembersByOrganizationID: %w", err)
 	}
-	if q.resetPasswordStmt, err = db.PrepareContext(ctx, resetPassword); err != nil {
-		return nil, fmt.Errorf("error preparing query ResetPassword: %w", err)
+	if q.getOrganizationMembersByUserClerkIDStmt, err = db.PrepareContext(ctx, getOrganizationMembersByUserClerkID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetOrganizationMembersByUserClerkID: %w", err)
 	}
-	if q.revokeRefreshTokenStmt, err = db.PrepareContext(ctx, revokeRefreshToken); err != nil {
-		return nil, fmt.Errorf("error preparing query RevokeRefreshToken: %w", err)
+	if q.getOrganizationMetadataByOrganizationIDStmt, err = db.PrepareContext(ctx, getOrganizationMetadataByOrganizationID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetOrganizationMetadataByOrganizationID: %w", err)
 	}
-	if q.revokeStateTokenStmt, err = db.PrepareContext(ctx, revokeStateToken); err != nil {
-		return nil, fmt.Errorf("error preparing query RevokeStateToken: %w", err)
+	if q.getOrganizationsByUserClerkIDStmt, err = db.PrepareContext(ctx, getOrganizationsByUserClerkID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetOrganizationsByUserClerkID: %w", err)
 	}
-	if q.setNewPasswordStmt, err = db.PrepareContext(ctx, setNewPassword); err != nil {
-		return nil, fmt.Errorf("error preparing query SetNewPassword: %w", err)
+	if q.getUserByClerkIDStmt, err = db.PrepareContext(ctx, getUserByClerkID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserByClerkID: %w", err)
 	}
-	if q.stateTokenStmt, err = db.PrepareContext(ctx, stateToken); err != nil {
-		return nil, fmt.Errorf("error preparing query StateToken: %w", err)
+	if q.updateOrganizationStmt, err = db.PrepareContext(ctx, updateOrganization); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateOrganization: %w", err)
 	}
-	if q.userByEmailStmt, err = db.PrepareContext(ctx, userByEmail); err != nil {
-		return nil, fmt.Errorf("error preparing query UserByEmail: %w", err)
+	if q.updateOrganizationMemberByClerkIDsStmt, err = db.PrepareContext(ctx, updateOrganizationMemberByClerkIDs); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateOrganizationMemberByClerkIDs: %w", err)
 	}
-	if q.userByIDStmt, err = db.PrepareContext(ctx, userByID); err != nil {
-		return nil, fmt.Errorf("error preparing query UserByID: %w", err)
+	if q.updateOrganizationMetadataStmt, err = db.PrepareContext(ctx, updateOrganizationMetadata); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateOrganizationMetadata: %w", err)
 	}
-	if q.userSessionStmt, err = db.PrepareContext(ctx, userSession); err != nil {
-		return nil, fmt.Errorf("error preparing query UserSession: %w", err)
-	}
-	if q.userSessionsStmt, err = db.PrepareContext(ctx, userSessions); err != nil {
-		return nil, fmt.Errorf("error preparing query UserSessions: %w", err)
-	}
-	if q.verifyEmailStmt, err = db.PrepareContext(ctx, verifyEmail); err != nil {
-		return nil, fmt.Errorf("error preparing query VerifyEmail: %w", err)
+	if q.updateUserStmt, err = db.PrepareContext(ctx, updateUser); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateUser: %w", err)
 	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
-	if q.createDeviceStmt != nil {
-		if cerr := q.createDeviceStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing createDeviceStmt: %w", cerr)
+	if q.createOrganizationStmt != nil {
+		if cerr := q.createOrganizationStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createOrganizationStmt: %w", cerr)
 		}
 	}
-	if q.createEmailVerificationStmt != nil {
-		if cerr := q.createEmailVerificationStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing createEmailVerificationStmt: %w", cerr)
+	if q.createOrganizationMemberStmt != nil {
+		if cerr := q.createOrganizationMemberStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createOrganizationMemberStmt: %w", cerr)
 		}
 	}
-	if q.createRefreshTokenStmt != nil {
-		if cerr := q.createRefreshTokenStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing createRefreshTokenStmt: %w", cerr)
-		}
-	}
-	if q.createResetPasswordStmt != nil {
-		if cerr := q.createResetPasswordStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing createResetPasswordStmt: %w", cerr)
-		}
-	}
-	if q.createSessionStmt != nil {
-		if cerr := q.createSessionStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing createSessionStmt: %w", cerr)
-		}
-	}
-	if q.createStateTokenStmt != nil {
-		if cerr := q.createStateTokenStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing createStateTokenStmt: %w", cerr)
+	if q.createOrganizationMetadataStmt != nil {
+		if cerr := q.createOrganizationMetadataStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createOrganizationMetadataStmt: %w", cerr)
 		}
 	}
 	if q.createUserStmt != nil {
@@ -133,84 +103,74 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
 		}
 	}
-	if q.deviceStmt != nil {
-		if cerr := q.deviceStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deviceStmt: %w", cerr)
+	if q.deleteOrganizationByClerkIDStmt != nil {
+		if cerr := q.deleteOrganizationByClerkIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteOrganizationByClerkIDStmt: %w", cerr)
 		}
 	}
-	if q.devicesByUserIDStmt != nil {
-		if cerr := q.devicesByUserIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing devicesByUserIDStmt: %w", cerr)
+	if q.deleteOrganizationMemberByClerkIDsStmt != nil {
+		if cerr := q.deleteOrganizationMemberByClerkIDsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteOrganizationMemberByClerkIDsStmt: %w", cerr)
 		}
 	}
-	if q.emailVerificationStmt != nil {
-		if cerr := q.emailVerificationStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing emailVerificationStmt: %w", cerr)
+	if q.deleteOrganizationMetadataByOrganizationIDStmt != nil {
+		if cerr := q.deleteOrganizationMetadataByOrganizationIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteOrganizationMetadataByOrganizationIDStmt: %w", cerr)
 		}
 	}
-	if q.markEmailVerificationAsExpiredStmt != nil {
-		if cerr := q.markEmailVerificationAsExpiredStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing markEmailVerificationAsExpiredStmt: %w", cerr)
+	if q.deleteUserByClerkIDStmt != nil {
+		if cerr := q.deleteUserByClerkIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteUserByClerkIDStmt: %w", cerr)
 		}
 	}
-	if q.markResetPasswordAsExpiredStmt != nil {
-		if cerr := q.markResetPasswordAsExpiredStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing markResetPasswordAsExpiredStmt: %w", cerr)
+	if q.getOrganizationByClerkIDStmt != nil {
+		if cerr := q.getOrganizationByClerkIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getOrganizationByClerkIDStmt: %w", cerr)
 		}
 	}
-	if q.refreshTokenStmt != nil {
-		if cerr := q.refreshTokenStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing refreshTokenStmt: %w", cerr)
+	if q.getOrganizationMembersByOrganizationIDStmt != nil {
+		if cerr := q.getOrganizationMembersByOrganizationIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getOrganizationMembersByOrganizationIDStmt: %w", cerr)
 		}
 	}
-	if q.resetPasswordStmt != nil {
-		if cerr := q.resetPasswordStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing resetPasswordStmt: %w", cerr)
+	if q.getOrganizationMembersByUserClerkIDStmt != nil {
+		if cerr := q.getOrganizationMembersByUserClerkIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getOrganizationMembersByUserClerkIDStmt: %w", cerr)
 		}
 	}
-	if q.revokeRefreshTokenStmt != nil {
-		if cerr := q.revokeRefreshTokenStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing revokeRefreshTokenStmt: %w", cerr)
+	if q.getOrganizationMetadataByOrganizationIDStmt != nil {
+		if cerr := q.getOrganizationMetadataByOrganizationIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getOrganizationMetadataByOrganizationIDStmt: %w", cerr)
 		}
 	}
-	if q.revokeStateTokenStmt != nil {
-		if cerr := q.revokeStateTokenStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing revokeStateTokenStmt: %w", cerr)
+	if q.getOrganizationsByUserClerkIDStmt != nil {
+		if cerr := q.getOrganizationsByUserClerkIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getOrganizationsByUserClerkIDStmt: %w", cerr)
 		}
 	}
-	if q.setNewPasswordStmt != nil {
-		if cerr := q.setNewPasswordStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing setNewPasswordStmt: %w", cerr)
+	if q.getUserByClerkIDStmt != nil {
+		if cerr := q.getUserByClerkIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserByClerkIDStmt: %w", cerr)
 		}
 	}
-	if q.stateTokenStmt != nil {
-		if cerr := q.stateTokenStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing stateTokenStmt: %w", cerr)
+	if q.updateOrganizationStmt != nil {
+		if cerr := q.updateOrganizationStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateOrganizationStmt: %w", cerr)
 		}
 	}
-	if q.userByEmailStmt != nil {
-		if cerr := q.userByEmailStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing userByEmailStmt: %w", cerr)
+	if q.updateOrganizationMemberByClerkIDsStmt != nil {
+		if cerr := q.updateOrganizationMemberByClerkIDsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateOrganizationMemberByClerkIDsStmt: %w", cerr)
 		}
 	}
-	if q.userByIDStmt != nil {
-		if cerr := q.userByIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing userByIDStmt: %w", cerr)
+	if q.updateOrganizationMetadataStmt != nil {
+		if cerr := q.updateOrganizationMetadataStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateOrganizationMetadataStmt: %w", cerr)
 		}
 	}
-	if q.userSessionStmt != nil {
-		if cerr := q.userSessionStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing userSessionStmt: %w", cerr)
-		}
-	}
-	if q.userSessionsStmt != nil {
-		if cerr := q.userSessionsStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing userSessionsStmt: %w", cerr)
-		}
-	}
-	if q.verifyEmailStmt != nil {
-		if cerr := q.verifyEmailStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing verifyEmailStmt: %w", cerr)
+	if q.updateUserStmt != nil {
+		if cerr := q.updateUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateUserStmt: %w", cerr)
 		}
 	}
 	return err
@@ -250,59 +210,49 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                                 DBTX
-	tx                                 *sql.Tx
-	createDeviceStmt                   *sql.Stmt
-	createEmailVerificationStmt        *sql.Stmt
-	createRefreshTokenStmt             *sql.Stmt
-	createResetPasswordStmt            *sql.Stmt
-	createSessionStmt                  *sql.Stmt
-	createStateTokenStmt               *sql.Stmt
-	createUserStmt                     *sql.Stmt
-	deviceStmt                         *sql.Stmt
-	devicesByUserIDStmt                *sql.Stmt
-	emailVerificationStmt              *sql.Stmt
-	markEmailVerificationAsExpiredStmt *sql.Stmt
-	markResetPasswordAsExpiredStmt     *sql.Stmt
-	refreshTokenStmt                   *sql.Stmt
-	resetPasswordStmt                  *sql.Stmt
-	revokeRefreshTokenStmt             *sql.Stmt
-	revokeStateTokenStmt               *sql.Stmt
-	setNewPasswordStmt                 *sql.Stmt
-	stateTokenStmt                     *sql.Stmt
-	userByEmailStmt                    *sql.Stmt
-	userByIDStmt                       *sql.Stmt
-	userSessionStmt                    *sql.Stmt
-	userSessionsStmt                   *sql.Stmt
-	verifyEmailStmt                    *sql.Stmt
+	db                                             DBTX
+	tx                                             *sql.Tx
+	createOrganizationStmt                         *sql.Stmt
+	createOrganizationMemberStmt                   *sql.Stmt
+	createOrganizationMetadataStmt                 *sql.Stmt
+	createUserStmt                                 *sql.Stmt
+	deleteOrganizationByClerkIDStmt                *sql.Stmt
+	deleteOrganizationMemberByClerkIDsStmt         *sql.Stmt
+	deleteOrganizationMetadataByOrganizationIDStmt *sql.Stmt
+	deleteUserByClerkIDStmt                        *sql.Stmt
+	getOrganizationByClerkIDStmt                   *sql.Stmt
+	getOrganizationMembersByOrganizationIDStmt     *sql.Stmt
+	getOrganizationMembersByUserClerkIDStmt        *sql.Stmt
+	getOrganizationMetadataByOrganizationIDStmt    *sql.Stmt
+	getOrganizationsByUserClerkIDStmt              *sql.Stmt
+	getUserByClerkIDStmt                           *sql.Stmt
+	updateOrganizationStmt                         *sql.Stmt
+	updateOrganizationMemberByClerkIDsStmt         *sql.Stmt
+	updateOrganizationMetadataStmt                 *sql.Stmt
+	updateUserStmt                                 *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                                 tx,
-		tx:                                 tx,
-		createDeviceStmt:                   q.createDeviceStmt,
-		createEmailVerificationStmt:        q.createEmailVerificationStmt,
-		createRefreshTokenStmt:             q.createRefreshTokenStmt,
-		createResetPasswordStmt:            q.createResetPasswordStmt,
-		createSessionStmt:                  q.createSessionStmt,
-		createStateTokenStmt:               q.createStateTokenStmt,
-		createUserStmt:                     q.createUserStmt,
-		deviceStmt:                         q.deviceStmt,
-		devicesByUserIDStmt:                q.devicesByUserIDStmt,
-		emailVerificationStmt:              q.emailVerificationStmt,
-		markEmailVerificationAsExpiredStmt: q.markEmailVerificationAsExpiredStmt,
-		markResetPasswordAsExpiredStmt:     q.markResetPasswordAsExpiredStmt,
-		refreshTokenStmt:                   q.refreshTokenStmt,
-		resetPasswordStmt:                  q.resetPasswordStmt,
-		revokeRefreshTokenStmt:             q.revokeRefreshTokenStmt,
-		revokeStateTokenStmt:               q.revokeStateTokenStmt,
-		setNewPasswordStmt:                 q.setNewPasswordStmt,
-		stateTokenStmt:                     q.stateTokenStmt,
-		userByEmailStmt:                    q.userByEmailStmt,
-		userByIDStmt:                       q.userByIDStmt,
-		userSessionStmt:                    q.userSessionStmt,
-		userSessionsStmt:                   q.userSessionsStmt,
-		verifyEmailStmt:                    q.verifyEmailStmt,
+		db:                                     tx,
+		tx:                                     tx,
+		createOrganizationStmt:                 q.createOrganizationStmt,
+		createOrganizationMemberStmt:           q.createOrganizationMemberStmt,
+		createOrganizationMetadataStmt:         q.createOrganizationMetadataStmt,
+		createUserStmt:                         q.createUserStmt,
+		deleteOrganizationByClerkIDStmt:        q.deleteOrganizationByClerkIDStmt,
+		deleteOrganizationMemberByClerkIDsStmt: q.deleteOrganizationMemberByClerkIDsStmt,
+		deleteOrganizationMetadataByOrganizationIDStmt: q.deleteOrganizationMetadataByOrganizationIDStmt,
+		deleteUserByClerkIDStmt:                        q.deleteUserByClerkIDStmt,
+		getOrganizationByClerkIDStmt:                   q.getOrganizationByClerkIDStmt,
+		getOrganizationMembersByOrganizationIDStmt:     q.getOrganizationMembersByOrganizationIDStmt,
+		getOrganizationMembersByUserClerkIDStmt:        q.getOrganizationMembersByUserClerkIDStmt,
+		getOrganizationMetadataByOrganizationIDStmt:    q.getOrganizationMetadataByOrganizationIDStmt,
+		getOrganizationsByUserClerkIDStmt:              q.getOrganizationsByUserClerkIDStmt,
+		getUserByClerkIDStmt:                           q.getUserByClerkIDStmt,
+		updateOrganizationStmt:                         q.updateOrganizationStmt,
+		updateOrganizationMemberByClerkIDsStmt:         q.updateOrganizationMemberByClerkIDsStmt,
+		updateOrganizationMetadataStmt:                 q.updateOrganizationMetadataStmt,
+		updateUserStmt:                                 q.updateUserStmt,
 	}
 }
