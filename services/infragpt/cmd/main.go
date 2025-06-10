@@ -44,6 +44,7 @@ func main() {
 	}
 
 	type Config struct {
+		LogLevel string                `mapstructure:"log_level"`
 		Port     int                   `mapstructure:"port"`
 		GrpcPort int                   `mapstructure:"grpc_port"`
 		HttpLog  bool                  `mapstructure:"http_log"`
@@ -58,6 +59,15 @@ func main() {
 		log.Fatalf("Error decoding config: %v", err)
 	}
 
+	var level slog.Level
+	// parse level from string
+	if err := level.UnmarshalText([]byte(c.LogLevel)); err != nil {
+		panic(err)
+	}
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
+	slog.SetDefault(logger)
+	
 	slackConfig := c.Slack
 	db, err := postgres.Config{Config: c.Database}.New()
 	if err != nil {
@@ -156,6 +166,17 @@ func main() {
 		if err != nil {
 			slog.Error("infragpt: grpc server failed", "error", err)
 			return fmt.Errorf("grpc server failed: %w", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		// run identity service webhook server
+		slog.Info("infragpt: identity service webhook server starting", "port", c.Identity.Clerk.Port)
+		err = identityService.Subscribe(ctx)
+		if err == nil || errors.Is(err, context.Canceled) {
+			slog.Info("infragpt: identity service webhook server stopped")
+			return nil
 		}
 		return nil
 	})

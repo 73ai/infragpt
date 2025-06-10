@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/supporting/clerk"
 
-	"github.com/priyanshujain/infragpt/services/infragpt"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/supporting/postgres"
 )
 
@@ -13,7 +12,7 @@ type Config struct {
 	Clerk    clerk.Config `mapstructure:"clerk"`
 }
 
-func (c Config) New(db *sql.DB) infragpt.IdentityService {
+func (c Config) New(db *sql.DB) *service {
 	queries := postgres.New(db)
 	userRepo := postgres.NewUserRepository(queries)
 	organizationRepo := postgres.NewOrganizationRepository(queries)

@@ -219,7 +219,7 @@ func ApiHandlerFunc[T any, R any](handler func(context.Context, T) (R, error)) f
 
 		response, err := handler(ctx, request)
 		if err != nil {
-			slog.Error("error in clerk webhook api handler", "path", r.URL, "request", request, "err", err)
+			slog.Error("error in clerk webhook api handler", "path", r.URL, "err", err)
 			var httpError = httperrors.From(err)
 			w.WriteHeader(httpError.HttpStatus)
 			_ = json.NewEncoder(w).Encode(httpError)
@@ -253,6 +253,7 @@ func webhookValidationMiddleware(webhook *svix.Webhook, next http.Handler) http.
 
 		err = webhook.Verify(body, r.Header)
 		if err != nil {
+			slog.Info("clerk: webhook validation failed", "error", err, "headers", r.Header)
 			http.Error(w, "Invalid webhook signature", http.StatusUnauthorized)
 			return
 		}
