@@ -12,28 +12,13 @@ import (
 	"time"
 
 	"github.com/priyanshujain/infragpt/services/infragpt"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/domain"
 )
-
-type Config struct {
-	ClientID      string
-	ClientSecret  string
-	RedirectURL   string
-	Scopes        []string
-	SigningSecret string
-}
 
 type slackConnector struct {
 	config Config
 	client *http.Client
 }
 
-func NewConnector(config Config) domain.Connector {
-	return &slackConnector{
-		config: config,
-		client: &http.Client{Timeout: 30 * time.Second},
-	}
-}
 
 func (s *slackConnector) InitiateAuthorization(organizationID string, userID string) (infragpt.IntegrationAuthorizationIntent, error) {
 	state := fmt.Sprintf("%s:%s:%d", organizationID, userID, time.Now().Unix())

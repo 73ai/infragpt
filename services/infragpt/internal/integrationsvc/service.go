@@ -16,13 +16,13 @@ type service struct {
 	connectors            map[infragpt.ConnectorType]domain.Connector
 }
 
-type Config struct {
+type ServiceConfig struct {
 	IntegrationRepository domain.IntegrationRepository
 	CredentialRepository  domain.CredentialRepository
 	Connectors            map[infragpt.ConnectorType]domain.Connector
 }
 
-func NewService(config Config) infragpt.IntegrationService {
+func NewService(config ServiceConfig) infragpt.IntegrationService {
 	return &service{
 		integrationRepository: config.IntegrationRepository,
 		credentialRepository:  config.CredentialRepository,
