@@ -59,3 +59,15 @@ func (r *userRepository) Update(ctx context.Context, clerkUserID string, user do
 
 	return nil
 }
+
+func (r *userRepository) DeleteByClerkID(ctx context.Context, clerkUserID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, exists := r.users[clerkUserID]; !exists {
+		return fmt.Errorf("user with clerk_user_id %s not found", clerkUserID)
+	}
+
+	delete(r.users, clerkUserID)
+	return nil
+}
