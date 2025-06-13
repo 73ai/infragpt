@@ -11,6 +11,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/priyanshujain/infragpt/services/agent/src/client/go v0.0.0-00010101000000-000000000000
 	github.com/slack-go/slack v0.16.0
+	github.com/sqlc-dev/pqtype v0.3.0
 	github.com/svix/svix-webhooks v1.67.0
 	golang.org/x/sync v0.14.0
 	google.golang.org/grpc v1.72.2
