@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-func NewHandler(svc infragpt.Service) http.Handler {
+func NewHandler(svc infragpt.ConversationService) http.Handler {
 	h := &httpHandler{
 		svc: svc,
 	}
@@ -21,7 +21,7 @@ func NewHandler(svc infragpt.Service) http.Handler {
 
 type httpHandler struct {
 	http.ServeMux
-	svc infragpt.Service
+	svc infragpt.ConversationService
 }
 
 func (h *httpHandler) init() {
