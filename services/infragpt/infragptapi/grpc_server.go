@@ -10,10 +10,10 @@ import (
 
 type grpcServer struct {
 	proto.UnimplementedInfraGPTServiceServer
-	svc infragpt.Service
+	svc infragpt.ConversationService
 }
 
-func NewGRPCServer(svc infragpt.Service) *grpc.Server {
+func NewGRPCServer(svc infragpt.ConversationService) *grpc.Server {
 	server := grpc.NewServer()
 	proto.RegisterInfraGPTServiceServer(server, &grpcServer{
 		svc: svc,

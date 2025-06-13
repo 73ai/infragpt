@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/priyanshujain/infragpt/services/infragpt/identityapi"
 	"log"
 	"log/slog"
 	"net"
@@ -14,15 +13,18 @@ import (
 	"time"
 
 	agentclient "github.com/priyanshujain/infragpt/services/agent/src/client/go"
+	"github.com/priyanshujain/infragpt/services/infragpt/identityapi"
 	"github.com/priyanshujain/infragpt/services/infragpt/infragptapi"
+	"github.com/priyanshujain/infragpt/services/infragpt/integrationapi"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/domain"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/supporting/agent"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/supporting/postgres"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/supporting/slack"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httplog"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/postgresconfig"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/agent"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/postgres"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/slack"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/mitchellh/mapstructure"
@@ -44,14 +46,15 @@ func main() {
 	}
 
 	type Config struct {
-		LogLevel string                `mapstructure:"log_level"`
-		Port     int                   `mapstructure:"port"`
-		GrpcPort int                   `mapstructure:"grpc_port"`
-		HttpLog  bool                  `mapstructure:"http_log"`
-		Slack    slack.Config          `mapstructure:"slack"`
-		Database postgresconfig.Config `mapstructure:"database"`
-		Agent    agentclient.Config    `mapstructure:"agent"`
-		Identity identitysvc.Config    `mapstructure:"identity"`
+		LogLevel     string                  `mapstructure:"log_level"`
+		Port         int                     `mapstructure:"port"`
+		GrpcPort     int                     `mapstructure:"grpc_port"`
+		HttpLog      bool                    `mapstructure:"http_log"`
+		Slack        slack.Config            `mapstructure:"slack"`
+		Database     postgresconfig.Config   `mapstructure:"database"`
+		Agent        agentclient.Config      `mapstructure:"agent"`
+		Identity     identitysvc.Config      `mapstructure:"identity"`
+		Integrations integrationsvc.Config   `mapstructure:"integrations"`
 	}
 
 	var c Config
@@ -67,7 +70,7 @@ func main() {
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
 	slog.SetDefault(logger)
-	
+
 	slackConfig := c.Slack
 	db, err := postgres.Config{Config: c.Database}.New()
 	if err != nil {
@@ -78,6 +81,13 @@ func main() {
 
 	// Create identity service with underlying database connection
 	identityService := c.Identity.New(db.DB())
+
+	// Create integration service with database connection
+	c.Integrations.Database = db.DB()
+	integrationService, err := c.Integrations.New()
+	if err != nil {
+		panic(fmt.Errorf("error creating integration service: %w", err))
+	}
 
 	authMiddleware := c.Identity.Clerk.NewAuthMiddleware()
 
@@ -97,7 +107,7 @@ func main() {
 		agentService = agentClient
 	}
 
-	svcConfig := infragptsvc.Config{
+	svcConfig := conversationsvc.Config{
 		SlackGateway:           sr,
 		IntegrationRepository:  db,
 		ConversationRepository: db,
@@ -123,6 +133,7 @@ func main() {
 
 	coreAPIHandler := infragptapi.NewHandler(svc)
 	identityAPIHandler := identityapi.NewHandler(identityService, authMiddleware)
+	integrationAPIHandler := integrationapi.NewHandler(integrationService, authMiddleware)
 
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -132,6 +143,10 @@ func main() {
 		}()
 		if strings.HasPrefix(r.URL.Path, "/identity/") {
 			identityAPIHandler.ServeHTTP(w, r)
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/integrations/") {
+			integrationAPIHandler.ServeHTTP(w, r)
 			return
 		}
 		coreAPIHandler.ServeHTTP(w, r)
@@ -179,6 +194,18 @@ func main() {
 			return nil
 		}
 		return nil
+	})
+
+	g.Go(func() error {
+		// run integration service connectors
+		slog.Info("infragpt: integration service connectors starting")
+		err = integrationService.Subscribe(ctx)
+		if err == nil || errors.Is(err, context.Canceled) {
+			slog.Info("infragpt: integration service connectors stopped")
+			return nil
+		}
+		slog.Error("infragpt: integration service connectors failed", "error", err)
+		return fmt.Errorf("integration service connectors failed: %w", err)
 	})
 
 	if err := g.Wait(); err != nil {

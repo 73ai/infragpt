@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/domain"
 )
 
 func (db *InfraGPTDB) GetConversationByThread(ctx context.Context, teamID, channelID, threadTS string) (domain.Conversation, error) {
