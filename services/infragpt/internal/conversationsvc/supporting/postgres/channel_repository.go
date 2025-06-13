@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/domain"
 )
 
 func (db *InfraGPTDB) AddChannel(ctx context.Context, teamID, channelID, channelName string) error {

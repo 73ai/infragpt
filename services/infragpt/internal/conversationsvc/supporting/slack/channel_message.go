@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/domain"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 )

@@ -1,9 +1,9 @@
-package infragptsvc
+package conversationsvc
 
 import (
 	"context"
 	"fmt"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/domain"
 )
 
 type Config struct {

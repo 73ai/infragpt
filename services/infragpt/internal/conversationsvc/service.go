@@ -1,4 +1,4 @@
-package infragptsvc
+package conversationsvc
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/domain"
 )
 
 type Service struct {
@@ -22,7 +22,7 @@ type Service struct {
 }
 
 func (s *Service) Integrations(ctx context.Context, query infragpt.IntegrationsQuery) ([]infragpt.Integration, error) {
-	is, err := s.integrationRepository.Integrations(ctx, query.BusinessID)
+	is, err := s.integrationRepository.Integrations(ctx, query.OrganizationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get integrations: %w", err)
 	}
@@ -30,8 +30,8 @@ func (s *Service) Integrations(ctx context.Context, query infragpt.IntegrationsQ
 	var integrations []infragpt.Integration
 	for _, i := range is {
 		integrations = append(integrations, infragpt.Integration{
-			Type:   i.Type,
-			Status: i.Status,
+			ConnectorType: i.ConnectorType,
+			Status:        i.Status,
 		})
 	}
 
@@ -44,8 +44,8 @@ func (s *Service) CompleteSlackIntegration(ctx context.Context, command infragpt
 	} else {
 		err := s.integrationRepository.SaveIntegration(ctx, domain.Integration{
 			Integration: infragpt.Integration{
-				Type:   infragpt.IntegrationTypeSlack,
-				Status: infragpt.IntegrationStatusActive,
+				ConnectorType: infragpt.ConnectorTypeSlack,
+				Status:        infragpt.IntegrationStatusActive,
 			},
 			BusinessID:        command.BusinessID,
 			ProviderProjectID: pid,
@@ -58,7 +58,7 @@ func (s *Service) CompleteSlackIntegration(ctx context.Context, command infragpt
 	return nil
 }
 
-var _ infragpt.Service = (*Service)(nil)
+var _ infragpt.ConversationService = (*Service)(nil)
 
 func (s *Service) SendReply(ctx context.Context, command infragpt.SendReplyCommand) error {
 	slog.Info("Sending reply to Slack", "conversationID", command.ConversationID, "message", command.Message)

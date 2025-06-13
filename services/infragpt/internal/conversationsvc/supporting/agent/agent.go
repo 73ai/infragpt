@@ -7,7 +7,7 @@ import (
 	"time"
 
 	agent "github.com/priyanshujain/infragpt/services/agent/src/client/go"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/domain"
 )
 
 // Client wraps the agent gRPC client to implement domain.AgentService

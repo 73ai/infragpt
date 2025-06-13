@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/domain"
 )
 
 type InfraGPTDB struct {
@@ -54,8 +54,8 @@ func (i InfraGPTDB) Integrations(ctx context.Context, businessID string) ([]doma
 	for _, i := range is {
 		integrations = append(integrations, domain.Integration{
 			Integration: infragpt.Integration{
-				Type:   infragpt.IntegrationType(i.Provider),
-				Status: infragpt.IntegrationStatus(i.Status),
+				ConnectorType: infragpt.ConnectorType(i.Provider),
+				Status:        infragpt.IntegrationStatus(i.Status),
 			},
 			BusinessID:        businessID,
 			ProviderProjectID: i.ProviderProjectID,
@@ -70,7 +70,7 @@ func (i InfraGPTDB) SaveIntegration(ctx context.Context, integration domain.Inte
 	err := i.saveIntegration(ctx, saveIntegrationParams{
 		ID:                uuid.New(),
 		BusinessID:        bid,
-		Provider:          string(integration.Type),
+		Provider:          string(integration.ConnectorType),
 		ProviderProjectID: integration.ProviderProjectID,
 		Status:            string(integration.Status),
 	})
