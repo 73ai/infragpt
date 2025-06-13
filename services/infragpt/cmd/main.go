@@ -15,14 +15,14 @@ import (
 
 	agentclient "github.com/priyanshujain/infragpt/services/agent/src/client/go"
 	"github.com/priyanshujain/infragpt/services/infragpt/infragptapi"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/domain"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/supporting/agent"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/supporting/postgres"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/supporting/slack"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httplog"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/postgresconfig"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/domain"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/agent"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/postgres"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/infragptsvc/supporting/slack"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/mitchellh/mapstructure"
@@ -67,7 +67,7 @@ func main() {
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
 	slog.SetDefault(logger)
-	
+
 	slackConfig := c.Slack
 	db, err := postgres.Config{Config: c.Database}.New()
 	if err != nil {
@@ -97,7 +97,7 @@ func main() {
 		agentService = agentClient
 	}
 
-	svcConfig := infragptsvc.Config{
+	svcConfig := conversationsvc.Config{
 		SlackGateway:           sr,
 		IntegrationRepository:  db,
 		ConversationRepository: db,
