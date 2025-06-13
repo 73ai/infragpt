@@ -204,7 +204,8 @@ func main() {
 			slog.Info("infragpt: integration service connectors stopped")
 			return nil
 		}
-		return nil
+		slog.Error("infragpt: integration service connectors failed", "error", err)
+		return fmt.Errorf("integration service connectors failed: %w", err)
 	})
 
 	if err := g.Wait(); err != nil {
