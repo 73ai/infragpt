@@ -24,7 +24,7 @@ func NewIntegrationRepository(sqlDB *sql.DB) domain.IntegrationRepository {
 }
 
 func (r *integrationRepository) Store(ctx context.Context, integration infragpt.Integration) error {
-	metadata := make(map[string]interface{})
+	metadata := make(map[string]any)
 	for k, v := range integration.Metadata {
 		metadata[k] = v
 	}
@@ -181,7 +181,7 @@ func (r *integrationRepository) Delete(ctx context.Context, id string) error {
 func (r *integrationRepository) mapToIntegration(dbIntegration Integration) (infragpt.Integration, error) {
 	metadata := make(map[string]string)
 	if dbIntegration.Metadata.Valid {
-		var metadataMap map[string]interface{}
+		var metadataMap map[string]any
 		if err := json.Unmarshal(dbIntegration.Metadata.RawMessage, &metadataMap); err != nil {
 			return infragpt.Integration{}, fmt.Errorf("failed to unmarshal metadata: %w", err)
 		}

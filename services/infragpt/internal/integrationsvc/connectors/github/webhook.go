@@ -66,7 +66,7 @@ func (wh *webhookHandler) handler() func(w http.ResponseWriter, r *http.Request)
 		}
 
 		// Parse payload as generic JSON
-		var rawPayload map[string]interface{}
+		var rawPayload map[string]any
 		if err := json.Unmarshal(payload, &rawPayload); err != nil {
 			http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
 			return
@@ -92,7 +92,7 @@ func (wh *webhookHandler) handler() func(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map[string]interface{}) (WebhookEvent, error) {
+func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map[string]any) (WebhookEvent, error) {
 	event := WebhookEvent{
 		EventType:  EventType(eventType),
 		RawPayload: rawPayload,
@@ -100,13 +100,13 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 	}
 
 	// Extract common fields
-	if installation, ok := rawPayload["installation"].(map[string]interface{}); ok {
+	if installation, ok := rawPayload["installation"].(map[string]any); ok {
 		if id, ok := installation["id"].(float64); ok {
 			event.InstallationID = int64(id)
 		}
 	}
 
-	if sender, ok := rawPayload["sender"].(map[string]interface{}); ok {
+	if sender, ok := rawPayload["sender"].(map[string]any); ok {
 		if id, ok := sender["id"].(float64); ok {
 			event.SenderID = int64(id)
 		}
@@ -115,7 +115,7 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 		}
 	}
 
-	if repository, ok := rawPayload["repository"].(map[string]interface{}); ok {
+	if repository, ok := rawPayload["repository"].(map[string]any); ok {
 		if id, ok := repository["id"].(float64); ok {
 			event.RepositoryID = int64(id)
 		}
@@ -142,7 +142,7 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 		}
 
 	case EventTypePullRequest:
-		if pr, ok := rawPayload["pull_request"].(map[string]interface{}); ok {
+		if pr, ok := rawPayload["pull_request"].(map[string]any); ok {
 			if number, ok := pr["number"].(float64); ok {
 				event.PullRequestNumber = int(number)
 			}
@@ -152,7 +152,7 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 			if state, ok := pr["state"].(string); ok {
 				event.PullRequestState = state
 			}
-			if head, ok := pr["head"].(map[string]interface{}); ok {
+			if head, ok := pr["head"].(map[string]any); ok {
 				if sha, ok := head["sha"].(string); ok {
 					event.CommitSHA = sha
 				}
@@ -160,7 +160,7 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 		}
 
 	case EventTypeIssues:
-		if issue, ok := rawPayload["issue"].(map[string]interface{}); ok {
+		if issue, ok := rawPayload["issue"].(map[string]any); ok {
 			if number, ok := issue["number"].(float64); ok {
 				event.IssueNumber = int(number)
 			}
@@ -178,9 +178,9 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 		}
 		
 		// Handle repository changes
-		if repositories, ok := rawPayload["repositories"].([]interface{}); ok {
+		if repositories, ok := rawPayload["repositories"].([]any); ok {
 			for _, repo := range repositories {
-				if repoMap, ok := repo.(map[string]interface{}); ok {
+				if repoMap, ok := repo.(map[string]any); ok {
 					if fullName, ok := repoMap["full_name"].(string); ok {
 						if event.InstallationAction == "created" {
 							event.RepositoriesAdded = append(event.RepositoriesAdded, fullName)
@@ -190,9 +190,9 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 			}
 		}
 		
-		if repositoriesRemoved, ok := rawPayload["repositories_removed"].([]interface{}); ok {
+		if repositoriesRemoved, ok := rawPayload["repositories_removed"].([]any); ok {
 			for _, repo := range repositoriesRemoved {
-				if repoMap, ok := repo.(map[string]interface{}); ok {
+				if repoMap, ok := repo.(map[string]any); ok {
 					if fullName, ok := repoMap["full_name"].(string); ok {
 						event.RepositoriesRemoved = append(event.RepositoriesRemoved, fullName)
 					}

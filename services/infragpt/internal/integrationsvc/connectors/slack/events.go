@@ -13,29 +13,17 @@ const (
 )
 
 type MessageEvent struct {
-	EventType EventType `json:"event_type"`
-	
-	// Common fields
-	TeamID    string `json:"team_id"`
-	ChannelID string `json:"channel_id"`
-	UserID    string `json:"user_id"`
-	Timestamp string `json:"timestamp"`
-	
-	// Message content
-	Text      string `json:"text"`
-	ThreadTS  string `json:"thread_ts,omitempty"`
-	
-	// Command-specific fields (for slash commands)
-	Command     string `json:"command,omitempty"`
-	ResponseURL string `json:"response_url,omitempty"`
-	TriggerID   string `json:"trigger_id,omitempty"`
-	
-	// Reaction-specific fields
-	Reaction string `json:"reaction,omitempty"`
-	
-	// Raw event data for advanced processing
-	RawEvent map[string]interface{} `json:"raw_event,omitempty"`
-	
-	// Metadata
-	CreatedAt time.Time `json:"created_at"`
+	EventType EventType
+	TeamID    string
+	ChannelID string
+	UserID    string
+	Timestamp string
+	Text      string
+	ThreadTS  string
+	Command     string
+	ResponseURL string
+	TriggerID   string
+	Reaction string
+	RawEvent map[string]any
+	CreatedAt time.Time
 }

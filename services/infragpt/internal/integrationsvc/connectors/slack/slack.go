@@ -239,7 +239,7 @@ func (s *slackConnector) Subscribe(ctx context.Context, handler func(ctx context
 	return fmt.Errorf("slack Socket Mode implementation pending - requires slack-go library")
 }
 
-func (s *slackConnector) convertToMessageEvent(rawEvent interface{}) MessageEvent {
+func (s *slackConnector) convertToMessageEvent(rawEvent any) MessageEvent {
 	// TODO: Convert Slack Socket Mode events to our MessageEvent format
 	// This would parse different event types (message, slash command, etc.)
 	// and create appropriate MessageEvent structs
@@ -252,6 +252,6 @@ func (s *slackConnector) convertToMessageEvent(rawEvent interface{}) MessageEven
 		Text:      "",
 		Timestamp: fmt.Sprintf("%d", time.Now().Unix()),
 		CreatedAt: time.Now(),
-		RawEvent:  make(map[string]interface{}),
+		RawEvent:  make(map[string]any),
 	}
 }

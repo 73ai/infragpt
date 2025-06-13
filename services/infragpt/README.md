@@ -24,6 +24,15 @@ The service follows clean architecture principles with clear separation of conce
   - Metadata collection (company size, team size, use cases, observability stack)
   - Member management within organizations
 
+#### 3. Integration Service (`internal/integrationsvc/`)
+- **Purpose**: External service integration management with connector pattern
+- **Key Features**:
+  - Multi-connector architecture (Slack, GitHub, AWS, GCP, PagerDuty, Datadog)
+  - OAuth2 and installation-based authentication flows
+  - AES-256-GCM encrypted credential storage
+  - Subscribe pattern for real-time event handling
+  - Dedicated webhook servers and Socket Mode support
+
 ### Architecture Layers
 
 ```
@@ -41,10 +50,10 @@ The service follows clean architecture principles with clear separation of conce
 └─────────────────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────────┐
 │                   Infrastructure Layer                       │
-│  ┌───────────────┐ ┌────────────┐ ┌────────────┐ ┌─────────┐ │
-│  │   PostgreSQL  │ │   Slack    │ │   Agent    │ │  Clerk  │ │
-│  │   Database    │ │    API     │ │   gRPC     │ │ Webhooks│ │
-│  └───────────────┘ └────────────┘ └────────────┘ └─────────┘ │
+│  ┌──────────┐ ┌──────┐ ┌───────┐ ┌───────┐ ┌──────┐ ┌──────┐ │
+│  │PostgreSQL│ │Slack │ │GitHub │ │ Agent │ │Clerk │ │Other │ │
+│  │ Database │ │Socket│ │Webhook│ │ gRPC  │ │ Auth │ │ APIs │ │
+│  └──────────┘ └──────┘ └───────┘ └───────┘ └──────┘ └──────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -53,6 +62,7 @@ The service follows clean architecture principles with clear separation of conce
 ```
 ├── cmd/main.go                    # Application entry point
 ├── config.yaml                    # Configuration file
+├── integration.go                 # Integration service interface  
 ├── identity.go                    # Identity service interface
 ├── spec.go                        # Main service interface
 │
@@ -62,9 +72,10 @@ The service follows clean architecture principles with clear separation of conce
 │   └── proto/                     # Protocol buffer definitions
 │
 ├── identityapi/                   # Identity API handlers
-│   ├── handler.go                 # Identity HTTP endpoints
-│   ├── middleware.go              # Authentication middleware
-│   └── webhooks.go                # Clerk webhook validation
+│   └── handler.go                 # Identity HTTP endpoints
+│
+├── integrationapi/                # Integration API handlers
+│   └── handler.go                 # Integration HTTP endpoints
 │
 ├── internal/
 │   ├── generic/                   # Shared utilities
@@ -72,44 +83,87 @@ The service follows clean architecture principles with clear separation of conce
 │   │   ├── httplog/              # HTTP request logging middleware
 │   │   └── postgresconfig/       # Database configuration
 │   │
-│   ├── infragptsvc/              # InfraGPT service implementation
-│   │   ├── domain/               # Business domain models
+│   ├── conversationsvc/           # Conversation service implementation
+│   │   ├── domain/               # Conversation domain models
 │   │   ├── service.go            # Service implementation
 │   │   └── supporting/           # Infrastructure implementations
 │   │       ├── agent/            # Agent client integration
 │   │       ├── postgres/         # Database repositories
 │   │       └── slack/            # Slack API integration
 │   │
-│   └── identitysvc/              # Identity service implementation
-│       ├── domain/               # Identity domain models
+│   ├── identitysvc/              # Identity service implementation
+│   │   ├── domain/               # Identity domain models
+│   │   ├── service.go            # Service implementation
+│   │   └── supporting/           # Infrastructure implementations
+│   │       ├── clerk/            # Clerk integration
+│   │       └── postgres/         # Database repositories
+│   │
+│   └── integrationsvc/           # Integration service implementation
+│       ├── domain/               # Integration domain models
 │       ├── service.go            # Service implementation
+│       ├── config.go             # Service configuration
+│       ├── connectors/           # Connector implementations
+│       │   ├── slack/            # Slack OAuth2 + Socket Mode
+│       │   └── github/           # GitHub App + Webhooks
 │       └── supporting/postgres/  # Database repositories
 │
 ├── migrations/                    # Database migration scripts
 └── docs/                         # Documentation
+    ├── CONTRIBUTING.md            # Development guidelines
+    ├── IMPLEMENTATION.md          # Implementation overview
+    └── INTEGRATION_SYSTEM.md     # Integration system design
 ```
+
+## Implementation Status
+
+### ✅ Production Ready
+- **Identity Service**: Complete Clerk authentication with organization management
+- **Integration Service**: Full connector architecture with Slack and GitHub connectors
+- **Database Layer**: Type-safe SQLC queries with optimized indexing
+- **API Layer**: REST endpoints with authentication middleware
+- **Security**: AES-256-GCM credential encryption and webhook signature validation
+- **Concurrency**: errgroup-based goroutine management with graceful shutdown
+
+### 🔧 Active Development  
+- **Conversation Service**: Enhanced AI agent integration and context management
+- **Business Logic**: Event-driven workflow automation based on external service events
+- **Additional Connectors**: AWS, GCP, PagerDuty, and Datadog connector implementations
+
+### 📋 Planned
+- **Advanced Workflows**: Complex multi-step automation and approval flows
+- **Analytics Dashboard**: Usage metrics and integration health monitoring
+- **Plugin Architecture**: Custom connector development framework
 
 ## Key Features
 
-### 1. Slack Integration
+### 1. Real-time Slack Integration
 - **Socket Mode**: Real-time bi-directional communication with Slack
 - **Thread Management**: Conversation threading and context preservation
 - **Channel Subscriptions**: Automated responses to mentions and messages
-- **Workspace Management**: Multi-workspace support with token management
+- **Multi-Workspace**: Support for multiple Slack workspace connections
+- **OAuth2 Flow**: Complete Slack app installation and token management
 
 ### 2. Identity & Authentication
-- **Clerk Integration**: OAuth authentication with webhook synchronization
-- **Organization Management**: Multi-tenant organization structure
-- **Onboarding Flow**: Guided setup for new organizations
-- **Metadata Collection**: Company profile and use case tracking
+- **Clerk Integration**: OAuth authentication with real-time webhook synchronization
+- **Organization Management**: Multi-tenant organization structure with member management
+- **Onboarding Flow**: Guided setup for new organizations with metadata collection
+- **Session Management**: JWT token validation and secure authentication middleware
 
 ### 3. AI Agent Integration
 - **gRPC Communication**: High-performance communication with AI agents
 - **Conversation Context**: Maintains conversation state across interactions
 - **Agent Registry**: Support for multiple specialized AI agents
 - **Fallback Handling**: Graceful degradation when agents are unavailable
+- **Message Processing**: Real-time message analysis and response generation
 
-### 4. HTTP Logging Middleware
+### 4. External Service Integration
+- **Multi-Connector Architecture**: Support for 6+ external services (Slack, GitHub, AWS, GCP, PagerDuty, Datadog)
+- **OAuth2 & Installation Flows**: Complete authorization workflows with secure credential storage
+- **Real-time Event Processing**: Socket Mode (Slack) and webhook servers (GitHub, etc.)
+- **AES-256-GCM Encryption**: Production-ready credential encryption with key rotation support
+- **Subscribe Pattern**: Consistent event handling across all connectors
+
+### 5. HTTP Logging Middleware
 - **Colorful Output**: ANSI color-coded logs for different HTTP methods and status codes
 - **Request/Response Tracking**: Complete request lifecycle logging
 - **Configurable**: Can be enabled/disabled via boolean parameter
@@ -143,7 +197,44 @@ identity:
   clerk:
     webhook_secret: "..." # Clerk webhook signing secret
     publishable_key: "..." # Clerk publishable key
+    port: 8082            # Webhook server port
+
+integrations:
+  slack:
+    client_id: "..."      # Slack app client ID
+    client_secret: "..."  # Slack app client secret
+    bot_token: "..."      # Bot token for Socket Mode
+    app_token: "..."      # App token for Socket Mode
+    redirect_url: "..."   # OAuth callback URL
+    signing_secret: "..." # Webhook signature validation
+    
+  github:
+    app_id: "..."         # GitHub App ID
+    private_key: "..."    # GitHub App private key (PEM)
+    webhook_secret: "..." # Webhook signature validation
+    webhook_port: 8081    # Dedicated webhook server port
+    
+  # Additional connectors: GCP, AWS, PagerDuty, Datadog
+  # See docs/INTEGRATION_SYSTEM.md for complete configuration
 ```
+
+## Current Capabilities
+
+### Live Features
+- **Multi-Service Architecture**: Three production-ready services working together
+- **Slack Bot Integration**: Real-time message processing with Socket Mode
+- **External Service Connections**: OAuth2 and installation-based authentication flows
+- **Secure Credential Storage**: AES-256-GCM encryption with environment-based key management
+- **Event-Driven Processing**: Real-time webhook and socket-based event handling
+- **Multi-Tenant Organizations**: Complete organization and user management
+- **Type-Safe Database**: SQLC-generated queries with optimized indexing
+- **Production Security**: Signature validation, panic recovery, and audit logging
+
+### Integration Capabilities
+- **Slack**: Complete OAuth2 + Socket Mode integration (Production Ready)
+- **GitHub**: GitHub App installation + webhook events (Production Ready)
+- **Identity Management**: Clerk authentication and organization sync (Production Ready)
+- **AI Agents**: gRPC communication with conversation context (Active Development)
 
 ## Development Commands
 
@@ -155,9 +246,11 @@ go build ./cmd/main.go        # Build binary
 
 ### Testing
 ```bash
-go test ./...                 # Run all tests
-go test ./internal/identitysvc/... # Run identity service tests
-go vet ./...                  # Static analysis
+go test ./...                           # Run all tests
+go test ./internal/identitysvc/...      # Run identity service tests
+go test ./internal/integrationsvc/...   # Run integration service tests
+go test ./internal/conversationsvc/...  # Run conversation service tests
+go vet ./...                            # Static analysis
 ```
 
 ### Database Management
@@ -180,10 +273,13 @@ go mod download               # Download dependencies
 - **organization_members**: User-organization relationships
 
 ### InfraGPT Tables  
-- **integrations**: Slack workspace integrations
 - **conversations**: Message thread management
 - **channels**: Slack channel subscriptions
 - **messages**: Message history and context
+
+### Integration Tables
+- **integrations**: External service integrations (Slack, GitHub, etc.)
+- **integration_credentials**: Encrypted credential storage with AES-256-GCM
 
 ## API Endpoints
 
@@ -191,6 +287,13 @@ go mod download               # Download dependencies
 - `POST /webhooks/clerk` - Clerk webhook receiver
 - `POST /api/v1/organizations/get` - Get organization details
 - `POST /api/v1/organizations/metadata/set` - Set organization metadata
+
+### Integration API
+- `POST /integrations/authorize/` - Initiate OAuth/installation flow
+- `POST /integrations/callback/` - Handle OAuth callbacks
+- `POST /integrations/list/` - List organization integrations
+- `POST /integrations/revoke/` - Revoke integration
+- `POST /integrations/status/` - Integration health check
 
 ### InfraGPT API
 - `GET /slack` - Complete Slack OAuth flow
@@ -241,15 +344,38 @@ go mod download               # Download dependencies
 ## Dependencies
 
 ### Core Dependencies
-- **Slack API**: `github.com/slack-go/slack`
-- **PostgreSQL**: `github.com/lib/pq`
-- **gRPC**: `google.golang.org/grpc`
-- **Configuration**: `gopkg.in/yaml.v3`, `github.com/mitchellh/mapstructure`
+- **Slack API**: `github.com/slack-go/slack` - Slack integration and Socket Mode
+- **PostgreSQL**: `github.com/lib/pq` - Database driver with connection pooling
+- **gRPC**: `google.golang.org/grpc` - AI agent communication
+- **Configuration**: `gopkg.in/yaml.v3`, `github.com/mitchellh/mapstructure` - YAML config parsing
+- **Concurrency**: `golang.org/x/sync/errgroup` - Coordinated goroutine management
+- **HTTP**: Standard library `net/http` - API servers and webhook endpoints
+- **Cryptography**: Standard library `crypto/*` - AES-256-GCM encryption and signature validation
+- **UUID**: `github.com/google/uuid` - Unique identifier generation
 
 ### Development Dependencies
-- **SQLC**: SQL to Go code generation
-- **Testcontainers**: Integration testing with real PostgreSQL
-- **Errgroup**: Concurrent goroutine management
+- **SQLC**: Type-safe SQL query generation with PostgreSQL support
+- **Testcontainers**: Integration testing with real PostgreSQL containers
+- **Testing**: Standard library `testing` with table-driven test patterns
+- **Code Generation**: `protoc` and related tools for gRPC interface generation
+
+## Integration System
+
+The Integration Service provides a connector-based architecture for integrating with external services. For detailed design documentation, see [docs/INTEGRATION_SYSTEM.md](docs/INTEGRATION_SYSTEM.md).
+
+### Supported Connectors
+- **Slack**: OAuth2 + Socket Mode for real-time events
+- **GitHub**: GitHub App installation with webhook events
+- **GCP**: Service account credential management
+- **AWS**: Access key + secret key authentication
+- **PagerDuty**: API key authentication
+- **Datadog**: API key + application key authentication
+
+### Key Design Principles
+- **Connector Ownership**: Each connector manages its own communication method
+- **Subscribe Pattern**: Unified event handling following Clerk authentication pattern
+- **Secure Storage**: AES-256-GCM encryption for all credentials
+- **Clean Architecture**: Domain-driven design with proper separation of concerns
 
 ## Contributing
 
