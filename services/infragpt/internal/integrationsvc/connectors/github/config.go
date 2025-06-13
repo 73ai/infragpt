@@ -12,6 +12,7 @@ type Config struct {
 	PrivateKey    string `mapstructure:"private_key"`
 	WebhookSecret string `mapstructure:"webhook_secret"`
 	RedirectURL   string `mapstructure:"redirect_url"`
+	WebhookPort   int    `mapstructure:"webhook_port"`
 }
 
 func (c Config) NewConnector() domain.Connector {

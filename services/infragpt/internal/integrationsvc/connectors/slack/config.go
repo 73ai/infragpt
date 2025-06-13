@@ -13,6 +13,8 @@ type Config struct {
 	RedirectURL   string   `mapstructure:"redirect_url"`
 	Scopes        []string `mapstructure:"scopes"`
 	SigningSecret string   `mapstructure:"signing_secret"`
+	BotToken      string   `mapstructure:"bot_token"`
+	AppToken      string   `mapstructure:"app_token"`
 }
 
 func (c Config) NewConnector() domain.Connector {

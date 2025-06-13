@@ -1,6 +1,7 @@
 package slack
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -197,4 +198,60 @@ func (s *slackConnector) computeSignature(payload []byte, secret string) string 
 	h.Write([]byte(baseString))
 	
 	return fmt.Sprintf("v0=%s", hex.EncodeToString(h.Sum(nil)))
+}
+
+func (s *slackConnector) Subscribe(ctx context.Context, handler func(ctx context.Context, event any) error) error {
+	if s.config.BotToken == "" {
+		return fmt.Errorf("slack: bot token is required for Socket Mode")
+	}
+	if s.config.AppToken == "" {
+		return fmt.Errorf("slack: app token is required for Socket Mode")
+	}
+
+	// TODO: Implement Socket Mode client when Slack library is available
+	// For now, return a placeholder implementation
+	// 
+	// Example implementation would be:
+	// client := socketmode.New(
+	//     slack.New(s.config.BotToken),
+	//     socketmode.OptionAppToken(s.config.AppToken),
+	// )
+	//
+	// go func() {
+	//     for evt := range client.Events {
+	//         switch evt.Type {
+	//         case socketmode.EventTypeEventsAPI:
+	//             eventsAPIEvent, ok := evt.Data.(slackevents.EventsAPIEvent)
+	//             if !ok {
+	//                 continue
+	//             }
+	//             
+	//             messageEvent := s.convertToMessageEvent(eventsAPIEvent)
+	//             if err := handler(ctx, messageEvent); err != nil {
+	//                 // Log error but continue processing
+	//             }
+	//         }
+	//     }
+	// }()
+	//
+	// return client.Run()
+	
+	return fmt.Errorf("slack Socket Mode implementation pending - requires slack-go library")
+}
+
+func (s *slackConnector) convertToMessageEvent(rawEvent interface{}) MessageEvent {
+	// TODO: Convert Slack Socket Mode events to our MessageEvent format
+	// This would parse different event types (message, slash command, etc.)
+	// and create appropriate MessageEvent structs
+	
+	return MessageEvent{
+		EventType: EventTypeMessage,
+		TeamID:    "",
+		ChannelID: "",
+		UserID:    "",
+		Text:      "",
+		Timestamp: fmt.Sprintf("%d", time.Now().Unix()),
+		CreatedAt: time.Now(),
+		RawEvent:  make(map[string]interface{}),
+	}
 }

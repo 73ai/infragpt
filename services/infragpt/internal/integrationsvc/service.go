@@ -3,11 +3,15 @@ package integrationsvc
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/domain"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/connectors/slack"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/connectors/github"
 )
 
 type service struct {
@@ -163,4 +167,119 @@ func (s *service) Integration(ctx context.Context, query infragpt.IntegrationQue
 	}
 
 	return integration, nil
+}
+
+func (s *service) Subscribe(ctx context.Context) error {
+	var wg sync.WaitGroup
+	
+	for connectorType, connector := range s.connectors {
+		wg.Add(1)
+		go func(connectorType infragpt.ConnectorType, connector domain.Connector) {
+			defer wg.Done()
+			
+			if err := connector.Subscribe(ctx, s.handleConnectorEvent); err != nil {
+				slog.Error("connector subscription failed", "connector_type", connectorType, "error", err)
+			}
+		}(connectorType, connector)
+	}
+	
+	wg.Wait()
+	return nil
+}
+
+func (s *service) handleConnectorEvent(ctx context.Context, event any) error {
+	switch e := event.(type) {
+	case slack.MessageEvent:
+		return s.handleSlackEvent(ctx, e)
+	case github.WebhookEvent:
+		return s.handleGitHubEvent(ctx, e)
+	default:
+		slog.Warn("received unknown event type", "event_type", fmt.Sprintf("%T", event))
+		return nil
+	}
+}
+
+func (s *service) handleSlackEvent(ctx context.Context, event slack.MessageEvent) error {
+	slog.Info("handling Slack event", 
+		"event_type", event.EventType, 
+		"team_id", event.TeamID,
+		"channel_id", event.ChannelID,
+		"user_id", event.UserID)
+	
+	switch event.EventType {
+	case slack.EventTypeMessage:
+		return s.handleSlackMessage(ctx, event)
+	case slack.EventTypeSlashCommand:
+		return s.handleSlackSlashCommand(ctx, event)
+	case slack.EventTypeAppMention:
+		return s.handleSlackAppMention(ctx, event)
+	default:
+		slog.Debug("unhandled Slack event type", "event_type", event.EventType)
+		return nil
+	}
+}
+
+func (s *service) handleGitHubEvent(ctx context.Context, event github.WebhookEvent) error {
+	slog.Info("handling GitHub event", 
+		"event_type", event.EventType,
+		"installation_id", event.InstallationID,
+		"repository_name", event.RepositoryName,
+		"sender_login", event.SenderLogin)
+	
+	switch event.EventType {
+	case github.EventTypePush:
+		return s.handleGitHubPush(ctx, event)
+	case github.EventTypePullRequest:
+		return s.handleGitHubPullRequest(ctx, event)
+	case github.EventTypeInstallation:
+		return s.handleGitHubInstallation(ctx, event)
+	default:
+		slog.Debug("unhandled GitHub event type", "event_type", event.EventType)
+		return nil
+	}
+}
+
+func (s *service) handleSlackMessage(ctx context.Context, event slack.MessageEvent) error {
+	// TODO: Implement Slack message processing logic
+	// This could involve parsing commands, triggering workflows, etc.
+	slog.Info("processing Slack message", "text", event.Text, "channel", event.ChannelID)
+	return nil
+}
+
+func (s *service) handleSlackSlashCommand(ctx context.Context, event slack.MessageEvent) error {
+	// TODO: Implement Slack slash command processing logic
+	slog.Info("processing Slack slash command", "command", event.Command, "text", event.Text)
+	return nil
+}
+
+func (s *service) handleSlackAppMention(ctx context.Context, event slack.MessageEvent) error {
+	// TODO: Implement Slack app mention processing logic
+	slog.Info("processing Slack app mention", "text", event.Text, "channel", event.ChannelID)
+	return nil
+}
+
+func (s *service) handleGitHubPush(ctx context.Context, event github.WebhookEvent) error {
+	// TODO: Implement GitHub push event processing logic
+	slog.Info("processing GitHub push", "repository", event.RepositoryName, "branch", event.Branch, "commit", event.CommitSHA)
+	return nil
+}
+
+func (s *service) handleGitHubPullRequest(ctx context.Context, event github.WebhookEvent) error {
+	// TODO: Implement GitHub pull request processing logic
+	slog.Info("processing GitHub pull request", 
+		"repository", event.RepositoryName, 
+		"pr_number", event.PullRequestNumber,
+		"action", event.Action,
+		"title", event.PullRequestTitle)
+	return nil
+}
+
+func (s *service) handleGitHubInstallation(ctx context.Context, event github.WebhookEvent) error {
+	// TODO: Implement GitHub installation event processing logic
+	slog.Info("processing GitHub installation", 
+		"installation_id", event.InstallationID,
+		"action", event.InstallationAction,
+		"repositories_added", event.RepositoriesAdded,
+		"repositories_removed", event.RepositoriesRemoved)
+	return nil
 }

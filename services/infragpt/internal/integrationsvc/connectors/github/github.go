@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -256,4 +257,18 @@ type accountResponse struct {
 	ID    int64  `json:"id"`
 	Login string `json:"login"`
 	Type  string `json:"type"`
+}
+
+func (g *githubConnector) Subscribe(ctx context.Context, handler func(ctx context.Context, event any) error) error {
+	if g.config.WebhookPort == 0 {
+		return fmt.Errorf("github: webhook port is required for webhook server")
+	}
+
+	webhookConfig := webhookServerConfig{
+		port:                g.config.WebhookPort,
+		webhookSecret:       g.config.WebhookSecret,
+		callbackHandlerFunc: handler,
+	}
+	
+	return webhookConfig.startWebhookServer(ctx)
 }
