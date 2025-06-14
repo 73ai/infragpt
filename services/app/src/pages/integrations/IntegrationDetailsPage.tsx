@@ -103,8 +103,11 @@ const IntegrationDetailsPage = observer(() => {
       );
       
       // Redirect to authorization URL
-      if (response.type === 'redirect') {
+      if (response.type === 'redirect' || response.type === 'oauth2') {
         window.location.href = response.url;
+      } else if (response.type === 'popup') {
+        // Handle popup flow (future enhancement)
+        window.open(response.url, 'integration-auth', 'width=600,height=600');
       }
     } catch (error) {
       integrationStore.handleError(error, 'reconfiguring integration');

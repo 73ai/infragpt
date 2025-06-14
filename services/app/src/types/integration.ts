@@ -65,7 +65,7 @@ export interface IntegrationConfiguration {
 }
 
 export interface AuthorizationIntent {
-  type: 'redirect' | 'popup';
+  type: 'redirect' | 'popup' | 'oauth2';
   url: string;
   state?: string;
   expires_at?: string;
@@ -79,7 +79,7 @@ export interface AuthorizeRequest {
 }
 
 export interface AuthorizeResponse {
-  type: 'redirect' | 'popup';
+  type: 'redirect' | 'popup' | 'oauth2';
   url: string;
   state?: string;
 }
