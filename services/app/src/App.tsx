@@ -5,6 +5,9 @@ import { Toaster } from 'sonner';
 import LoginPage from './pages/login';
 import SignUpPage from './pages/signup';
 import OnboardingPage from './pages/onboarding';
+import IntegrationsPage from './pages/integrations/IntegrationsPage';
+import IntegrationDetailsPage from './pages/integrations/IntegrationDetailsPage';
+import IntegrationCallbackPage from './pages/integrations/IntegrationCallbackPage';
 import { RedirectToSignIn, useAuth } from '@clerk/clerk-react';
 import { useOnboardingGuard } from './hooks/useOnboardingGuard';
 
@@ -78,8 +81,26 @@ const App = () => {
           element={
             <ProtectedRoute>
               <Layout>
-                <MainPage />
+                <IntegrationsPage />
               </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/integrations/:connectorType"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <IntegrationDetailsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/integrations/:connectorType/callback"
+          element={
+            <ProtectedRoute>
+              <IntegrationCallbackPage />
             </ProtectedRoute>
           }
         />
