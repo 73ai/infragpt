@@ -33,10 +33,12 @@ jobs:
         working-directory: services/website
         run: npm run build
         
+      - name: Install Netlify CLI
+        run: npm install -g netlify-cli
+        
       - name: Deploy to Netlify
-        uses: netlify/actions/cli@master
-        with:
-          args: deploy --dir=services/website/dist --prod
+        working-directory: services/website
+        run: netlify deploy --dir=dist --prod --message "Deploy from GitHub Actions"
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
