@@ -18,6 +18,23 @@ type Config struct {
 }
 
 func (c Config) NewConnector() domain.Connector {
+	// Ensure default scopes are set if none are provided
+	if len(c.Scopes) == 0 {
+		c.Scopes = []string{
+			"app_mentions:read",
+			"chat:write",
+			"im:history",
+			"im:write",
+			"reactions:write",
+			"users:read",
+			"users:read.email",
+			"channels:read",
+			"channels:history",
+			"groups:read",
+			"groups:history",
+		}
+	}
+	
 	return &slackConnector{
 		config: c,
 		client: &http.Client{Timeout: 30 * time.Second},
