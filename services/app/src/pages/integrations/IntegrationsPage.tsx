@@ -1,6 +1,6 @@
 // Integration Manager - Main List Page
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useUser } from '@clerk/clerk-react';
 import { integrationStore } from '../../stores/IntegrationStore';
@@ -9,25 +9,51 @@ import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useApiClient, Organization } from '../../lib/api';
 
 const IntegrationsPage = observer(() => {
   const { user } = useUser();
-  const organizationId = user?.organizationMemberships?.[0]?.organization?.id;
+  const { getOrganization } = useApiClient();
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [loadingOrg, setLoadingOrg] = useState(false);
+  
+  const clerkOrgId = user?.organizationMemberships?.[0]?.organization?.id;
 
+  // Get the proper organization UUID from API using Clerk org ID
   useEffect(() => {
-    if (organizationId) {
-      integrationStore.loadIntegrations(organizationId);
+    const fetchOrganization = async () => {
+      if (!clerkOrgId) return;
+      
+      setLoadingOrg(true);
+      try {
+        const org = await getOrganization(clerkOrgId);
+        setOrganization(org);
+      } catch (error) {
+        console.error('Failed to fetch organization:', error);
+        integrationStore.handleError(error, 'fetching organization');
+      } finally {
+        setLoadingOrg(false);
+      }
+    };
+
+    fetchOrganization();
+  }, [clerkOrgId, getOrganization]);
+
+  // Load integrations once we have the proper organization UUID
+  useEffect(() => {
+    if (organization?.id) {
+      integrationStore.loadIntegrations(organization.id);
     }
-  }, [organizationId]);
+  }, [organization?.id]);
 
   const handleConnectorAction = async (connectorType: string, action: 'connect' | 'details') => {
-    if (!organizationId) return;
+    if (!organization?.id) return;
 
     if (action === 'connect') {
       try {
         const response = await integrationStore.initiateConnection(
           connectorType as any,
-          organizationId,
+          organization.id,
           `${window.location.origin}/integrations/${connectorType}/callback`
         );
         
@@ -47,7 +73,7 @@ const IntegrationsPage = observer(() => {
     }
   };
 
-  if (integrationStore.loading && integrationStore.integrations.size === 0) {
+  if ((loadingOrg || integrationStore.loading) && integrationStore.integrations.size === 0) {
     return (
       <div className="h-full flex flex-col">
         {/* Header */}

@@ -12,21 +12,45 @@ import { IntegrationActions } from './components/IntegrationActions';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { ArrowLeft } from 'lucide-react';
+import { useApiClient, Organization } from '../../lib/api';
 
 const IntegrationDetailsPage = observer(() => {
   const { connectorType } = useParams<{ connectorType: string }>();
   const navigate = useNavigate();
   const { user } = useUser();
-  const organizationId = user?.organizationMemberships?.[0]?.organization?.id;
-  
+  const { getOrganization } = useApiClient();
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [loadingOrg, setLoadingOrg] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const clerkOrgId = user?.organizationMemberships?.[0]?.organization?.id;
 
   const connector = connectorType ? getConnectorByType(connectorType as any) : null;
   const integration = connectorType ? integrationStore.getIntegrationByConnectorType(connectorType as any) : null;
 
+  // Get the proper organization UUID from API using Clerk org ID
+  useEffect(() => {
+    const fetchOrganization = async () => {
+      if (!clerkOrgId) return;
+      
+      setLoadingOrg(true);
+      try {
+        const org = await getOrganization(clerkOrgId);
+        setOrganization(org);
+      } catch (error) {
+        console.error('Failed to fetch organization:', error);
+        integrationStore.handleError(error, 'fetching organization');
+      } finally {
+        setLoadingOrg(false);
+      }
+    };
+
+    fetchOrganization();
+  }, [clerkOrgId, getOrganization]);
+
   useEffect(() => {
     const loadData = async () => {
-      if (!organizationId || !connectorType || !connector) {
+      if (!organization?.id || !connectorType || !connector) {
         setLoading(false);
         return;
       }
@@ -34,7 +58,7 @@ const IntegrationDetailsPage = observer(() => {
       try {
         // Load integration details if it exists
         if (integrationStore.isConnectorConnected(connectorType as any)) {
-          await integrationStore.getIntegrationDetails(organizationId, connectorType as any);
+          await integrationStore.getIntegrationDetails(organization.id, connectorType as any);
         }
         
         // Load activity log if integration exists
@@ -49,7 +73,7 @@ const IntegrationDetailsPage = observer(() => {
     };
 
     loadData();
-  }, [organizationId, connectorType, connector, integration?.id]);
+  }, [organization?.id, connectorType, connector, integration?.id]);
 
   const handleTestConnection = async () => {
     if (!integration) return;
@@ -69,12 +93,12 @@ const IntegrationDetailsPage = observer(() => {
   };
 
   const handleReconfigure = async () => {
-    if (!organizationId || !connectorType) return;
+    if (!organization?.id || !connectorType) return;
     
     try {
       const response = await integrationStore.initiateConnection(
         connectorType as any,
-        organizationId,
+        organization.id,
         `${window.location.origin}/integrations/${connectorType}/callback`
       );
       
@@ -125,7 +149,7 @@ const IntegrationDetailsPage = observer(() => {
     );
   }
 
-  if (loading) {
+  if (loadingOrg || loading) {
     return (
       <div className="space-y-6">
         <Button variant="ghost" onClick={() => navigate('/integrations')}>
