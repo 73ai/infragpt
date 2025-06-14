@@ -29,6 +29,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/yaml.v3"
+	_ "github.com/lib/pq"
 )
 
 func main() {
