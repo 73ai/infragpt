@@ -1,10 +1,12 @@
-name: Deploy
+name: CLI Deploy
 
 on:
   pull_request:
     types: [closed]
     branches:
       - master
+    paths:
+      - "cli/**"
 
 permissions:
   contents: write
