@@ -67,7 +67,6 @@ func (h *httpHandler) authorize() func(w http.ResponseWriter, r *http.Request) {
 
 func (h *httpHandler) callback() func(w http.ResponseWriter, r *http.Request) {
 	type request struct {
-		OrganizationID string `json:"organization_id"`
 		ConnectorType  string `json:"connector_type"`
 		Code           string `json:"code"`
 		State          string `json:"state"`
@@ -90,7 +89,6 @@ func (h *httpHandler) callback() func(w http.ResponseWriter, r *http.Request) {
 
 	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
 		cmd := infragpt.AuthorizeIntegrationCommand{
-			OrganizationID: req.OrganizationID,
 			ConnectorType:  infragpt.ConnectorType(req.ConnectorType),
 			Code:           req.Code,
 			State:          req.State,

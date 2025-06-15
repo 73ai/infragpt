@@ -69,10 +69,30 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 		return infragpt.Integration{}, fmt.Errorf("failed to complete authorization: %w", err)
 	}
 
+	// Extract organization ID from credentials organization info
+	organizationID := ""
+	if credentials.OrganizationInfo != nil {
+		// For now, use external ID as organization ID
+		// In the future, this should map to actual organization management
+		organizationID = credentials.OrganizationInfo.ExternalID
+	} else {
+		return infragpt.Integration{}, fmt.Errorf("organization information not provided by connector")
+	}
+
+	// Check if integration already exists for this org and connector type
+	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, organizationID, cmd.ConnectorType)
+	if err != nil {
+		return infragpt.Integration{}, fmt.Errorf("failed to check existing integrations: %w", err)
+	}
+
+	if len(existingIntegrations) > 0 {
+		return infragpt.Integration{}, fmt.Errorf("integration already exists for connector type %s in organization %s", cmd.ConnectorType, organizationID)
+	}
+
 	now := time.Now()
 	integration := infragpt.Integration{
 		ID:             uuid.New().String(),
-		OrganizationID: cmd.OrganizationID,
+		OrganizationID: organizationID,
 		UserID:         "user-from-auth", // TODO: Get from auth context
 		ConnectorType:  cmd.ConnectorType,
 		Status:         infragpt.IntegrationStatusActive,
@@ -84,6 +104,15 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 
 	if cmd.InstallationID != "" {
 		integration.BotID = cmd.InstallationID
+	}
+
+	// Store connector organization info in integration metadata
+	if credentials.OrganizationInfo != nil {
+		integration.ConnectorOrganizationID = credentials.OrganizationInfo.ExternalID
+		integration.Metadata["connector_org_name"] = credentials.OrganizationInfo.Name
+		for k, v := range credentials.OrganizationInfo.Metadata {
+			integration.Metadata[k] = v
+		}
 	}
 
 	if err := s.integrationRepository.Store(ctx, integration); err != nil {

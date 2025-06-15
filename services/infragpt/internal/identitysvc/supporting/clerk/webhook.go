@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
-	svix "github.com/svix/svix-webhooks/go"
 	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
+	svix "github.com/svix/svix-webhooks/go"
 
 	"github.com/priyanshujain/infragpt/services/infragpt"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"

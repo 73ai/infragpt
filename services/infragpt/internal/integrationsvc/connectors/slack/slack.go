@@ -66,9 +66,18 @@ func (s *slackConnector) CompleteAuthorization(authData infragpt.AuthorizationDa
 		"scope":            oauthV2Response.Scope,
 	}
 
+	organizationInfo := &infragpt.OrganizationInfo{
+		ExternalID: oauthV2Response.Team.ID,
+		Name:       oauthV2Response.Team.Name,
+		Metadata: map[string]string{
+			"connector_type": "slack",
+		},
+	}
+
 	return infragpt.Credentials{
-		Type: infragpt.CredentialTypeOAuth2,
-		Data: credentialData,
+		Type:             infragpt.CredentialTypeOAuth2,
+		Data:             credentialData,
+		OrganizationInfo: organizationInfo,
 	}, nil
 }
 
