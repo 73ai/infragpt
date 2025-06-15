@@ -59,21 +59,21 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
     );
   };
 
-  const getLastSyncText = () => {
-    if (!integration?.lastSyncAt) return null;
+  const getCreatedText = () => {
+    if (!integration?.createdAt) return null;
     
-    const lastSync = new Date(integration.lastSyncAt);
+    const created = new Date(integration.createdAt);
     const now = new Date();
-    const diffMinutes = Math.floor((now.getTime() - lastSync.getTime()) / (1000 * 60));
+    const diffMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
     
     if (diffMinutes < 60) {
-      return `${diffMinutes} min ago`;
+      return `Added ${diffMinutes} min ago`;
     } else if (diffMinutes < 1440) {
       const hours = Math.floor(diffMinutes / 60);
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+      return `Added ${hours} hour${hours > 1 ? 's' : ''} ago`;
     } else {
       const days = Math.floor(diffMinutes / 1440);
-      return `${days} day${days > 1 ? 's' : ''} ago`;
+      return `Added ${days} day${days > 1 ? 's' : ''} ago`;
     }
   };
 
@@ -149,9 +149,9 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
                     <span className="font-medium">Channels:</span> {integration.configuration.connectedChannels.length}
                   </span>
                 )}
-                {getLastSyncText() && (
+                {getCreatedText() && (
                   <span>
-                    <span className="font-medium">Last sync:</span> {getLastSyncText()}
+                    {getCreatedText()}
                   </span>
                 )}
               </div>

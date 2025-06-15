@@ -181,11 +181,6 @@ export const IntegrationStatus: React.FC<IntegrationStatusProps> = ({
             {integration.status.charAt(0).toUpperCase() + integration.status.slice(1)}
           </Badge>
           
-          {integration.lastSyncAt && (
-            <span className="text-sm text-muted-foreground">
-              Last sync: {formatTimestamp(integration.lastSyncAt)}
-            </span>
-          )}
         </div>
 
         {/* Connector-specific Information */}
