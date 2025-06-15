@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,6 +33,17 @@ func NewService(config ServiceConfig) infragpt.IntegrationService {
 		credentialRepository:  config.CredentialRepository,
 		connectors:            config.Connectors,
 	}
+}
+
+// parseState extracts organization ID and user ID from OAuth state parameter
+// State format: "organizationID:userID:timestamp"
+func (s *service) parseState(state string) (organizationID, userID string, err error) {
+	parts := strings.Split(state, ":")
+	if len(parts) < 2 {
+		return "", "", fmt.Errorf("invalid state format")
+	}
+
+	return parts[0], parts[1], nil
 }
 
 func (s *service) NewIntegration(ctx context.Context, cmd infragpt.NewIntegrationCommand) (infragpt.IntegrationAuthorizationIntent, error) {
@@ -69,14 +81,18 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 		return infragpt.Integration{}, fmt.Errorf("failed to complete authorization: %w", err)
 	}
 
-	// Extract organization ID from credentials organization info
-	organizationID := ""
-	if credentials.OrganizationInfo != nil {
-		// For now, use external ID as organization ID
-		// In the future, this should map to actual organization management
-		organizationID = credentials.OrganizationInfo.ExternalID
-	} else {
-		return infragpt.Integration{}, fmt.Errorf("organization information not provided by connector")
+	// Parse organization ID and user ID from OAuth state
+	organizationID, userID, err := s.parseState(cmd.State)
+	if err != nil {
+		return infragpt.Integration{}, fmt.Errorf("failed to parse state: %w", err)
+	}
+
+	// Validate that organization ID and user ID are valid UUIDs
+	if _, err := uuid.Parse(organizationID); err != nil {
+		return infragpt.Integration{}, fmt.Errorf("invalid organization ID in state: %w", err)
+	}
+	if _, err := uuid.Parse(userID); err != nil {
+		return infragpt.Integration{}, fmt.Errorf("invalid user ID in state: %w", err)
 	}
 
 	// Check if integration already exists for this org and connector type
@@ -93,7 +109,7 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 	integration := infragpt.Integration{
 		ID:             uuid.New().String(),
 		OrganizationID: organizationID,
-		UserID:         "user-from-auth", // TODO: Get from auth context
+		UserID:         userID,
 		ConnectorType:  cmd.ConnectorType,
 		Status:         infragpt.IntegrationStatusActive,
 		Metadata:       make(map[string]string),
