@@ -204,7 +204,6 @@ func (s *service) Profile(ctx context.Context, query infragpt.ProfileQuery) (inf
 
 	return infragpt.Profile{
 		ID:               org.ID,
-		ClerkOrgID:       org.ClerkOrgID,
 		Name:             org.Name,
 		Slug:             org.Slug,
 		CreatedAt:        org.CreatedAt,

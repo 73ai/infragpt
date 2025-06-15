@@ -41,7 +41,6 @@ func (h *httpHandler) organization() func(w http.ResponseWriter, r *http.Request
 	}
 	type response struct {
 		ID             string `json:"id"`
-		ClerkOrgID     string `json:"clerk_org_id"`
 		Name           string `json:"name"`
 		Slug           string `json:"slug"`
 		CreatedAt      string `json:"created_at"`
@@ -79,7 +78,6 @@ func (h *httpHandler) organization() func(w http.ResponseWriter, r *http.Request
 
 		resp := response{
 			ID:             profile.ID.String(),
-			ClerkOrgID:     profile.ClerkOrgID,
 			Name:           profile.Name,
 			Slug:           profile.Slug,
 			CreatedAt:      profile.CreatedAt.Format(time.RFC3339),
@@ -111,7 +109,6 @@ func (h *httpHandler) me() func(w http.ResponseWriter, r *http.Request) {
 	}
 	type response struct {
 		ID             string `json:"id"`
-		ClerkOrgID     string `json:"clerk_org_id"`
 		Name           string `json:"name"`
 		Slug           string `json:"slug"`
 		CreatedAt      string `json:"created_at"`
@@ -149,7 +146,6 @@ func (h *httpHandler) me() func(w http.ResponseWriter, r *http.Request) {
 
 		resp := response{
 			ID:             profile.ID.String(),
-			ClerkOrgID:     profile.ClerkOrgID,
 			Name:           profile.Name,
 			Slug:           profile.Slug,
 			CreatedAt:      profile.CreatedAt.Format(time.RFC3339),

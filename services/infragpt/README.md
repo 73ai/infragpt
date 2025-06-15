@@ -289,8 +289,8 @@ go mod download               # Download dependencies
 - `POST /api/v1/organizations/metadata/set` - Set organization metadata
 
 ### Integration API
-- `POST /integrations/authorize/` - Initiate OAuth/installation flow
-- `POST /integrations/callback/` - Handle OAuth callbacks
+- `POST /integrations/initiate/` - Initiate OAuth/installation flow
+- `POST /integrations/authorize/` - Handle OAuth callbacks
 - `POST /integrations/list/` - List organization integrations
 - `POST /integrations/revoke/` - Revoke integration
 - `POST /integrations/status/` - Integration health check

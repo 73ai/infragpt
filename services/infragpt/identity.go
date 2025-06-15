@@ -49,7 +49,6 @@ type OrganizationMember struct {
 
 type Profile struct {
 	ID               uuid.UUID `json:"id"`
-	ClerkOrgID       string    `json:"clerk_org_id"`
 	Name             string    `json:"name"`
 	Slug             string    `json:"slug"`
 	CreatedAt        time.Time `json:"created_at"`

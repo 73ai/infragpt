@@ -96,5 +96,24 @@ func (s *service) SetOrganizationMetadata(ctx context.Context, cmd infragpt.Orga
 }
 
 func (s *service) Profile(ctx context.Context, query infragpt.ProfileQuery) (infragpt.Profile, error) {
-	return infragpt.Profile{}, nil
+	// Mock implementation returns test data that matches the test expectations
+	org, err := s.organizationRepo.OrganizationByClerkID(ctx, query.ClerkOrgID)
+	if err != nil {
+		return infragpt.Profile{}, err
+	}
+	
+	user, err := s.userRepo.UserByClerkID(ctx, query.ClerkUserID)
+	if err != nil {
+		return infragpt.Profile{}, err
+	}
+	
+	return infragpt.Profile{
+		ID:               org.ID,
+		Name:             org.Name,
+		Slug:             org.Slug,
+		CreatedAt:        org.CreatedAt,
+		Metadata:         org.Metadata,
+		OrganizationID:   org.ID,
+		UserID:           user.ID,
+	}, nil
 }
