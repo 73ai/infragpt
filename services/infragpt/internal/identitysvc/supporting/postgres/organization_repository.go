@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/priyanshujain/infragpt/services/infragpt"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"
 )
@@ -23,12 +24,21 @@ func NewOrganizationRepository(sqlDB *sql.DB) domain.OrganizationRepository {
 }
 
 func (r *organizationRepository) Create(ctx context.Context, org domain.Organization) error {
-	return r.queries.CreateOrganization(ctx, CreateOrganizationParams{
+	err := r.queries.CreateOrganization(ctx, CreateOrganizationParams{
 		ClerkOrgID:      org.ClerkOrgID,
 		Name:            org.Name,
 		Slug:            org.Slug,
 		CreatedByUserID: uuid.NullUUID{UUID: org.CreatedByUserID, Valid: true},
 	})
+	
+	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			return domain.ErrDuplicateKey
+		}
+		return err
+	}
+	
+	return nil
 }
 
 func (r *organizationRepository) OrganizationByClerkID(ctx context.Context, clerkOrgID string) (*domain.Organization, error) {

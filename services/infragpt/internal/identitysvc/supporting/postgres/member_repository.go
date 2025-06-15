@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"
 )
 
@@ -19,13 +20,22 @@ func NewMemberRepository(sqlDB *sql.DB) domain.MemberRepository {
 }
 
 func (r *memberRepository) Create(ctx context.Context, member domain.OrganizationMember) error {
-	return r.queries.CreateOrganizationMember(ctx, CreateOrganizationMemberParams{
+	err := r.queries.CreateOrganizationMember(ctx, CreateOrganizationMemberParams{
 		UserID:         member.UserID,
 		OrganizationID: member.OrganizationID,
 		ClerkUserID:    member.ClerkUserID,
 		ClerkOrgID:     member.ClerkOrgID,
 		Role:           member.Role,
 	})
+	
+	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			return domain.ErrDuplicateKey
+		}
+		return err
+	}
+	
+	return nil
 }
 
 func (r *memberRepository) DeleteByClerkIDs(ctx context.Context, clerkUserID string, clerkOrgID string) error {

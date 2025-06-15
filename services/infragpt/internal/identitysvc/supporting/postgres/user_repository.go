@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/lib/pq"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"
 )
 
@@ -18,12 +19,21 @@ func NewUserRepository(sqlDB *sql.DB) domain.UserRepository {
 }
 
 func (r *userRepository) Create(ctx context.Context, user domain.User) error {
-	return r.queries.CreateUser(ctx, CreateUserParams{
+	err := r.queries.CreateUser(ctx, CreateUserParams{
 		ClerkUserID: user.ClerkUserID,
 		Email:       user.Email,
 		FirstName:   user.FirstName,
 		LastName:    user.LastName,
 	})
+	
+	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			return domain.ErrDuplicateKey
+		}
+		return err
+	}
+	
+	return nil
 }
 
 func (r *userRepository) UserByClerkID(ctx context.Context, clerkUserID string) (*domain.User, error) {
