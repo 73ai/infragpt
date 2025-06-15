@@ -307,7 +307,7 @@ export const withErrorHandling = async <T>(
     const sanitizedContext = errorContext 
       ? errorContext.replace(/[\r\n\t]/g, ' ').substring(0, 100)
       : '';
-    console.error('Integration service error' + (sanitizedContext ? ` (${sanitizedContext})` : '') + ':', error);
+    console.error('Integration service error%s:', sanitizedContext ? ` (${sanitizedContext})` : '', error);
     throw error;
   }
 };
