@@ -4,104 +4,140 @@ import Sectionhead from "@components/sectionhead.astro";
 
 <div id="vision" class="bg-white py-24 sm:py-32">
   <div class="mx-auto max-w-7xl px-6 lg:px-8">
-    <Sectionhead>
-      <Fragment slot="title">Our Vision</Fragment>
-      <Fragment slot="desc">
-        Building the future of infrastructure automation
-      </Fragment>
-    </Sectionhead>
+    <div class="mx-auto max-w-4xl">
+      <div class="text-center mb-16">
+        <h1 class="text-4xl font-bold text-gray-900 mb-6">
+          Whys of InfraGPT
+        </h1>
+        <p class="text-xl text-gray-600 leading-relaxed">
+          A founder's perspective on the future of infrastructure management
+        </p>
+      </div>
+      
+      <div class="prose prose-lg mx-auto text-gray-700 space-y-8">
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-r-lg">
+          <p class="text-lg font-medium text-blue-900 mb-2">My core belief:</p>
+          <p class="text-blue-800 italic">
+            "In today's world, building and managing software shouldn't be a daunting task."
+          </p>
+        </div>
+        
+        <p class="text-lg">
+          I've been managing infrastructure for a decade both as a developer and as a infrastructure engineer.
+       I've maintained >99% uptime for large-scale systems
+          and reduced production costs. At OkCredit I reduced cost of serving 2 million MAUs from ₹400,000 to ₹50,000 per day. Through this journey, 
+          I've seen firsthand how hard it is to manage infrastructure for software teams.
+        </p>
+        
+        <p>
+          Today's reality is overwhelming microservices, container orchestrators, multi-region deployments, 
+          security compliance, and now the rise of "vibe coding". We are producing more code than ever.
+           All of this lands hot in production, creating an urgent need for counterbalance.
+        </p>
+        
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-6">
+          <h3 class="text-xl font-semibold text-amber-900 mb-3">The Problem We're Solving</h3>
+          <p class="text-amber-800">
+            Instead of focusing on fixing production issues at 2AM or doing boring cost analysis, people should prioritize building 
+            amazing user experiences and great features. DevOps expertise should be accessible and affordable, 
+            not a privilege of well-funded teams.
+          </p>
+        </div>
+        
+        <h3 class="text-2xl font-semibold text-gray-900">Why AI Agents Are the Answer</h3>
+        
+        <p>
+          The deterministic nature of infrastructure makes it perfect for AI agents. Unlike other domains,
+          infrastructure problems have clear terminal states. We can determine when we've solved an issue with 
+          confidence. This is what makes the approach viable.
+        </p>
+        
+        <p>
+          Modern reasoning models can think step-by-step, breaking down complex problems into logical steps. 
+          Combined with tools and context from your entire infrastructure graph who deployed what, when, 
+          and why - agents can solve problems that traditionally required deep expertise.
+        </p>
+        
+        <div>
+          <div class="bg-green-50 border border-green-200 rounded-lg p-6 mb-10">
+            <h4 class="font-semibold text-green-900 mb-3">Example of workflows it enables</h4>
+            <ul class="text-green-800 space-y-2">
+              <li>Incident response without waking anyone at 2AM</li>
+              <li>Automated infrastructure drift detection and PR generation</li>
+              <li>Cost insights with every infrastructure change</li>
+              <li>Continuous security monitoring and remediation</li>
+              <li>Knowledge that improves with every problem solved</li>
+            </ul>
+          </div>
+          
+          <div class="bg-purple-50 border border-purple-200 rounded-lg p-6">
+            <h4 class="font-semibold text-purple-900 mb-3">Success Metrics That Matter</h4>
+            <ul class="text-purple-800 space-y-2">
+              <li>Reduced MTTR (Mean Time To Resolution)</li>
+              <li>Lower cloud bills month over month</li>
+              <li>Higher deployment frequency</li>
+              <li>No burnouts, and Engineers focusing on higher-value work</li>
+              <li>Strong security posture</li>
+            </ul>
+          </div>
+        </div>
+        
+        <h3 class="text-2xl font-semibold text-gray-900">User Experience Is Everything</h3>
+        
+        <p>
+          Developer primarily use Slack, Github and the terminal for their work.
+         We’re building InfraGPT that it integrates directly with existing workflows. People 
+          should be able agents in a way that feels natural. It's like having a agentic teammate. 
+        </p>
+
+        <h3 class="text-2xl font-semibold text-gray-900">Why OpenSource</h3>
+        
+        
+        <p>
+          We believe in the power of open source to drive innovation and adoption. By making InfraGPT open source, people know exactly what's running in their production environments.
+          It ensures transparency and trust in how AI is applied to infrastructure. 
+        </p>
+        
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+          <h4 class="font-semibold text-gray-900 mb-3">The Future as I think of it </h4>
+          <p class="text-gray-700">
+            Over time, agents will become the default for infrastructure management. Organizations will start 
+            with cost optimization, move to incident response, and eventually automate the all repetitive, 
+            tedious parts. A future where engineers create software while an AI quietly keeps production safe.
+
+
+            <p class="mt-4 text-gray-600" style="text-align: right;">
+              — Priyanshu Jain, Founder
+            </p>
+          </p>
+        </div>
     
-    <div class="mx-auto mt-16 max-w-4xl">
-      <div class="text-center">
-        <h3 class="text-2xl font-semibold text-gray-900 mb-8">
-          Democratizing DevOps Excellence
-        </h3>
-        <p class="text-lg leading-8 text-gray-700 mb-12">
-          We envision a world where every software team, regardless of size or expertise, 
-          has access to enterprise-grade DevOps capabilities. InfraGPT is building that future.
-        </p>
       </div>
       
-      <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <div class="relative p-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-          <div class="flex items-center mb-4">
-            <div class="flex-shrink-0">
-              <svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
-              </svg>
-            </div>
-            <h4 class="ml-4 text-xl font-semibold text-gray-900">AI-First Approach</h4>
-          </div>
-          <p class="text-gray-700">
-            Transform complex infrastructure management into natural conversations. 
-            Our AI understands context, learns from your environment, and provides 
-            intelligent automation that evolves with your needs.
-          </p>
-        </div>
-        
-        <div class="relative p-8 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
-          <div class="flex items-center mb-4">
-            <div class="flex-shrink-0">
-              <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-              </svg>
-            </div>
-            <h4 class="ml-4 text-xl font-semibold text-gray-900">Open Source Foundation</h4>
-          </div>
-          <p class="text-gray-700">
-            Built on transparency, community collaboration, and shared ownership. 
-            Every line of code is open, auditable, and extensible. Together, 
-            we're creating tools that serve everyone, not just the privileged few.
-          </p>
-        </div>
-        
-        <div class="relative p-8 bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-100">
-          <div class="flex items-center mb-4">
-            <div class="flex-shrink-0">
-              <svg class="h-8 w-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-              </svg>
-            </div>
-            <h4 class="ml-4 text-xl font-semibold text-gray-900">Composable Architecture</h4>
-          </div>
-          <p class="text-gray-700">
-            Modular by design. Connect existing tools, integrate with any workflow, 
-            and customize every component. InfraGPT adapts to your stack, 
-            not the other way around.
-          </p>
-        </div>
-        
-        <div class="relative p-8 bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border border-orange-100">
-          <div class="flex items-center mb-4">
-            <div class="flex-shrink-0">
-              <svg class="h-8 w-8 text-orange-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-              </svg>
-            </div>
-            <h4 class="ml-4 text-xl font-semibold text-gray-900">Team Empowerment</h4>
-          </div>
-          <p class="text-gray-700">
-            Every developer becomes a DevOps expert. Break down silos, 
-            accelerate delivery, and create a culture where infrastructure 
-            excellence is accessible to all team members.
-          </p>
-        </div>
-      </div>
-      
-      <div class="text-center mt-16">
-        <p class="text-lg font-medium text-gray-900 mb-4">
-          Join us in shaping the future of infrastructure automation
+      <div class="text-center mt-16 pt-8 border-t border-gray-200">
+        <p class="text-lg font-medium text-gray-900 mb-6">
+          Want to learn more about our journey and vision?
         </p>
-        <div class="flex justify-center gap-4">
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+          <a 
+            href="https://pjay.in/writings/ai-in-devops/" 
+            target="_blank"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+            </svg>
+            Read Blog Post
+          </a>
           <a 
             href="https://github.com/priyanshujain/infragpt" 
             target="_blank"
-            class="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors"
+            class="inline-flex items-center gap-2 px-6 py-3 border border-gray-300 text-gray-900 font-medium rounded-lg hover:bg-gray-50 transition-colors"
           >
             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z" clip-rule="evenodd"></path>
             </svg>
-            Contribute on GitHub
+            View on GitHub
           </a>
           <a 
             href="https://cal.com/priyanshujain/30min" 
