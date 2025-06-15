@@ -38,6 +38,15 @@ func (g *githubConnector) InitiateAuthorization(organizationID string, userID st
 	}, nil
 }
 
+func (g *githubConnector) ParseState(state string) (organizationID string, userID string, err error) {
+	parts := strings.Split(state, ":")
+	if len(parts) < 3 {
+		return "", "", fmt.Errorf("invalid state format, expected organizationID:userID:timestamp")
+	}
+	
+	return parts[0], parts[1], nil
+}
+
 func (g *githubConnector) CompleteAuthorization(authData infragpt.AuthorizationData) (infragpt.Credentials, error) {
 	if authData.InstallationID == "" {
 		return infragpt.Credentials{}, fmt.Errorf("installation ID is required for GitHub App")

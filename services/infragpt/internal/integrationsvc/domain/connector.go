@@ -9,6 +9,7 @@ import (
 type Connector interface {
 	// Authorization methods
 	InitiateAuthorization(organizationID string, userID string) (infragpt.IntegrationAuthorizationIntent, error)
+	ParseState(state string) (organizationID string, userID string, err error)
 	CompleteAuthorization(authData infragpt.AuthorizationData) (infragpt.Credentials, error)
 	ValidateCredentials(creds infragpt.Credentials) error
 	RefreshCredentials(creds infragpt.Credentials) (infragpt.Credentials, error)

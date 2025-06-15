@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
 
@@ -35,16 +34,6 @@ func NewService(config ServiceConfig) infragpt.IntegrationService {
 	}
 }
 
-// parseState extracts organization ID and user ID from OAuth state parameter
-// State format: "organizationID:userID:timestamp"
-func (s *service) parseState(state string) (organizationID, userID string, err error) {
-	parts := strings.Split(state, ":")
-	if len(parts) < 2 {
-		return "", "", fmt.Errorf("invalid state format")
-	}
-
-	return parts[0], parts[1], nil
-}
 
 func (s *service) NewIntegration(ctx context.Context, cmd infragpt.NewIntegrationCommand) (infragpt.IntegrationAuthorizationIntent, error) {
 	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, cmd.OrganizationID, cmd.ConnectorType)
@@ -81,8 +70,8 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 		return infragpt.Integration{}, fmt.Errorf("failed to complete authorization: %w", err)
 	}
 
-	// Parse organization ID and user ID from OAuth state
-	organizationID, userID, err := s.parseState(cmd.State)
+	// Parse organization ID and user ID from OAuth state using connector
+	organizationID, userID, err := connector.ParseState(cmd.State)
 	if err != nil {
 		return infragpt.Integration{}, fmt.Errorf("failed to parse state: %w", err)
 	}

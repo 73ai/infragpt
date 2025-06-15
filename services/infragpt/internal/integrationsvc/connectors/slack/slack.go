@@ -39,6 +39,15 @@ func (s *slackConnector) InitiateAuthorization(organizationID string, userID str
 	}, nil
 }
 
+func (s *slackConnector) ParseState(state string) (organizationID string, userID string, err error) {
+	parts := strings.Split(state, ":")
+	if len(parts) < 3 {
+		return "", "", fmt.Errorf("invalid state format, expected organizationID:userID:timestamp")
+	}
+	
+	return parts[0], parts[1], nil
+}
+
 func (s *slackConnector) CompleteAuthorization(authData infragpt.AuthorizationData) (infragpt.Credentials, error) {
 	if authData.Code == "" {
 		return infragpt.Credentials{}, fmt.Errorf("authorization code is required")

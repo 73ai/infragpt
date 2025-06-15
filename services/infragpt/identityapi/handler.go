@@ -3,10 +3,11 @@ package identityapi
 import (
 	"context"
 	"encoding/json"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
 
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
