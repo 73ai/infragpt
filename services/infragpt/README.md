@@ -285,8 +285,9 @@ go mod download               # Download dependencies
 
 ### Identity API
 - `POST /webhooks/clerk` - Clerk webhook receiver
-- `POST /api/v1/organizations/get` - Get organization details
-- `POST /api/v1/organizations/metadata/set` - Set organization metadata
+- `POST /identity/organization/` - Get organization profile with user context
+- `POST /identity/me/` - Get user profile with organization context
+- `POST /identity/organization/set-metadata/` - Set organization metadata
 
 ### Integration API
 - `POST /integrations/initiate/` - Initiate OAuth/installation flow
