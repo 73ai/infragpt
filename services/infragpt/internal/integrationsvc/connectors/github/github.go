@@ -21,10 +21,9 @@ type githubConnector struct {
 	client *http.Client
 }
 
-
 func (g *githubConnector) InitiateAuthorization(organizationID string, userID string) (infragpt.IntegrationAuthorizationIntent, error) {
 	state := fmt.Sprintf("%s:%s:%d", organizationID, userID, time.Now().Unix())
-	
+
 	params := url.Values{}
 	params.Set("state", state)
 	if g.config.RedirectURL != "" {
@@ -37,6 +36,15 @@ func (g *githubConnector) InitiateAuthorization(organizationID string, userID st
 		Type: infragpt.AuthorizationTypeInstallation,
 		URL:  installURL,
 	}, nil
+}
+
+func (g *githubConnector) ParseState(state string) (organizationID string, userID string, err error) {
+	parts := strings.Split(state, ":")
+	if len(parts) < 3 {
+		return "", "", fmt.Errorf("invalid state format, expected organizationID:userID:timestamp")
+	}
+	
+	return parts[0], parts[1], nil
 }
 
 func (g *githubConnector) CompleteAuthorization(authData infragpt.AuthorizationData) (infragpt.Credentials, error) {
@@ -65,13 +73,13 @@ func (g *githubConnector) CompleteAuthorization(authData infragpt.AuthorizationD
 	}
 
 	credentialData := map[string]string{
-		"installation_id":    authData.InstallationID,
-		"access_token":       accessToken.Token,
-		"account_login":      installationDetails.Account.Login,
-		"account_id":         strconv.FormatInt(installationDetails.Account.ID, 10),
-		"account_type":       installationDetails.Account.Type,
-		"target_type":        installationDetails.TargetType,
-		"permissions":        g.formatPermissions(installationDetails.Permissions),
+		"installation_id": authData.InstallationID,
+		"access_token":    accessToken.Token,
+		"account_login":   installationDetails.Account.Login,
+		"account_id":      strconv.FormatInt(installationDetails.Account.ID, 10),
+		"account_type":    installationDetails.Account.Type,
+		"target_type":     installationDetails.TargetType,
+		"permissions":     g.formatPermissions(installationDetails.Permissions),
 	}
 
 	var expiresAt *time.Time
@@ -154,7 +162,7 @@ func (g *githubConnector) ValidateWebhookSignature(payload []byte, signature str
 	}
 
 	expectedSignature := g.computeSignature(payload, secret)
-	
+
 	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
 		return fmt.Errorf("webhook signature validation failed")
 	}
@@ -168,7 +176,7 @@ func (g *githubConnector) generateJWT() (string, error) {
 
 func (g *githubConnector) getInstallationAccessToken(jwt string, installationID int64) (*accessTokenResponse, error) {
 	url := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens", installationID)
-	
+
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -198,7 +206,7 @@ func (g *githubConnector) getInstallationAccessToken(jwt string, installationID 
 
 func (g *githubConnector) getInstallationDetails(jwt string, installationID int64) (*installationResponse, error) {
 	url := fmt.Sprintf("https://api.github.com/app/installations/%d", installationID)
-	
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -269,6 +277,6 @@ func (g *githubConnector) Subscribe(ctx context.Context, handler func(ctx contex
 		webhookSecret:       g.config.WebhookSecret,
 		callbackHandlerFunc: handler,
 	}
-	
+
 	return webhookConfig.startWebhookServer(ctx)
 }

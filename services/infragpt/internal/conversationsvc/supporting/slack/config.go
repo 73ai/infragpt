@@ -3,6 +3,7 @@ package slack
 import (
 	"context"
 	"fmt"
+
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/domain"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"

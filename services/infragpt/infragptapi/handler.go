@@ -3,12 +3,13 @@ package infragptapi
 import (
 	"context"
 	"encoding/json"
-	"github.com/google/uuid"
-	"github.com/priyanshujain/infragpt/services/infragpt"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
 	"io"
 	"log/slog"
 	"net/http"
+
+	"github.com/google/uuid"
+	"github.com/priyanshujain/infragpt/services/infragpt"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
 )
 
 func NewHandler(svc infragpt.ConversationService) http.Handler {

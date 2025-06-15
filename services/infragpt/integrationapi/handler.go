@@ -17,8 +17,8 @@ type httpHandler struct {
 }
 
 func (h *httpHandler) init() {
+	h.HandleFunc("/integrations/initiate/", h.initiate())
 	h.HandleFunc("/integrations/authorize/", h.authorize())
-	h.HandleFunc("/integrations/callback/", h.callback())
 	h.HandleFunc("/integrations/list/", h.list())
 	h.HandleFunc("/integrations/revoke/", h.revoke())
 	h.HandleFunc("/integrations/refresh/", h.refresh())
@@ -35,7 +35,7 @@ func NewHandler(integrationService infragpt.IntegrationService,
 	return authMiddleware(h)
 }
 
-func (h *httpHandler) authorize() func(w http.ResponseWriter, r *http.Request) {
+func (h *httpHandler) initiate() func(w http.ResponseWriter, r *http.Request) {
 	type request struct {
 		OrganizationID string `json:"organization_id"`
 		UserID         string `json:"user_id"`
@@ -65,9 +65,8 @@ func (h *httpHandler) authorize() func(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *httpHandler) callback() func(w http.ResponseWriter, r *http.Request) {
+func (h *httpHandler) authorize() func(w http.ResponseWriter, r *http.Request) {
 	type request struct {
-		OrganizationID string `json:"organization_id"`
 		ConnectorType  string `json:"connector_type"`
 		Code           string `json:"code"`
 		State          string `json:"state"`
@@ -90,7 +89,6 @@ func (h *httpHandler) callback() func(w http.ResponseWriter, r *http.Request) {
 
 	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
 		cmd := infragpt.AuthorizeIntegrationCommand{
-			OrganizationID: req.OrganizationID,
 			ConnectorType:  infragpt.ConnectorType(req.ConnectorType),
 			Code:           req.Code,
 			State:          req.State,
@@ -151,7 +149,7 @@ func (h *httpHandler) list() func(w http.ResponseWriter, r *http.Request) {
 		query := infragpt.IntegrationsQuery{
 			OrganizationID: req.OrganizationID,
 		}
-		
+
 		if req.ConnectorType != "" {
 			query.ConnectorType = infragpt.ConnectorType(req.ConnectorType)
 		}
@@ -223,7 +221,7 @@ func (h *httpHandler) refresh() func(w http.ResponseWriter, r *http.Request) {
 		// 2. Get credentials for integration
 		// 3. Call connector.RefreshCredentials()
 		// 4. Update stored credentials
-		
+
 		return response{
 			Message: "Credential refresh not implemented yet",
 		}, nil

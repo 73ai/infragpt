@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useOrganization, useAuth } from '@clerk/clerk-react';
+import { useOrganization, useAuth, useUser } from '@clerk/clerk-react';
 import { useApiClient } from '@/lib/api';
+import { userStore } from '@/stores/UserStore';
 
 export interface OnboardingStatus {
   isLoading: boolean;
@@ -19,7 +20,11 @@ export const useOnboardingGuard = (): OnboardingStatus => {
 
   const { organization, isLoaded: orgLoaded } = useOrganization();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
-  const { getOrganization } = useApiClient();
+  const { user } = useUser();
+  const { getMe } = useApiClient();
+  
+  const clerkUserId = user?.id;
+  const clerkOrgId = organization?.id;
 
   useEffect(() => {
     const checkOnboardingStatus = async () => {
@@ -55,16 +60,19 @@ export const useOnboardingGuard = (): OnboardingStatus => {
         return;
       }
 
-      // Check if organization metadata is complete
+      // Load user profile and check onboarding completion
       try {
-        const orgData = await getOrganization(organization.id);
+        // Load user profile if not already loaded
+        if (!userStore.userProfile && !userStore.loading && clerkUserId && clerkOrgId) {
+          await userStore.loadUserProfile(getMe, clerkUserId, clerkOrgId);
+        }
         
         // Check if metadata exists and has required fields
         const isComplete = Boolean(
-          orgData.metadata?.company_size &&
-          orgData.metadata?.team_size &&
-          orgData.metadata?.use_cases?.length > 0 &&
-          orgData.metadata?.observability_stack?.length > 0
+          userStore.userProfile?.metadata?.company_size &&
+          userStore.userProfile?.metadata?.team_size &&
+          userStore.userProfile?.metadata?.use_cases?.length > 0 &&
+          userStore.userProfile?.metadata?.observability_stack?.length > 0
         );
 
         setStatus({
@@ -74,18 +82,18 @@ export const useOnboardingGuard = (): OnboardingStatus => {
           error: null,
         });
       } catch (error) {
-        // If organization doesn't exist in our backend yet, onboarding is incomplete
+        // If user profile doesn't exist in our backend yet, onboarding is incomplete
         setStatus({
           isLoading: false,
           isComplete: false,
-          hasOrganization: true, // Org exists in Clerk, but not in our backend
+          hasOrganization: true, // Org exists in Clerk, but user profile not in our backend
           error: null,
         });
       }
     };
 
     checkOnboardingStatus();
-  }, [organization?.id, isSignedIn, authLoaded, orgLoaded, getOrganization]);
+  }, [organization?.id, isSignedIn, authLoaded, orgLoaded, getMe, clerkUserId, clerkOrgId]);
 
   return status;
 };

@@ -55,20 +55,23 @@ func Ensure(t *testing.T, f fixture) {
 				t.Fatalf("failed to create organization: %v", err)
 			}
 
-			// 3. Get organization without metadata
-			query := infragpt.OrganizationQuery{ClerkOrgID: "org_workflow123"}
-			org, err := svc.Organization(ctx, query)
+			// 3. Get profile without metadata
+			query := infragpt.ProfileQuery{
+				ClerkOrgID:  "org_workflow123",
+				ClerkUserID: "user_workflow123",
+			}
+			profile, err := svc.Profile(ctx, query)
 			if err != nil {
-				t.Fatalf("failed to get organization: %v", err)
+				t.Fatalf("failed to get profile: %v", err)
 			}
 
-			if org.Name != "Test Org" {
-				t.Errorf("expected org name 'Test Org', got '%s'", org.Name)
+			if profile.Name != "Test Org" {
+				t.Errorf("expected org name 'Test Org', got '%s'", profile.Name)
 			}
 
 			// 4. Set metadata
 			cmd := infragpt.OrganizationMetadataCommand{
-				OrganizationID:     org.ID,
+				OrganizationID:     profile.ID,
 				CompanySize:        infragpt.CompanySizeStartup,
 				TeamSize:           infragpt.TeamSize1To5,
 				UseCases:           []infragpt.UseCase{infragpt.UseCaseInfrastructureMonitoring},
@@ -79,18 +82,18 @@ func Ensure(t *testing.T, f fixture) {
 				t.Fatalf("failed to set metadata: %v", err)
 			}
 
-			// 5. Get organization with metadata
-			org, err = svc.Organization(ctx, query)
+			// 5. Get profile with metadata
+			profile, err = svc.Profile(ctx, query)
 			if err != nil {
-				t.Fatalf("failed to get organization with metadata: %v", err)
+				t.Fatalf("failed to get profile with metadata: %v", err)
 			}
 
-			if org.Metadata.CompanySize != infragpt.CompanySizeStartup {
-				t.Errorf("expected company size '%s', got '%s'", infragpt.CompanySizeStartup, org.Metadata.CompanySize)
+			if profile.Metadata.CompanySize != infragpt.CompanySizeStartup {
+				t.Errorf("expected company size '%s', got '%s'", infragpt.CompanySizeStartup, profile.Metadata.CompanySize)
 			}
 
-			if len(org.Metadata.UseCases) != 1 || org.Metadata.UseCases[0] != infragpt.UseCaseInfrastructureMonitoring {
-				t.Errorf("expected use cases [%s], got %v", infragpt.UseCaseInfrastructureMonitoring, org.Metadata.UseCases)
+			if len(profile.Metadata.UseCases) != 1 || profile.Metadata.UseCases[0] != infragpt.UseCaseInfrastructureMonitoring {
+				t.Errorf("expected use cases [%s], got %v", infragpt.UseCaseInfrastructureMonitoring, profile.Metadata.UseCases)
 			}
 		})
 	})

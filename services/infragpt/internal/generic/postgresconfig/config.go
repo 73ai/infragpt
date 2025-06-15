@@ -18,7 +18,7 @@ func (c Config) connStr() string {
 }
 
 func (c Config) Init() (*sql.DB, error) {
-	db, err := sql.Open("pgx", c.connStr())
+	db, err := sql.Open("postgres", c.connStr())
 	if err != nil {
 		return nil, err
 	}

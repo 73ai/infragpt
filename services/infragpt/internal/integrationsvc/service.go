@@ -9,9 +9,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/domain"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/connectors/slack"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/connectors/github"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/connectors/slack"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/domain"
 )
 
 type service struct {
@@ -33,6 +33,7 @@ func NewService(config ServiceConfig) infragpt.IntegrationService {
 		connectors:            config.Connectors,
 	}
 }
+
 
 func (s *service) NewIntegration(ctx context.Context, cmd infragpt.NewIntegrationCommand) (infragpt.IntegrationAuthorizationIntent, error) {
 	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, cmd.OrganizationID, cmd.ConnectorType)
@@ -59,7 +60,6 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 	}
 
 	authData := infragpt.AuthorizationData{
-		ConnectorType:  cmd.ConnectorType,
 		Code:           cmd.Code,
 		State:          cmd.State,
 		InstallationID: cmd.InstallationID,
@@ -70,11 +70,35 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 		return infragpt.Integration{}, fmt.Errorf("failed to complete authorization: %w", err)
 	}
 
+	// Parse organization ID and user ID from OAuth state using connector
+	organizationID, userID, err := connector.ParseState(cmd.State)
+	if err != nil {
+		return infragpt.Integration{}, fmt.Errorf("failed to parse state: %w", err)
+	}
+
+	// Validate that organization ID and user ID are valid UUIDs
+	if _, err := uuid.Parse(organizationID); err != nil {
+		return infragpt.Integration{}, fmt.Errorf("invalid organization ID in state: %w", err)
+	}
+	if _, err := uuid.Parse(userID); err != nil {
+		return infragpt.Integration{}, fmt.Errorf("invalid user ID in state: %w", err)
+	}
+
+	// Check if integration already exists for this org and connector type
+	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, organizationID, cmd.ConnectorType)
+	if err != nil {
+		return infragpt.Integration{}, fmt.Errorf("failed to check existing integrations: %w", err)
+	}
+
+	if len(existingIntegrations) > 0 {
+		return infragpt.Integration{}, fmt.Errorf("integration already exists for connector type %s in organization %s", cmd.ConnectorType, organizationID)
+	}
+
 	now := time.Now()
 	integration := infragpt.Integration{
 		ID:             uuid.New().String(),
-		OrganizationID: cmd.OrganizationID,
-		UserID:         "user-from-auth", // TODO: Get from auth context
+		OrganizationID: organizationID,
+		UserID:         userID,
 		ConnectorType:  cmd.ConnectorType,
 		Status:         infragpt.IntegrationStatusActive,
 		Metadata:       make(map[string]string),
@@ -85,6 +109,15 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 
 	if cmd.InstallationID != "" {
 		integration.BotID = cmd.InstallationID
+	}
+
+	// Store connector organization info in integration metadata
+	if credentials.OrganizationInfo != nil {
+		integration.ConnectorOrganizationID = credentials.OrganizationInfo.ExternalID
+		integration.Metadata["connector_org_name"] = credentials.OrganizationInfo.Name
+		for k, v := range credentials.OrganizationInfo.Metadata {
+			integration.Metadata[k] = v
+		}
 	}
 
 	if err := s.integrationRepository.Store(ctx, integration); err != nil {
@@ -131,7 +164,7 @@ func (s *service) RevokeIntegration(ctx context.Context, cmd infragpt.RevokeInte
 			Data:      credential.Data,
 			ExpiresAt: credential.ExpiresAt,
 		}
-		
+
 		if err := connector.RevokeCredentials(creds); err != nil {
 			return fmt.Errorf("failed to revoke credentials with connector: %w", err)
 		}
@@ -152,7 +185,7 @@ func (s *service) Integrations(ctx context.Context, query infragpt.IntegrationsQ
 	if query.ConnectorType != "" {
 		return s.integrationRepository.FindByOrganizationAndType(ctx, query.OrganizationID, query.ConnectorType)
 	}
-	
+
 	return s.integrationRepository.FindByOrganization(ctx, query.OrganizationID)
 }
 
@@ -171,18 +204,18 @@ func (s *service) Integration(ctx context.Context, query infragpt.IntegrationQue
 
 func (s *service) Subscribe(ctx context.Context) error {
 	var wg sync.WaitGroup
-	
+
 	for connectorType, connector := range s.connectors {
 		wg.Add(1)
 		go func(connectorType infragpt.ConnectorType, connector domain.Connector) {
 			defer wg.Done()
-			
+
 			if err := connector.Subscribe(ctx, s.handleConnectorEvent); err != nil {
 				slog.Error("connector subscription failed", "connector_type", connectorType, "error", err)
 			}
 		}(connectorType, connector)
 	}
-	
+
 	wg.Wait()
 	return nil
 }
@@ -200,12 +233,12 @@ func (s *service) handleConnectorEvent(ctx context.Context, event any) error {
 }
 
 func (s *service) handleSlackEvent(ctx context.Context, event slack.MessageEvent) error {
-	slog.Info("handling Slack event", 
-		"event_type", event.EventType, 
+	slog.Info("handling Slack event",
+		"event_type", event.EventType,
 		"team_id", event.TeamID,
 		"channel_id", event.ChannelID,
 		"user_id", event.UserID)
-	
+
 	switch event.EventType {
 	case slack.EventTypeMessage:
 		return s.handleSlackMessage(ctx, event)
@@ -220,12 +253,12 @@ func (s *service) handleSlackEvent(ctx context.Context, event slack.MessageEvent
 }
 
 func (s *service) handleGitHubEvent(ctx context.Context, event github.WebhookEvent) error {
-	slog.Info("handling GitHub event", 
+	slog.Info("handling GitHub event",
 		"event_type", event.EventType,
 		"installation_id", event.InstallationID,
 		"repository_name", event.RepositoryName,
 		"sender_login", event.SenderLogin)
-	
+
 	switch event.EventType {
 	case github.EventTypePush:
 		return s.handleGitHubPush(ctx, event)
@@ -266,8 +299,8 @@ func (s *service) handleGitHubPush(ctx context.Context, event github.WebhookEven
 
 func (s *service) handleGitHubPullRequest(ctx context.Context, event github.WebhookEvent) error {
 	// TODO: Implement GitHub pull request processing logic
-	slog.Info("processing GitHub pull request", 
-		"repository", event.RepositoryName, 
+	slog.Info("processing GitHub pull request",
+		"repository", event.RepositoryName,
 		"pr_number", event.PullRequestNumber,
 		"action", event.Action,
 		"title", event.PullRequestTitle)
@@ -276,7 +309,7 @@ func (s *service) handleGitHubPullRequest(ctx context.Context, event github.Webh
 
 func (s *service) handleGitHubInstallation(ctx context.Context, event github.WebhookEvent) error {
 	// TODO: Implement GitHub installation event processing logic
-	slog.Info("processing GitHub installation", 
+	slog.Info("processing GitHub installation",
 		"installation_id", event.InstallationID,
 		"action", event.InstallationAction,
 		"repositories_added", event.RepositoriesAdded,

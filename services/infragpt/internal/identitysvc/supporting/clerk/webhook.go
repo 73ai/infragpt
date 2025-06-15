@@ -3,16 +3,19 @@ package clerk
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
-	svix "github.com/svix/svix-webhooks/go"
 	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"strings"
 
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
+	svix "github.com/svix/svix-webhooks/go"
+
 	"github.com/priyanshujain/infragpt/services/infragpt"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"
 )
 
 type user struct {
@@ -266,6 +269,14 @@ func ApiHandlerFunc[T any, R any](handler func(context.Context, T) (R, error)) f
 
 		response, err := handler(ctx, request)
 		if err != nil {
+			// Return 200 OK for duplicate key errors to prevent Clerk from retrying
+			if errors.Is(err, domain.ErrDuplicateKey) {
+				slog.Info("clerk webhook: duplicate key error, returning 200 OK", "path", r.URL, "err", err)
+				w.WriteHeader(http.StatusOK)
+				_ = json.NewEncoder(w).Encode(response)
+				return
+			}
+
 			slog.Error("error in clerk webhook api handler", "path", r.URL, "err", err)
 			var httpError = httperrors.From(err)
 			w.WriteHeader(httpError.HttpStatus)

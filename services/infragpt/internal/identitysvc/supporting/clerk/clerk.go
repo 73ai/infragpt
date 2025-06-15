@@ -2,9 +2,10 @@ package clerk
 
 import (
 	"context"
+	"net/http"
+
 	clerkapi "github.com/clerk/clerk-sdk-go/v2"
 	clerkhttp "github.com/clerk/clerk-sdk-go/v2/http"
-	"net/http"
 )
 
 type clerk struct {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/priyanshujain/infragpt/services/infragpt"
+	"github.com/slack-go/slack"
 )
 
 type slackConnector struct {
@@ -20,10 +21,9 @@ type slackConnector struct {
 	client *http.Client
 }
 
-
 func (s *slackConnector) InitiateAuthorization(organizationID string, userID string) (infragpt.IntegrationAuthorizationIntent, error) {
 	state := fmt.Sprintf("%s:%s:%d", organizationID, userID, time.Now().Unix())
-	
+
 	params := url.Values{}
 	params.Set("client_id", s.config.ClientID)
 	params.Set("scope", strings.Join(s.config.Scopes, ","))
@@ -39,58 +39,54 @@ func (s *slackConnector) InitiateAuthorization(organizationID string, userID str
 	}, nil
 }
 
+func (s *slackConnector) ParseState(state string) (organizationID string, userID string, err error) {
+	parts := strings.Split(state, ":")
+	if len(parts) < 3 {
+		return "", "", fmt.Errorf("invalid state format, expected organizationID:userID:timestamp")
+	}
+	
+	return parts[0], parts[1], nil
+}
+
 func (s *slackConnector) CompleteAuthorization(authData infragpt.AuthorizationData) (infragpt.Credentials, error) {
 	if authData.Code == "" {
 		return infragpt.Credentials{}, fmt.Errorf("authorization code is required")
 	}
 
-	params := url.Values{}
-	params.Set("client_id", s.config.ClientID)
-	params.Set("client_secret", s.config.ClientSecret)
-	params.Set("code", authData.Code)
-	params.Set("redirect_uri", s.config.RedirectURL)
-
-	resp, err := s.client.PostForm("https://slack.com/api/oauth.v2.access", params)
+	// Use slack-go library for OAuth2 token exchange
+	oauthV2Response, err := slack.GetOAuthV2Response(
+		s.client,
+		s.config.ClientID,
+		s.config.ClientSecret,
+		authData.Code,
+		s.config.RedirectURL,
+	)
 	if err != nil {
 		return infragpt.Credentials{}, fmt.Errorf("failed to exchange code for token: %w", err)
 	}
-	defer resp.Body.Close()
-
-	var response struct {
-		OK          bool   `json:"ok"`
-		AccessToken string `json:"access_token"`
-		Scope       string `json:"scope"`
-		UserID      string `json:"user_id"`
-		TeamID      string `json:"team_id"`
-		TeamName    string `json:"team_name"`
-		Bot         struct {
-			BotUserID      string `json:"bot_user_id"`
-			BotAccessToken string `json:"bot_access_token"`
-		} `json:"bot"`
-		Error string `json:"error,omitempty"`
-	}
-	
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return infragpt.Credentials{}, fmt.Errorf("failed to decode OAuth response: %w", err)
-	}
-
-	if !response.OK {
-		return infragpt.Credentials{}, fmt.Errorf("OAuth error: %s", response.Error)
-	}
 
 	credentialData := map[string]string{
-		"access_token":     response.AccessToken,
-		"bot_access_token": response.Bot.BotAccessToken,
-		"bot_user_id":      response.Bot.BotUserID,
-		"team_id":          response.TeamID,
-		"team_name":        response.TeamName,
-		"user_id":          response.UserID,
-		"scope":            response.Scope,
+		"access_token":     oauthV2Response.AuthedUser.AccessToken,
+		"bot_access_token": oauthV2Response.AccessToken,
+		"bot_user_id":      oauthV2Response.BotUserID,
+		"team_id":          oauthV2Response.Team.ID,
+		"team_name":        oauthV2Response.Team.Name,
+		"user_id":          oauthV2Response.AuthedUser.ID,
+		"scope":            oauthV2Response.Scope,
+	}
+
+	organizationInfo := &infragpt.OrganizationInfo{
+		ExternalID: oauthV2Response.Team.ID,
+		Name:       oauthV2Response.Team.Name,
+		Metadata: map[string]string{
+			"connector_type": "slack",
+		},
 	}
 
 	return infragpt.Credentials{
-		Type: infragpt.CredentialTypeOAuth2,
-		Data: credentialData,
+		Type:             infragpt.CredentialTypeOAuth2,
+		Data:             credentialData,
+		OrganizationInfo: organizationInfo,
 	}, nil
 }
 
@@ -100,37 +96,15 @@ func (s *slackConnector) ValidateCredentials(creds infragpt.Credentials) error {
 		return fmt.Errorf("bot access token not found in credentials")
 	}
 
-	req, err := http.NewRequest("POST", "https://slack.com/api/auth.test", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create validation request: %w", err)
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", botToken))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := s.client.Do(req)
+	// Use slack-go library for auth test
+	client := slack.New(botToken)
+	authTest, err := client.AuthTest()
 	if err != nil {
 		return fmt.Errorf("failed to validate credentials: %w", err)
 	}
-	defer resp.Body.Close()
 
-	var response struct {
-		OK     bool   `json:"ok"`
-		URL    string `json:"url"`
-		Team   string `json:"team"`
-		User   string `json:"user"`
-		TeamID string `json:"team_id"`
-		UserID string `json:"user_id"`
-		BotID  string `json:"bot_id"`
-		Error  string `json:"error,omitempty"`
-	}
-	
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return fmt.Errorf("failed to decode auth test response: %w", err)
-	}
-
-	if !response.OK {
-		return fmt.Errorf("credential validation failed: %s", response.Error)
+	if authTest.UserID == "" {
+		return fmt.Errorf("credential validation failed: invalid response")
 	}
 
 	return nil
@@ -156,9 +130,9 @@ func (s *slackConnector) RevokeCredentials(creds infragpt.Credentials) error {
 	defer resp.Body.Close()
 
 	var response struct {
-		OK       bool   `json:"ok"`
-		Revoked  bool   `json:"revoked"`
-		Error    string `json:"error,omitempty"`
+		OK      bool   `json:"ok"`
+		Revoked bool   `json:"revoked"`
+		Error   string `json:"error,omitempty"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -182,7 +156,7 @@ func (s *slackConnector) ValidateWebhookSignature(payload []byte, signature stri
 	}
 
 	expectedSignature := s.computeSignature(payload, secret)
-	
+
 	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
 		return fmt.Errorf("webhook signature validation failed")
 	}
@@ -193,10 +167,10 @@ func (s *slackConnector) ValidateWebhookSignature(payload []byte, signature stri
 func (s *slackConnector) computeSignature(payload []byte, secret string) string {
 	timestamp := time.Now().Unix()
 	baseString := fmt.Sprintf("v0:%d:%s", timestamp, string(payload))
-	
+
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write([]byte(baseString))
-	
+
 	return fmt.Sprintf("v0=%s", hex.EncodeToString(h.Sum(nil)))
 }
 
@@ -210,7 +184,7 @@ func (s *slackConnector) Subscribe(ctx context.Context, handler func(ctx context
 
 	// TODO: Implement Socket Mode client when Slack library is available
 	// For now, return a placeholder implementation
-	// 
+	//
 	// Example implementation would be:
 	// client := socketmode.New(
 	//     slack.New(s.config.BotToken),
@@ -225,7 +199,7 @@ func (s *slackConnector) Subscribe(ctx context.Context, handler func(ctx context
 	//             if !ok {
 	//                 continue
 	//             }
-	//             
+	//
 	//             messageEvent := s.convertToMessageEvent(eventsAPIEvent)
 	//             if err := handler(ctx, messageEvent); err != nil {
 	//                 // Log error but continue processing
@@ -235,7 +209,7 @@ func (s *slackConnector) Subscribe(ctx context.Context, handler func(ctx context
 	// }()
 	//
 	// return client.Run()
-	
+
 	return fmt.Errorf("slack Socket Mode implementation pending - requires slack-go library")
 }
 
@@ -243,7 +217,7 @@ func (s *slackConnector) convertToMessageEvent(rawEvent any) MessageEvent {
 	// TODO: Convert Slack Socket Mode events to our MessageEvent format
 	// This would parse different event types (message, slash command, etc.)
 	// and create appropriate MessageEvent structs
-	
+
 	return MessageEvent{
 		EventType: EventTypeMessage,
 		TeamID:    "",
