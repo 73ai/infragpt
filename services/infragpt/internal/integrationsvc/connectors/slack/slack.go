@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/priyanshujain/infragpt/services/infragpt"
+	"github.com/slack-go/slack"
 )
 
 type slackConnector struct {
@@ -44,48 +45,26 @@ func (s *slackConnector) CompleteAuthorization(authData infragpt.AuthorizationDa
 		return infragpt.Credentials{}, fmt.Errorf("authorization code is required")
 	}
 
-	params := url.Values{}
-	params.Set("client_id", s.config.ClientID)
-	params.Set("client_secret", s.config.ClientSecret)
-	params.Set("code", authData.Code)
-	params.Set("redirect_uri", s.config.RedirectURL)
-
-	resp, err := s.client.PostForm("https://slack.com/api/oauth.v2.access", params)
+	// Use slack-go library for OAuth2 token exchange
+	oauthV2Response, err := slack.GetOAuthV2Response(
+		s.client,
+		s.config.ClientID,
+		s.config.ClientSecret,
+		authData.Code,
+		s.config.RedirectURL,
+	)
 	if err != nil {
 		return infragpt.Credentials{}, fmt.Errorf("failed to exchange code for token: %w", err)
 	}
-	defer resp.Body.Close()
-
-	var response struct {
-		OK          bool   `json:"ok"`
-		AccessToken string `json:"access_token"`
-		Scope       string `json:"scope"`
-		UserID      string `json:"user_id"`
-		TeamID      string `json:"team_id"`
-		TeamName    string `json:"team_name"`
-		Bot         struct {
-			BotUserID      string `json:"bot_user_id"`
-			BotAccessToken string `json:"bot_access_token"`
-		} `json:"bot"`
-		Error string `json:"error,omitempty"`
-	}
-	
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return infragpt.Credentials{}, fmt.Errorf("failed to decode OAuth response: %w", err)
-	}
-
-	if !response.OK {
-		return infragpt.Credentials{}, fmt.Errorf("OAuth error: %s", response.Error)
-	}
 
 	credentialData := map[string]string{
-		"access_token":     response.AccessToken,
-		"bot_access_token": response.Bot.BotAccessToken,
-		"bot_user_id":      response.Bot.BotUserID,
-		"team_id":          response.TeamID,
-		"team_name":        response.TeamName,
-		"user_id":          response.UserID,
-		"scope":            response.Scope,
+		"access_token":     oauthV2Response.AuthedUser.AccessToken,
+		"bot_access_token": oauthV2Response.AccessToken,
+		"bot_user_id":      oauthV2Response.BotUserID,
+		"team_id":          oauthV2Response.Team.ID,
+		"team_name":        oauthV2Response.Team.Name,
+		"user_id":          oauthV2Response.AuthedUser.ID,
+		"scope":            oauthV2Response.Scope,
 	}
 
 	return infragpt.Credentials{
@@ -100,37 +79,15 @@ func (s *slackConnector) ValidateCredentials(creds infragpt.Credentials) error {
 		return fmt.Errorf("bot access token not found in credentials")
 	}
 
-	req, err := http.NewRequest("POST", "https://slack.com/api/auth.test", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create validation request: %w", err)
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", botToken))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := s.client.Do(req)
+	// Use slack-go library for auth test
+	client := slack.New(botToken)
+	authTest, err := client.AuthTest()
 	if err != nil {
 		return fmt.Errorf("failed to validate credentials: %w", err)
 	}
-	defer resp.Body.Close()
 
-	var response struct {
-		OK     bool   `json:"ok"`
-		URL    string `json:"url"`
-		Team   string `json:"team"`
-		User   string `json:"user"`
-		TeamID string `json:"team_id"`
-		UserID string `json:"user_id"`
-		BotID  string `json:"bot_id"`
-		Error  string `json:"error,omitempty"`
-	}
-	
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return fmt.Errorf("failed to decode auth test response: %w", err)
-	}
-
-	if !response.OK {
-		return fmt.Errorf("credential validation failed: %s", response.Error)
+	if authTest.UserID == "" {
+		return fmt.Errorf("credential validation failed: invalid response")
 	}
 
 	return nil
