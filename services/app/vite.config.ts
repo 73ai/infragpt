@@ -16,6 +16,12 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
+  },
+  server: {
+    host: true,
+    allowedHosts: [
+      'app-local.infragpt.io'
+    ]
   }
 
 });

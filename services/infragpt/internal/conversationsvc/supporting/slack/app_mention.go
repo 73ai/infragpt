@@ -3,11 +3,12 @@ package slack
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"strings"
+
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/conversationsvc/domain"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
-	"log/slog"
-	"strings"
 )
 
 func (s *Slack) handleAppMention(ctx context.Context, teamID string, event *slackevents.AppMentionEvent, handler func(context.Context, domain.UserCommand) error) error {

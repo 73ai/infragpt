@@ -1,6 +1,6 @@
 # InfraGPT Web Application
 
-InfraGPT Web Application is a modern React TypeScript client that provides a comprehensive interface for AI-powered infrastructure management. The application features Clerk authentication, organization onboarding workflows, and seamless integration with the InfraGPT backend services.
+InfraGPT Web Application is a modern React TypeScript client that provides a comprehensive interface for AI-powered infrastructure management. The application features Clerk authentication, organization onboarding workflows, integration management with external services, and seamless integration with the InfraGPT backend services.
 
 ## Architecture Overview
 
@@ -9,7 +9,8 @@ The application follows modern React patterns with TypeScript, featuring:
 - **Authentication**: Clerk integration for user and organization management
 - **Routing**: React Router for client-side navigation with protected routes
 - **UI Components**: Radix UI with Tailwind CSS for modern, accessible design
-- **State Management**: React hooks with custom API client
+- **State Management**: MobX stores for application state management
+- **Integration Management**: Comprehensive external service integration workflows
 - **Form Handling**: React Hook Form with Zod validation
 - **Build System**: Vite for fast development and optimized production builds
 
@@ -69,12 +70,33 @@ src/
 ├── lib/                       # Utility functions and configurations
 │   ├── utils.ts               # Utility functions (cn, etc.)
 │   ├── api.ts                 # API client with Clerk authentication
-│   └── onboarding-constants.ts # Onboarding form constants and types
+│   ├── onboarding-constants.ts # Onboarding form constants and types
+│   └── integration-constants.ts # Integration connector definitions and constants
+│
+├── stores/                    # MobX state management stores
+│   ├── IntegrationStore.ts    # Integration management state and actions
+│   └── UserStore.ts           # User profile and organization state
+│
+├── services/                  # API service layer
+│   └── integrationService.ts  # Integration API client with security features
+│
+├── types/                     # TypeScript type definitions
+│   └── integration.ts         # Integration-related type definitions
 │
 ├── pages/                     # Page components
 │   ├── login.tsx              # Login page
 │   ├── signup.tsx             # Signup page
-│   └── onboarding.tsx         # Organization onboarding page
+│   ├── onboarding.tsx         # Organization onboarding page
+│   └── integrations/          # Integration management pages
+│       ├── IntegrationsPage.tsx        # Integration listing and management
+│       ├── IntegrationDetailsPage.tsx  # Individual integration details
+│       ├── IntegrationCallbackPage.tsx # OAuth callback handling
+│       └── components/        # Integration-specific components
+│           ├── ConnectorCard.tsx       # Integration card display
+│           ├── ConnectorGrid.tsx       # Integration grid layout
+│           ├── IntegrationStatus.tsx   # Status and timeline display
+│           ├── IntegrationConfiguration.tsx # Configuration details
+│           └── IntegrationActions.tsx  # Action buttons and controls
 │
 └── assets/                    # Static assets
     ├── fonts/                 # Custom font files
@@ -101,18 +123,33 @@ src/
 3. **Step 3 - Observability Stack**: Current tooling selection
 4. **Step 4 - Summary**: Review and submit collected information
 
-### 3. UI/UX Features
+### 3. Integration Management
+- **External Service Connectors**: Support for Slack, GitHub, AWS, GCP, and other services
+- **OAuth Authentication**: Secure OAuth2 flows for service connections
+- **Real-time Status**: Live integration status monitoring with visual indicators
+- **Configuration Management**: Detailed connector-specific configuration views
+- **Timeline Tracking**: Creation and update timestamps with human-readable formatting
+- **Security Features**: Protected callback handling and URI decoding safety
+
+#### Supported Integrations:
+- **Slack**: Workspace and channel connectivity with team ID tracking
+- **GitHub**: Repository management with installation ID and webhook configuration
+- **AWS**: Account and region-based integration with credential management
+- **GCP**: Project-based integration with service account handling
+- **Datadog, PagerDuty**: Additional monitoring and alerting service support
+
+### 4. UI/UX Features
 - **Modern Design**: Clean, professional interface with Tailwind CSS
 - **Responsive Layout**: Mobile-first design with adaptive layouts
 - **Accessibility**: ARIA-compliant components from Radix UI
 - **Loading States**: Comprehensive loading and error state management
 - **Toast Notifications**: User feedback with Sonner toast system
 
-### 4. Data Management
+### 5. Data Management
 - **Type Safety**: Full TypeScript integration with Zod validation
 - **Form Validation**: Real-time validation with React Hook Form
 - **API Integration**: Type-safe API client with error handling
-- **State Management**: Efficient state management with React hooks
+- **State Management**: MobX stores for efficient state management and reactivity
 
 ## API Integration
 
@@ -123,6 +160,15 @@ The application communicates with the InfraGPT Go backend service:
 // API Client Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
+// Integration Service with Security Features
+class IntegrationService {
+  async getIntegrations(organizationId: string): Promise<Integration[]>
+  async initiateAuthorization(organizationId: string, userId: string, connectorType: ConnectorType): Promise<AuthorizeResponse>
+  async handleCallback(connectorType: ConnectorType, callbackData: Record<string, any>): Promise<Integration>
+  async getIntegrationDetails(organizationId: string, connectorType: ConnectorType): Promise<Integration>
+  async testConnection(integrationId: string): Promise<TestConnectionResponse>
+  async revokeIntegration(integrationId: string): Promise<void>
+}
 ```
 
 ### Authentication Flow
@@ -162,6 +208,60 @@ type ObservabilityStack =
   | 'pagerduty' | 'opsgenie' | 'other'
 ```
 
+## Integration Management Data Types
+
+### Integration Status
+```typescript
+type IntegrationStatus = 'connected' | 'error' | 'syncing' | 'disconnected'
+
+interface Integration {
+  id: string
+  organizationId: string
+  userId: string
+  connectorType: ConnectorType
+  status: IntegrationStatus
+  configuration?: Record<string, any>
+  metadata?: {
+    errorMessage?: string
+    errorCode?: string
+    lastSync?: string
+  }
+  createdAt: string
+  updatedAt: string
+}
+```
+
+### Connector Types
+```typescript
+type ConnectorType = 'slack' | 'github' | 'aws' | 'gcp' | 'datadog' | 'pagerduty'
+
+interface Connector {
+  type: ConnectorType
+  name: string
+  description: string
+  logo: string
+  category: 'communication' | 'code' | 'cloud' | 'monitoring'
+  authType: 'oauth2' | 'api_key' | 'service_account'
+  isAvailable: boolean
+}
+```
+
+### OAuth Response Types
+```typescript
+interface AuthorizeResponse {
+  type: 'redirect' | 'popup' | 'oauth2'
+  url: string
+  state?: string
+}
+
+interface CallbackRequest {
+  connector_type: ConnectorType
+  code?: string
+  state?: string
+  [key: string]: any
+}
+```
+
 ## Component Architecture
 
 ### Protected Routes
@@ -192,6 +292,32 @@ export const useApiClient = () => {
   // Provides authenticated API methods
   // Handles token refresh and error states
   // Returns typed API functions
+}
+```
+
+### MobX State Stores
+```typescript
+// Integration Store - Manages integration state and operations
+class IntegrationStore {
+  integrations = new Map<string, Integration>()
+  loading = false
+  error: string | null = null
+  
+  async loadIntegrations(organizationId: string): Promise<void>
+  async initiateConnection(connectorType: ConnectorType, organizationId: string, userId: string): Promise<AuthorizeResponse>
+  async testConnection(integrationId: string): Promise<TestConnectionResponse>
+  async revokeIntegration(integrationId: string): Promise<void>
+  getIntegrationByConnectorType(connectorType: ConnectorType): Integration | undefined
+}
+
+// User Store - Manages user profile and organization data
+class UserStore {
+  userProfile: UserProfile | null = null
+  loading = false
+  organizationId: string | null = null
+  userId: string | null = null
+  
+  async loadUserProfile(apiClient: any, clerkUserId: string, clerkOrgId: string): Promise<void>
 }
 ```
 
@@ -292,14 +418,23 @@ Output directory: `dist/`
 - **JWT Validation**: Clerk handles token validation and refresh
 - **Route Protection**: All sensitive routes require authentication
 - **Session Management**: Automatic session timeout and renewal
+- **OAuth Security**: Protected callback handling with state validation
 
 ### Data Security
 - **Input Validation**: All forms validated client and server-side
 - **HTTPS Enforcement**: Production deploys enforce HTTPS
 - **CORS Configuration**: Backend configured for specific origins
+- **Log Injection Prevention**: Sanitized error context in logging to prevent injection attacks
+- **URI Decoding Safety**: Protected decodeURIComponent calls with error handling for malformed URLs
+
+### Integration Security
+- **Secure Callbacks**: OAuth callback handling with validation and error boundaries
+- **API Token Management**: Secure storage and transmission of integration credentials
+- **Error Sanitization**: Prevents sensitive data exposure in error messages
+- **Request Validation**: All integration API requests include proper authentication and validation
 
 ### Privacy
-- **Data Minimization**: Only collect necessary onboarding data
+- **Data Minimization**: Only collect necessary onboarding and integration data
 - **Secure Storage**: Sensitive data stored server-side only
 - **Audit Logging**: Backend tracks data access and modifications
 

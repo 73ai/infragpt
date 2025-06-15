@@ -14,25 +14,25 @@ const (
 )
 
 type WebhookEvent struct {
-	EventType EventType
-	InstallationID int64
-	RepositoryID   int64
-	RepositoryName string
-	SenderID       int64
-	SenderLogin    string
-	Action string
-	Ref      string
-	Branch   string
-	CommitSHA string
-	PullRequestNumber int
-	PullRequestTitle  string
-	PullRequestState  string
-	IssueNumber int
-	IssueTitle  string
-	IssueState  string
-	InstallationAction string
-	RepositoriesAdded  []string
+	EventType           EventType
+	InstallationID      int64
+	RepositoryID        int64
+	RepositoryName      string
+	SenderID            int64
+	SenderLogin         string
+	Action              string
+	Ref                 string
+	Branch              string
+	CommitSHA           string
+	PullRequestNumber   int
+	PullRequestTitle    string
+	PullRequestState    string
+	IssueNumber         int
+	IssueTitle          string
+	IssueState          string
+	InstallationAction  string
+	RepositoriesAdded   []string
 	RepositoriesRemoved []string
-	RawPayload map[string]any
-	CreatedAt time.Time
+	RawPayload          map[string]any
+	CreatedAt           time.Time
 }

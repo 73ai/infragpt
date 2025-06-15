@@ -172,3 +172,5 @@ cython_debug/
 CLAUDE.md
 
 NOTES.md
+# Local Netlify folder
+.netlify

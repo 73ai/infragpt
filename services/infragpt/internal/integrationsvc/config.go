@@ -12,14 +12,14 @@ import (
 )
 
 type Config struct {
-	Database *sql.DB      `mapstructure:"-"`
-	Slack    slack.Config `mapstructure:"slack"`
+	Database *sql.DB       `mapstructure:"-"`
+	Slack    slack.Config  `mapstructure:"slack"`
 	GitHub   github.Config `mapstructure:"github"`
 }
 
 func (c Config) New() (infragpt.IntegrationService, error) {
 	integrationRepository := postgres.NewIntegrationRepository(c.Database)
-	
+
 	credentialRepository, err := postgres.NewCredentialRepository(c.Database)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create credential repository: %w", err)

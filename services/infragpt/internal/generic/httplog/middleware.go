@@ -64,7 +64,7 @@ func Middleware(enabled bool) func(http.Handler) http.Handler {
 			rw := &responseWriter{
 				ResponseWriter: w,
 				statusCode:     http.StatusOK,
-				body:          &bytes.Buffer{},
+				body:           &bytes.Buffer{},
 			}
 
 			// Log incoming request with colors

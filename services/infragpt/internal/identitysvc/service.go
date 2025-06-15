@@ -3,6 +3,7 @@ package identitysvc
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/domain"
@@ -190,20 +191,22 @@ func (s *service) SetOrganizationMetadata(ctx context.Context, cmd infragpt.Orga
 	return s.organizationRepo.SetMetadata(ctx, cmd.OrganizationID, metadata)
 }
 
-func (s *service) Organization(ctx context.Context, query infragpt.OrganizationQuery) (infragpt.Organization, error) {
-	org, err := s.organizationRepo.OrganizationByClerkID(ctx, query.ClerkOrgID)
+func (s *service) Profile(ctx context.Context, query infragpt.ProfileQuery) (infragpt.Profile, error) {
+	user, err := s.userRepo.UserByClerkID(ctx, query.ClerkUserID)
 	if err != nil {
-		return infragpt.Organization{}, err
+		return infragpt.Profile{}, fmt.Errorf("user not found: %w", err)
 	}
 
-	return infragpt.Organization{
-		ID:              org.ID,
-		ClerkOrgID:      org.ClerkOrgID,
-		Name:            org.Name,
-		Slug:            org.Slug,
-		CreatedByUserID: org.CreatedByUserID,
-		CreatedAt:       org.CreatedAt,
-		UpdatedAt:       org.UpdatedAt,
+	org, err := s.organizationRepo.OrganizationByClerkID(ctx, query.ClerkOrgID)
+	if err != nil {
+		return infragpt.Profile{}, fmt.Errorf("organization not found: %w", err)
+	}
+
+	return infragpt.Profile{
+		ID:               org.ID,
+		Name:             org.Name,
+		Slug:             org.Slug,
+		CreatedAt:        org.CreatedAt,
 		Metadata: infragpt.OrganizationMetadata{
 			OrganizationID:     org.Metadata.OrganizationID,
 			CompanySize:        org.Metadata.CompanySize,
@@ -213,5 +216,7 @@ func (s *service) Organization(ctx context.Context, query infragpt.OrganizationQ
 			CompletedAt:        org.Metadata.CompletedAt,
 			UpdatedAt:          org.Metadata.UpdatedAt,
 		},
+		OrganizationID:   org.ID,
+		UserID:           user.ID,
 	}, nil
 }

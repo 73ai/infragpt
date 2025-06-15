@@ -27,6 +27,7 @@ import (
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc"
 	"golang.org/x/sync/errgroup"
 
+	_ "github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/yaml.v3"
 )
@@ -46,15 +47,15 @@ func main() {
 	}
 
 	type Config struct {
-		LogLevel     string                  `mapstructure:"log_level"`
-		Port         int                     `mapstructure:"port"`
-		GrpcPort     int                     `mapstructure:"grpc_port"`
-		HttpLog      bool                    `mapstructure:"http_log"`
-		Slack        slack.Config            `mapstructure:"slack"`
-		Database     postgresconfig.Config   `mapstructure:"database"`
-		Agent        agentclient.Config      `mapstructure:"agent"`
-		Identity     identitysvc.Config      `mapstructure:"identity"`
-		Integrations integrationsvc.Config   `mapstructure:"integrations"`
+		LogLevel     string                `mapstructure:"log_level"`
+		Port         int                   `mapstructure:"port"`
+		GrpcPort     int                   `mapstructure:"grpc_port"`
+		HttpLog      bool                  `mapstructure:"http_log"`
+		Slack        slack.Config          `mapstructure:"slack"`
+		Database     postgresconfig.Config `mapstructure:"database"`
+		Agent        agentclient.Config    `mapstructure:"agent"`
+		Identity     identitysvc.Config    `mapstructure:"identity"`
+		Integrations integrationsvc.Config `mapstructure:"integrations"`
 	}
 
 	var c Config

@@ -62,16 +62,22 @@ type IntegrationAuthorizationIntent struct {
 }
 
 type AuthorizationData struct {
-	ConnectorType  ConnectorType
 	Code           string
 	State          string
 	InstallationID string
 }
 
 type Credentials struct {
-	Type      CredentialType
-	Data      map[string]string
-	ExpiresAt *time.Time
+	Type             CredentialType
+	Data             map[string]string
+	ExpiresAt        *time.Time
+	OrganizationInfo *OrganizationInfo
+}
+
+type OrganizationInfo struct {
+	ExternalID string
+	Name       string
+	Metadata   map[string]string
 }
 
 type IntegrationService interface {
@@ -90,7 +96,6 @@ type NewIntegrationCommand struct {
 }
 
 type AuthorizeIntegrationCommand struct {
-	OrganizationID string
 	ConnectorType  ConnectorType
 	Code           string
 	State          string

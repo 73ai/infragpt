@@ -18,7 +18,7 @@ type encryptionService struct {
 
 func newEncryptionService() (*encryptionService, error) {
 	key := deriveKey()
-	
+
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cipher: %w", err)
@@ -37,7 +37,7 @@ func deriveKey() []byte {
 	if salt == "" {
 		salt = "default-salt-for-development-only"
 	}
-	
+
 	hash := sha256.Sum256([]byte(salt))
 	return hash[:]
 }

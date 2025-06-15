@@ -150,8 +150,8 @@ CREATE TABLE integration_credentials (
 All endpoints use POST methods for consistency:
 
 ```
-POST /integrations/authorize/     # Initiate authorization
-POST /integrations/callback/      # Handle OAuth callbacks  
+POST /integrations/initiate/      # Initiate authorization
+POST /integrations/authorize/     # Handle OAuth callbacks  
 POST /integrations/list/          # List integrations
 POST /integrations/revoke/        # Revoke integration
 POST /integrations/status/        # Health check

@@ -3,10 +3,11 @@ package identityapi
 import (
 	"context"
 	"encoding/json"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
 
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
@@ -19,6 +20,7 @@ type httpHandler struct {
 
 func (h *httpHandler) init() {
 	h.HandleFunc("/identity/organization/", h.organization())
+	h.HandleFunc("/identity/me/", h.me())
 	h.HandleFunc("/identity/organization/set-metadata/", h.setOrganizationMetadata())
 }
 
@@ -34,15 +36,17 @@ func NewHandler(identityService infragpt.IdentityService,
 
 func (h *httpHandler) organization() func(w http.ResponseWriter, r *http.Request) {
 	type request struct {
-		ClerkOrgID string `json:"clerk_org_id"`
+		ClerkOrgID  string `json:"clerk_org_id"`
+		ClerkUserID string `json:"clerk_user_id"`
 	}
 	type response struct {
-		ID         string `json:"id"`
-		ClerkOrgID string `json:"clerk_org_id"`
-		Name       string `json:"name"`
-		Slug       string `json:"slug"`
-		CreatedAt  string `json:"created_at"`
-		Metadata   struct {
+		ID             string `json:"id"`
+		Name           string `json:"name"`
+		Slug           string `json:"slug"`
+		CreatedAt      string `json:"created_at"`
+		OrganizationID string `json:"organization_id"`
+		UserID         string `json:"user_id"`
+		Metadata       struct {
 			CompanySize        string   `json:"company_size"`
 			TeamSize           string   `json:"team_size"`
 			UseCases           []string `json:"use_cases"`
@@ -52,31 +56,33 @@ func (h *httpHandler) organization() func(w http.ResponseWriter, r *http.Request
 	}
 
 	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
-		query := infragpt.OrganizationQuery{
-			ClerkOrgID: req.ClerkOrgID,
+		query := infragpt.ProfileQuery{
+			ClerkOrgID:  req.ClerkOrgID,
+			ClerkUserID: req.ClerkUserID,
 		}
 
-		org, err := h.svc.Organization(ctx, query)
+		profile, err := h.svc.Profile(ctx, query)
 		if err != nil {
 			return response{}, err
 		}
 
-		useCases := make([]string, len(org.Metadata.UseCases))
-		for i, uc := range org.Metadata.UseCases {
+		useCases := make([]string, len(profile.Metadata.UseCases))
+		for i, uc := range profile.Metadata.UseCases {
 			useCases[i] = string(uc)
 		}
 
-		stack := make([]string, len(org.Metadata.ObservabilityStack))
-		for i, s := range org.Metadata.ObservabilityStack {
+		stack := make([]string, len(profile.Metadata.ObservabilityStack))
+		for i, s := range profile.Metadata.ObservabilityStack {
 			stack[i] = string(s)
 		}
 
 		resp := response{
-			ID:         org.ID.String(),
-			ClerkOrgID: org.ClerkOrgID,
-			Name:       org.Name,
-			Slug:       org.Slug,
-			CreatedAt:  org.CreatedAt.Format(time.RFC3339),
+			ID:             profile.ID.String(),
+			Name:           profile.Name,
+			Slug:           profile.Slug,
+			CreatedAt:      profile.CreatedAt.Format(time.RFC3339),
+			OrganizationID: profile.OrganizationID.String(),
+			UserID:         profile.UserID.String(),
 			Metadata: struct {
 				CompanySize        string   `json:"company_size"`
 				TeamSize           string   `json:"team_size"`
@@ -84,11 +90,79 @@ func (h *httpHandler) organization() func(w http.ResponseWriter, r *http.Request
 				ObservabilityStack []string `json:"observability_stack"`
 				CompletedAt        string   `json:"completed_at"`
 			}{
-				CompanySize:        string(org.Metadata.CompanySize),
-				TeamSize:           string(org.Metadata.TeamSize),
+				CompanySize:        string(profile.Metadata.CompanySize),
+				TeamSize:           string(profile.Metadata.TeamSize),
 				UseCases:           useCases,
 				ObservabilityStack: stack,
-				CompletedAt:        org.Metadata.CompletedAt.Format(time.RFC3339),
+				CompletedAt:        profile.Metadata.CompletedAt.Format(time.RFC3339),
+			},
+		}
+
+		return resp, nil
+	})
+}
+
+func (h *httpHandler) me() func(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		ClerkOrgID  string `json:"clerk_org_id"`
+		ClerkUserID string `json:"clerk_user_id"`
+	}
+	type response struct {
+		ID             string `json:"id"`
+		Name           string `json:"name"`
+		Slug           string `json:"slug"`
+		CreatedAt      string `json:"created_at"`
+		OrganizationID string `json:"organization_id"`
+		UserID         string `json:"user_id"`
+		Metadata       struct {
+			CompanySize        string   `json:"company_size"`
+			TeamSize           string   `json:"team_size"`
+			UseCases           []string `json:"use_cases"`
+			ObservabilityStack []string `json:"observability_stack"`
+			CompletedAt        string   `json:"completed_at"`
+		} `json:"metadata"`
+	}
+
+	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
+		query := infragpt.ProfileQuery{
+			ClerkOrgID:  req.ClerkOrgID,
+			ClerkUserID: req.ClerkUserID,
+		}
+
+		profile, err := h.svc.Profile(ctx, query)
+		if err != nil {
+			return response{}, err
+		}
+
+		useCases := make([]string, len(profile.Metadata.UseCases))
+		for i, uc := range profile.Metadata.UseCases {
+			useCases[i] = string(uc)
+		}
+
+		stack := make([]string, len(profile.Metadata.ObservabilityStack))
+		for i, s := range profile.Metadata.ObservabilityStack {
+			stack[i] = string(s)
+		}
+
+		resp := response{
+			ID:             profile.ID.String(),
+			Name:           profile.Name,
+			Slug:           profile.Slug,
+			CreatedAt:      profile.CreatedAt.Format(time.RFC3339),
+			OrganizationID: profile.OrganizationID.String(),
+			UserID:         profile.UserID.String(),
+			Metadata: struct {
+				CompanySize        string   `json:"company_size"`
+				TeamSize           string   `json:"team_size"`
+				UseCases           []string `json:"use_cases"`
+				ObservabilityStack []string `json:"observability_stack"`
+				CompletedAt        string   `json:"completed_at"`
+			}{
+				CompanySize:        string(profile.Metadata.CompanySize),
+				TeamSize:           string(profile.Metadata.TeamSize),
+				UseCases:           useCases,
+				ObservabilityStack: stack,
+				CompletedAt:        profile.Metadata.CompletedAt.Format(time.RFC3339),
 			},
 		}
 

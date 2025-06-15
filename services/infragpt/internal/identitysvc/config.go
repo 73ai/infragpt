@@ -2,6 +2,7 @@ package identitysvc
 
 import (
 	"database/sql"
+
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/supporting/clerk"
 
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/identitysvc/supporting/postgres"
