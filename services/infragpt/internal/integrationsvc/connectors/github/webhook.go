@@ -176,7 +176,7 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 		if action, ok := rawPayload["action"].(string); ok {
 			event.InstallationAction = action
 		}
-		
+
 		// Handle repository changes
 		if repositories, ok := rawPayload["repositories"].([]any); ok {
 			for _, repo := range repositories {
@@ -189,7 +189,7 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 				}
 			}
 		}
-		
+
 		if repositoriesRemoved, ok := rawPayload["repositories_removed"].([]any); ok {
 			for _, repo := range repositoriesRemoved {
 				if repoMap, ok := repo.(map[string]any); ok {
@@ -255,12 +255,12 @@ func validateGitHubSignature(payload []byte, signature string, secret string) bo
 	if !strings.HasPrefix(signature, "sha256=") {
 		return false
 	}
-	
+
 	expectedHash := strings.TrimPrefix(signature, "sha256=")
-	
+
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write(payload)
 	actualHash := hex.EncodeToString(h.Sum(nil))
-	
+
 	return hmac.Equal([]byte(expectedHash), []byte(actualHash))
 }

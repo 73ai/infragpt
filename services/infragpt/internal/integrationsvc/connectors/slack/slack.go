@@ -21,10 +21,9 @@ type slackConnector struct {
 	client *http.Client
 }
 
-
 func (s *slackConnector) InitiateAuthorization(organizationID string, userID string) (infragpt.IntegrationAuthorizationIntent, error) {
 	state := fmt.Sprintf("%s:%s:%d", organizationID, userID, time.Now().Unix())
-	
+
 	params := url.Values{}
 	params.Set("client_id", s.config.ClientID)
 	params.Set("scope", strings.Join(s.config.Scopes, ","))
@@ -113,9 +112,9 @@ func (s *slackConnector) RevokeCredentials(creds infragpt.Credentials) error {
 	defer resp.Body.Close()
 
 	var response struct {
-		OK       bool   `json:"ok"`
-		Revoked  bool   `json:"revoked"`
-		Error    string `json:"error,omitempty"`
+		OK      bool   `json:"ok"`
+		Revoked bool   `json:"revoked"`
+		Error   string `json:"error,omitempty"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -139,7 +138,7 @@ func (s *slackConnector) ValidateWebhookSignature(payload []byte, signature stri
 	}
 
 	expectedSignature := s.computeSignature(payload, secret)
-	
+
 	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
 		return fmt.Errorf("webhook signature validation failed")
 	}
@@ -150,10 +149,10 @@ func (s *slackConnector) ValidateWebhookSignature(payload []byte, signature stri
 func (s *slackConnector) computeSignature(payload []byte, secret string) string {
 	timestamp := time.Now().Unix()
 	baseString := fmt.Sprintf("v0:%d:%s", timestamp, string(payload))
-	
+
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write([]byte(baseString))
-	
+
 	return fmt.Sprintf("v0=%s", hex.EncodeToString(h.Sum(nil)))
 }
 
@@ -167,7 +166,7 @@ func (s *slackConnector) Subscribe(ctx context.Context, handler func(ctx context
 
 	// TODO: Implement Socket Mode client when Slack library is available
 	// For now, return a placeholder implementation
-	// 
+	//
 	// Example implementation would be:
 	// client := socketmode.New(
 	//     slack.New(s.config.BotToken),
@@ -182,7 +181,7 @@ func (s *slackConnector) Subscribe(ctx context.Context, handler func(ctx context
 	//             if !ok {
 	//                 continue
 	//             }
-	//             
+	//
 	//             messageEvent := s.convertToMessageEvent(eventsAPIEvent)
 	//             if err := handler(ctx, messageEvent); err != nil {
 	//                 // Log error but continue processing
@@ -192,7 +191,7 @@ func (s *slackConnector) Subscribe(ctx context.Context, handler func(ctx context
 	// }()
 	//
 	// return client.Run()
-	
+
 	return fmt.Errorf("slack Socket Mode implementation pending - requires slack-go library")
 }
 
@@ -200,7 +199,7 @@ func (s *slackConnector) convertToMessageEvent(rawEvent any) MessageEvent {
 	// TODO: Convert Slack Socket Mode events to our MessageEvent format
 	// This would parse different event types (message, slash command, etc.)
 	// and create appropriate MessageEvent structs
-	
+
 	return MessageEvent{
 		EventType: EventTypeMessage,
 		TeamID:    "",

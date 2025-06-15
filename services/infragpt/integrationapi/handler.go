@@ -151,7 +151,7 @@ func (h *httpHandler) list() func(w http.ResponseWriter, r *http.Request) {
 		query := infragpt.IntegrationsQuery{
 			OrganizationID: req.OrganizationID,
 		}
-		
+
 		if req.ConnectorType != "" {
 			query.ConnectorType = infragpt.ConnectorType(req.ConnectorType)
 		}
@@ -223,7 +223,7 @@ func (h *httpHandler) refresh() func(w http.ResponseWriter, r *http.Request) {
 		// 2. Get credentials for integration
 		// 3. Call connector.RefreshCredentials()
 		// 4. Update stored credentials
-		
+
 		return response{
 			Message: "Credential refresh not implemented yet",
 		}, nil

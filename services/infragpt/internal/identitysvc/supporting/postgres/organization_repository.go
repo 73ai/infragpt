@@ -30,14 +30,14 @@ func (r *organizationRepository) Create(ctx context.Context, org domain.Organiza
 		Slug:            org.Slug,
 		CreatedByUserID: uuid.NullUUID{UUID: org.CreatedByUserID, Valid: true},
 	})
-	
+
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			return domain.ErrDuplicateKey
 		}
 		return err
 	}
-	
+
 	return nil
 }
 

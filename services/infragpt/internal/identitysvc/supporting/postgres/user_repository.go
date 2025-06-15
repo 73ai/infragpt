@@ -25,14 +25,14 @@ func (r *userRepository) Create(ctx context.Context, user domain.User) error {
 		FirstName:   user.FirstName,
 		LastName:    user.LastName,
 	})
-	
+
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			return domain.ErrDuplicateKey
 		}
 		return err
 	}
-	
+
 	return nil
 }
 

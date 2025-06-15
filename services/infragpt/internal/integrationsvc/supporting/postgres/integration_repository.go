@@ -28,7 +28,7 @@ func (r *integrationRepository) Store(ctx context.Context, integration infragpt.
 	for k, v := range integration.Metadata {
 		metadata[k] = v
 	}
-	
+
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
@@ -185,7 +185,7 @@ func (r *integrationRepository) mapToIntegration(dbIntegration Integration) (inf
 		if err := json.Unmarshal(dbIntegration.Metadata.RawMessage, &metadataMap); err != nil {
 			return infragpt.Integration{}, fmt.Errorf("failed to unmarshal metadata: %w", err)
 		}
-		
+
 		for k, v := range metadataMap {
 			if str, ok := v.(string); ok {
 				metadata[k] = str

@@ -275,7 +275,7 @@ func ApiHandlerFunc[T any, R any](handler func(context.Context, T) (R, error)) f
 				_ = json.NewEncoder(w).Encode(response)
 				return
 			}
-			
+
 			slog.Error("error in clerk webhook api handler", "path", r.URL, "err", err)
 			var httpError = httperrors.From(err)
 			w.WriteHeader(httpError.HttpStatus)

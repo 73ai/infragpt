@@ -27,14 +27,14 @@ func (r *memberRepository) Create(ctx context.Context, member domain.Organizatio
 		ClerkOrgID:     member.ClerkOrgID,
 		Role:           member.Role,
 	})
-	
+
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			return domain.ErrDuplicateKey
 		}
 		return err
 	}
-	
+
 	return nil
 }
 

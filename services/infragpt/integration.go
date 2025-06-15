@@ -62,7 +62,6 @@ type IntegrationAuthorizationIntent struct {
 }
 
 type AuthorizationData struct {
-	ConnectorType  ConnectorType
 	Code           string
 	State          string
 	InstallationID string
