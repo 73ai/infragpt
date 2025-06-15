@@ -26,7 +26,7 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
       return 'coming_soon';
     }
     
-    if (integration?.status === 'connected') {
+    if (integration?.status === 'active' || integration?.status === 'connected') {
       return 'show_details';
     }
     
@@ -34,7 +34,7 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
   };
 
   const buttonState = getButtonState();
-  const isConnected = integration?.status === 'connected';
+  const isConnected = integration?.status === 'active' || integration?.status === 'connected';
   const hasError = integration?.status === 'error';
 
   const handleClick = () => {
@@ -54,7 +54,7 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
         className={`${config.color} ${config.bgColor} ${config.borderColor} border`}
       >
         <span className="mr-1">{config.icon}</span>
-        {integration.status.charAt(0).toUpperCase() + integration.status.slice(1)}
+        {config.text}
       </Badge>
     );
   };

@@ -80,36 +80,47 @@ export const INTEGRATION_ROUTES = {
 
 // Status Colors and Icons
 export const STATUS_CONFIG = {
+  active: {
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+    borderColor: 'border-green-200',
+    icon: '🟢',
+    text: 'Connected'
+  },
   connected: {
     color: 'text-green-600',
     bgColor: 'bg-green-50',
     borderColor: 'border-green-200',
-    icon: '✅'
+    icon: '✅',
+    text: 'Connected'
   },
   disconnected: {
     color: 'text-gray-600',
     bgColor: 'bg-gray-50',
     borderColor: 'border-gray-200',
-    icon: '⚫'
+    icon: '⚫',
+    text: 'Disconnected'
   },
   error: {
     color: 'text-red-600',
     bgColor: 'bg-red-50',
     borderColor: 'border-red-200',
-    icon: '❌'
+    icon: '❌',
+    text: 'Error'
   },
   syncing: {
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-200',
-    icon: '🔄'
+    icon: '🔄',
+    text: 'Syncing'
   }
 } as const;
 
 // Button Text Configuration
 export const BUTTON_TEXT = {
   connect: 'Connect',
-  show_details: 'Show Details',
+  show_details: 'View Details',
   coming_soon: 'Coming Soon'
 } as const;
 

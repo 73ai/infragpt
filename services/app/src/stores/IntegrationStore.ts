@@ -37,10 +37,27 @@ class IntegrationStore {
     makeAutoObservable(this);
   }
 
+  // Helper to transform API response to frontend interface
+  private transformAPIIntegration(apiIntegration: any): Integration {
+    return {
+      id: apiIntegration.id,
+      organizationId: apiIntegration.organization_id,
+      connectorType: apiIntegration.connector_type,
+      status: apiIntegration.status,
+      createdAt: apiIntegration.created_at,
+      updatedAt: apiIntegration.updated_at,
+      lastSyncAt: apiIntegration.last_used_at,
+      metadata: apiIntegration.metadata,
+      configuration: {
+        workspaceName: apiIntegration.metadata?.connector_org_name
+      }
+    };
+  }
+
   // Computed values
   get connectedIntegrations(): Integration[] {
     return Array.from(this.integrations.values()).filter(
-      integration => integration.status === 'connected'
+      integration => integration.status === 'active' || integration.status === 'connected'
     );
   }
 
@@ -76,7 +93,7 @@ class IntegrationStore {
     return Array.from(this.integrations.values()).some(
       integration => 
         integration.connectorType === connectorType && 
-        integration.status === 'connected'
+        (integration.status === 'active' || integration.status === 'connected')
     );
   }
 
@@ -98,11 +115,12 @@ class IntegrationStore {
         this.error = null;
       });
 
-      const integrations = await integrationService.getIntegrations(organizationId);
+      const apiResponse = await integrationService.getIntegrations(organizationId);
       
       runInAction(() => {
         this.integrations.clear();
-        integrations.forEach(integration => {
+        apiResponse.forEach(apiIntegration => {
+          const integration = this.transformAPIIntegration(apiIntegration);
           this.integrations.set(integration.id, integration);
         });
         this.loading = false;
@@ -113,6 +131,7 @@ class IntegrationStore {
   async initiateConnection(
     connectorType: ConnectorType, 
     organizationId: string,
+    userId: string,
     redirectUrl?: string
   ): Promise<AuthorizeResponse> {
     return withErrorHandling(async () => {
@@ -124,6 +143,7 @@ class IntegrationStore {
       try {
         const response = await integrationService.initiateAuthorization(
           organizationId,
+          userId,
           connectorType,
           redirectUrl
         );

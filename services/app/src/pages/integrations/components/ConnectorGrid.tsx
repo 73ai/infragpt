@@ -24,15 +24,16 @@ export const ConnectorGrid: React.FC<ConnectorGridProps> = ({
   });
 
   // Group connectors by status for better organization
-  const connectedConnectors = connectors.filter(connector => 
-    integrationMap.has(connector.type) && 
-    integrationMap.get(connector.type)?.status === 'connected'
-  );
+  const connectedConnectors = connectors.filter(connector => {
+    const integration = integrationMap.get(connector.type);
+    return integration && (integration.status === 'active' || integration.status === 'connected');
+  });
   
-  const availableConnectors = connectors.filter(connector => 
-    connector.isImplemented && 
-    (!integrationMap.has(connector.type) || integrationMap.get(connector.type)?.status !== 'connected')
-  );
+  const availableConnectors = connectors.filter(connector => {
+    const integration = integrationMap.get(connector.type);
+    return connector.isImplemented && 
+      (!integration || (integration.status !== 'active' && integration.status !== 'connected'));
+  });
   
   const comingSoonConnectors = connectors.filter(connector => 
     !connector.isImplemented

@@ -10,7 +10,7 @@ export type ConnectorType =
 
 export type AuthType = 'oauth2' | 'app_installation' | 'api_key';
 
-export type IntegrationStatus = 'connected' | 'disconnected' | 'error' | 'syncing';
+export type IntegrationStatus = 'active' | 'connected' | 'disconnected' | 'error' | 'syncing';
 
 export type ConnectorStatus = 'available' | 'connected' | 'coming_soon';
 
@@ -74,6 +74,7 @@ export interface AuthorizationIntent {
 // API Request/Response Types
 export interface AuthorizeRequest {
   organization_id: string;
+  user_id: string;
   connector_type: ConnectorType;
   redirect_url?: string;
 }

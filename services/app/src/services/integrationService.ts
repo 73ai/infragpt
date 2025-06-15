@@ -16,7 +16,6 @@ import {
   ConnectorType,
   IntegrationActivity
 } from '../types/integration';
-import { mockApiResponses, USE_MOCK_DATA } from '../lib/integration-test-data';
 
 // Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -75,11 +74,6 @@ class IntegrationService {
    * Get all integrations for an organization
    */
   async getIntegrations(organizationId: string): Promise<Integration[]> {
-    // Use mock data in development if enabled
-    if (USE_MOCK_DATA) {
-      return mockApiResponses.getIntegrations(organizationId);
-    }
-
     const request: IntegrationsListRequest = { organization_id: organizationId };
     
     const response = await this.request<IntegrationsListResponse>('/list/', {
@@ -94,24 +88,64 @@ class IntegrationService {
    * Initiate authorization flow for a connector
    */
   async initiateAuthorization(
-    organizationId: string, 
+    organizationId: string,
+    userId: string,
     connectorType: ConnectorType,
     redirectUrl?: string
   ): Promise<AuthorizeResponse> {
     const request: AuthorizeRequest = {
       organization_id: organizationId,
+      user_id: userId,
       connector_type: connectorType,
       redirect_url: redirectUrl
     };
 
-    return this.request<AuthorizeResponse>('/authorize/', {
+    return this.request<AuthorizeResponse>('/initiate/', {
       method: 'POST',
       body: JSON.stringify(request)
     });
   }
 
+  private async requestUnauthenticated<T>(
+    endpoint: string, 
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${API_BASE_URL}${INTEGRATION_API_PREFIX}${endpoint}`;
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new IntegrationError(
+          response.status,
+          errorText || `HTTP ${response.status}: ${response.statusText}`
+        );
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error instanceof IntegrationError) {
+        throw error;
+      }
+      
+      // Network or other errors
+      throw new IntegrationError(
+        0,
+        error instanceof Error ? error.message : 'Unknown error occurred'
+      );
+    }
+  }
+
   /**
    * Handle OAuth callback and complete integration
+   * This endpoint doesn't require authentication as it's called by external OAuth providers
    */
   async handleCallback(
     connectorType: ConnectorType,
@@ -122,7 +156,7 @@ class IntegrationService {
       ...callbackData
     };
 
-    return this.request<Integration>('/callback/', {
+    return this.requestUnauthenticated<Integration>('/authorize/', {
       method: 'POST',
       body: JSON.stringify(request)
     });
@@ -162,11 +196,6 @@ class IntegrationService {
    * Test connection for an integration
    */
   async testConnection(integrationId: string): Promise<TestConnectionResponse> {
-    // Use mock data in development if enabled
-    if (USE_MOCK_DATA) {
-      return mockApiResponses.testConnection(integrationId);
-    }
-
     const request: TestConnectionRequest = { integration_id: integrationId };
 
     return this.request<TestConnectionResponse>('/test/', {
