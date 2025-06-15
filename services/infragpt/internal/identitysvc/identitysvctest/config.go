@@ -95,6 +95,6 @@ func (s *service) SetOrganizationMetadata(ctx context.Context, cmd infragpt.Orga
 	return nil
 }
 
-func (s *service) Organization(ctx context.Context, query infragpt.OrganizationQuery) (infragpt.Organization, error) {
-	return infragpt.Organization{}, nil
+func (s *service) Profile(ctx context.Context, query infragpt.ProfileQuery) (infragpt.Profile, error) {
+	return infragpt.Profile{}, nil
 }

@@ -47,6 +47,17 @@ type OrganizationMember struct {
 	JoinedAt       time.Time
 }
 
+type Profile struct {
+	ID               uuid.UUID `json:"id"`
+	ClerkOrgID       string    `json:"clerk_org_id"`
+	Name             string    `json:"name"`
+	Slug             string    `json:"slug"`
+	CreatedAt        time.Time `json:"created_at"`
+	Metadata         OrganizationMetadata `json:"metadata"`
+	OrganizationID   uuid.UUID `json:"organization_id"`
+	UserID           uuid.UUID `json:"user_id"`
+}
+
 type CompanySize string
 
 const (
@@ -110,7 +121,7 @@ type IdentityService interface {
 	SubscribeOrganizationMemberDeleted(context.Context, OrganizationMemberDeletedEvent) error
 
 	SetOrganizationMetadata(context.Context, OrganizationMetadataCommand) error
-	Organization(context.Context, OrganizationQuery) (Organization, error)
+	Profile(context.Context, ProfileQuery) (Profile, error)
 }
 
 type OrganizationMetadataCommand struct {
@@ -121,8 +132,9 @@ type OrganizationMetadataCommand struct {
 	ObservabilityStack []ObservabilityStack
 }
 
-type OrganizationQuery struct {
-	ClerkOrgID string
+type ProfileQuery struct {
+	ClerkUserID string
+	ClerkOrgID  string
 }
 
 type UserCreatedEvent struct {
