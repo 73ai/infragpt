@@ -303,7 +303,11 @@ export const withErrorHandling = async <T>(
   try {
     return await operation();
   } catch (error) {
-    console.error(`Integration service error${errorContext ? ` (${errorContext})` : ''}:`, error);
+    // Sanitize errorContext to prevent log injection attacks
+    const sanitizedContext = errorContext 
+      ? errorContext.replace(/[\r\n\t]/g, ' ').substring(0, 100)
+      : '';
+    console.error('Integration service error' + (sanitizedContext ? ` (${sanitizedContext})` : '') + ':', error);
     throw error;
   }
 };

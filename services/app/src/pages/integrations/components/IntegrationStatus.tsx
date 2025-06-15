@@ -184,14 +184,17 @@ export const IntegrationStatus: React.FC<IntegrationStatusProps> = ({
         </div>
 
         {/* Connector-specific Information */}
-        {renderConnectorSpecificInfo() && (
-          <div>
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Configuration Details</h4>
-            <dl className="space-y-3">
-              {renderConnectorSpecificInfo()}
-            </dl>
-          </div>
-        )}
+        {(() => {
+          const connectorSpecificInfo = renderConnectorSpecificInfo();
+          return connectorSpecificInfo && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Configuration Details</h4>
+              <dl className="space-y-3">
+                {connectorSpecificInfo}
+              </dl>
+            </div>
+          );
+        })()}
 
         {/* Permissions/Capabilities */}
         {integration.configuration?.permissions && integration.configuration.permissions.length > 0 && (
