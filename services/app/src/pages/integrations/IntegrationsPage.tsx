@@ -1,60 +1,48 @@
 // Integration Manager - Main List Page
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useUser } from '@clerk/clerk-react';
 import { integrationStore } from '../../stores/IntegrationStore';
+import { userStore } from '../../stores/UserStore';
 import { ConnectorGrid } from './components/ConnectorGrid';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { useApiClient, Organization } from '../../lib/api';
+import { useApiClient } from '../../lib/api';
 
 const IntegrationsPage = observer(() => {
   const { user } = useUser();
-  const { getOrganization } = useApiClient();
-  const [organization, setOrganization] = useState<Organization | null>(null);
-  const [loadingOrg, setLoadingOrg] = useState(false);
+  const { getMe } = useApiClient();
   
+  const clerkUserId = user?.id;
   const clerkOrgId = user?.organizationMemberships?.[0]?.organization?.id;
 
-  // Get the proper organization UUID from API using Clerk org ID
+  // Load user profile on mount
   useEffect(() => {
-    const fetchOrganization = async () => {
-      if (!clerkOrgId) return;
-      
-      setLoadingOrg(true);
-      try {
-        const org = await getOrganization(clerkOrgId);
-        setOrganization(org);
-      } catch (error) {
-        console.error('Failed to fetch organization:', error);
-        integrationStore.handleError(error, 'fetching organization');
-      } finally {
-        setLoadingOrg(false);
-      }
-    };
-
-    fetchOrganization();
-  }, [clerkOrgId, getOrganization]);
-
-  // Load integrations once we have the proper organization UUID
-  useEffect(() => {
-    if (organization?.id) {
-      integrationStore.loadIntegrations(organization.id);
+    if (!userStore.userProfile && !userStore.loading && clerkUserId && clerkOrgId) {
+      userStore.loadUserProfile(getMe, clerkUserId, clerkOrgId);
     }
-  }, [organization?.id]);
+  }, [getMe, clerkUserId, clerkOrgId]);
+
+  // Load integrations once we have the user profile
+  useEffect(() => {
+    if (userStore.organizationId) {
+      integrationStore.loadIntegrations(userStore.organizationId);
+    }
+  }, [userStore.organizationId]);
 
   const handleConnectorAction = async (connectorType: string, action: 'connect' | 'details') => {
-    if (!organization?.id) return;
+    if (!userStore.organizationId || !userStore.userId) return;
 
     if (action === 'connect') {
       try {
         const response = await integrationStore.initiateConnection(
           connectorType as any,
-          organization.id,
-          `${window.location.origin}/integrations/${connectorType}/callback`
+          userStore.organizationId,
+          userStore.userId,
+          `${window.location.origin}/integrations/${connectorType}/authorize`
         );
         
         // Redirect to authorization URL
@@ -75,7 +63,7 @@ const IntegrationsPage = observer(() => {
     }
   };
 
-  if ((loadingOrg || integrationStore.loading) && integrationStore.integrations.size === 0) {
+  if ((userStore.loading || integrationStore.loading) && integrationStore.integrations.size === 0) {
     return (
       <div className="h-full flex flex-col">
         {/* Header */}

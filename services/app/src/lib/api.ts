@@ -28,6 +28,22 @@ export interface OrganizationMetadataRequest {
   observability_stack: string[];
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  slug: string;
+  created_at: string;
+  organization_id: string;
+  user_id: string;
+  metadata: {
+    company_size: string;
+    team_size: string;
+    use_cases: string[];
+    observability_stack: string[];
+    completed_at: string;
+  };
+}
+
 // Hook to use API client with Clerk auth
 export const useApiClient = () => {
   const { getToken } = useAuth();
@@ -66,8 +82,19 @@ export const useApiClient = () => {
     });
   }, [makeAuthenticatedRequest]);
 
+  const getMe = useCallback(async (clerkUserId: string, clerkOrgId: string): Promise<UserProfile> => {
+    return makeAuthenticatedRequest<UserProfile>('/identity/me/', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        clerk_user_id: clerkUserId,
+        clerk_org_id: clerkOrgId 
+      }),
+    });
+  }, [makeAuthenticatedRequest]);
+
   return {
     getOrganization,
     setOrganizationMetadata,
+    getMe,
   };
 };

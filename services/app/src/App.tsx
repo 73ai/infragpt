@@ -97,12 +97,8 @@ const App = () => {
           }
         />
         <Route
-          path="/integrations/:connectorType/callback"
-          element={
-            <ProtectedRoute>
-              <IntegrationCallbackPage />
-            </ProtectedRoute>
-          }
+          path="/integrations/:connectorType/authorize"
+          element={<IntegrationCallbackPage />}
         />
         {/* Redirect root to dashboard */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

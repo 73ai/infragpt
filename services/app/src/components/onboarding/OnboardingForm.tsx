@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { observer } from 'mobx-react-lite';
+import { useUser, useOrganization } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
@@ -10,7 +12,7 @@ import { UseCasesStep } from './steps/UseCasesStep';
 import { ObservabilityStackStep } from './steps/ObservabilityStackStep';
 import { SummaryStep } from './steps/SummaryStep';
 import { useApiClient } from '@/lib/api';
-import { useOrganization } from '@clerk/clerk-react';
+import { userStore } from '@/stores/UserStore';
 import { toast } from 'sonner';
 import { COMPANY_SIZES, TEAM_SIZES, USE_CASES, OBSERVABILITY_STACK } from '@/lib/onboarding-constants';
 import type { OnboardingFormData } from '@/lib/onboarding-constants';
@@ -33,12 +35,16 @@ const STEPS = [
   { id: 4, title: 'Summary', description: 'Review your information' },
 ];
 
-export function OnboardingForm({ onComplete }: OnboardingFormProps) {
+export const OnboardingForm = observer(({ onComplete }: OnboardingFormProps) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const { user } = useUser();
   const { organization } = useOrganization();
-  const { getOrganization, setOrganizationMetadata } = useApiClient();
+  const { getMe, setOrganizationMetadata } = useApiClient();
+  
+  const clerkUserId = user?.id;
+  const clerkOrgId = organization?.id;
 
   const form = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingSchema),
@@ -50,35 +56,34 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
     },
   });
 
-  // Fetch and prefill existing data
+  // Load user profile and prefill existing data
   useEffect(() => {
     const loadExistingData = async () => {
-      if (!organization?.id) {
-        setIsLoadingData(false);
-        return;
-      }
-
       try {
-        const orgData = await getOrganization(organization.id);
+        // Load user profile if not already loaded
+        if (!userStore.userProfile && !userStore.loading && clerkUserId && clerkOrgId) {
+          await userStore.loadUserProfile(getMe, clerkUserId, clerkOrgId);
+        }
         
         // If metadata exists, prefill the form
-        if (orgData.metadata && orgData.metadata.company_size) {
+        if (userStore.userProfile?.metadata && userStore.userProfile.metadata.company_size) {
           form.reset({
-            companySize: orgData.metadata.company_size as OnboardingFormData['companySize'],
-            teamSize: orgData.metadata.team_size as OnboardingFormData['teamSize'],
-            useCases: orgData.metadata.use_cases as OnboardingFormData['useCases'] || [],
-            observabilityStack: orgData.metadata.observability_stack as OnboardingFormData['observabilityStack'] || [],
+            companySize: userStore.userProfile.metadata.company_size as OnboardingFormData['companySize'],
+            teamSize: userStore.userProfile.metadata.team_size as OnboardingFormData['teamSize'],
+            useCases: userStore.userProfile.metadata.use_cases as OnboardingFormData['useCases'] || [],
+            observabilityStack: userStore.userProfile.metadata.observability_stack as OnboardingFormData['observabilityStack'] || [],
           });
         }
       } catch (error) {
-        // If organization doesn't exist yet, that's fine - form stays with defaults
+        // If user profile loading fails, that's fine - form stays with defaults
+        console.error('Failed to load user profile for onboarding:', error);
       } finally {
         setIsLoadingData(false);
       }
     };
 
     loadExistingData();
-  }, [organization?.id, getOrganization, form]);
+  }, [getMe, form, clerkUserId, clerkOrgId]);
 
   const nextStep = async () => {
     let fieldsToValidate: (keyof OnboardingFormData)[] = [];
@@ -110,7 +115,7 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
   };
 
   const handleFinalSubmit = async () => {
-    if (!organization?.id) {
+    if (!userStore.organizationId) {
       toast.error('Organization not found');
       return;
     }
@@ -127,16 +132,26 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
 
     setIsSubmitting(true);
     try {
-      // First, get the organization to retrieve the internal ID
-      const orgData = await getOrganization(organization.id);
+      // Use the organization ID from userStore
+      if (!userStore.organizationId) {
+        throw new Error('Organization ID not available');
+      }
       
-      // Use the internal organization ID for setting metadata
       await setOrganizationMetadata({
-        organization_id: orgData.id,
+        organization_id: userStore.organizationId,
         company_size: data.companySize!,
         team_size: data.teamSize!,
         use_cases: data.useCases,
         observability_stack: data.observabilityStack,
+      });
+
+      // Update the userStore with the new metadata
+      userStore.updateMetadata({
+        company_size: data.companySize!,
+        team_size: data.teamSize!,
+        use_cases: data.useCases,
+        observability_stack: data.observabilityStack,
+        completed_at: new Date().toISOString(),
       });
       
       toast.success('Onboarding completed successfully!');
@@ -247,4 +262,4 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
       </Card>
     </div>
   );
-}
+});
