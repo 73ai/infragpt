@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/domain"
 )
 
@@ -16,8 +17,21 @@ type Config struct {
 }
 
 func (c Config) NewConnector() domain.Connector {
+	// Parse the private key
+	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(c.PrivateKey))
+	if err != nil {
+		// Return a connector with nil private key that will fail during JWT generation
+		// This allows the error to be handled at runtime rather than during initialization
+		return &githubConnector{
+			config:     c,
+			client:     &http.Client{Timeout: 30 * time.Second},
+			privateKey: nil,
+		}
+	}
+
 	return &githubConnector{
-		config: c,
-		client: &http.Client{Timeout: 30 * time.Second},
+		config:     c,
+		client:     &http.Client{Timeout: 30 * time.Second},
+		privateKey: privateKey,
 	}
 }

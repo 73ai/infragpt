@@ -112,7 +112,15 @@ func (s *service) Profile(ctx context.Context, query infragpt.ProfileQuery) (inf
 		Name:             org.Name,
 		Slug:             org.Slug,
 		CreatedAt:        org.CreatedAt,
-		Metadata:         org.Metadata,
+		Metadata:         infragpt.OrganizationMetadata{
+			OrganizationID:     org.Metadata.OrganizationID,
+			CompanySize:        org.Metadata.CompanySize,
+			TeamSize:           org.Metadata.TeamSize,
+			UseCases:           org.Metadata.UseCases,
+			ObservabilityStack: org.Metadata.ObservabilityStack,
+			CompletedAt:        org.Metadata.CompletedAt,
+			UpdatedAt:          org.Metadata.UpdatedAt,
+		},
 		OrganizationID:   org.ID,
 		UserID:           user.ID,
 	}, nil

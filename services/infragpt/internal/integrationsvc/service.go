@@ -4,13 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/connectors/github"
-	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/connectors/slack"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/domain"
 )
 
@@ -33,7 +31,6 @@ func NewService(config ServiceConfig) infragpt.IntegrationService {
 		connectors:            config.Connectors,
 	}
 }
-
 
 func (s *service) NewIntegration(ctx context.Context, cmd infragpt.NewIntegrationCommand) (infragpt.IntegrationAuthorizationIntent, error) {
 	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, cmd.OrganizationID, cmd.ConnectorType)
@@ -202,117 +199,116 @@ func (s *service) Integration(ctx context.Context, query infragpt.IntegrationQue
 	return integration, nil
 }
 
+// Subscribe starts webhook subscriptions for all connectors
 func (s *service) Subscribe(ctx context.Context) error {
-	var wg sync.WaitGroup
-
 	for connectorType, connector := range s.connectors {
-		wg.Add(1)
 		go func(connectorType infragpt.ConnectorType, connector domain.Connector) {
-			defer wg.Done()
-
 			if err := connector.Subscribe(ctx, s.handleConnectorEvent); err != nil {
 				slog.Error("connector subscription failed", "connector_type", connectorType, "error", err)
 			}
 		}(connectorType, connector)
 	}
 
-	wg.Wait()
 	return nil
 }
 
+// handleConnectorEvent processes events from connectors - simplified for installation-only approach
 func (s *service) handleConnectorEvent(ctx context.Context, event any) error {
 	switch e := event.(type) {
-	case slack.MessageEvent:
-		return s.handleSlackEvent(ctx, e)
 	case github.WebhookEvent:
 		return s.handleGitHubEvent(ctx, e)
 	default:
-		slog.Warn("received unknown event type", "event_type", fmt.Sprintf("%T", event))
+		slog.Debug("received unknown event type", "event_type", fmt.Sprintf("%T", event))
 		return nil
 	}
 }
 
-func (s *service) handleSlackEvent(ctx context.Context, event slack.MessageEvent) error {
-	slog.Info("handling Slack event",
-		"event_type", event.EventType,
-		"team_id", event.TeamID,
-		"channel_id", event.ChannelID,
-		"user_id", event.UserID)
-
-	switch event.EventType {
-	case slack.EventTypeMessage:
-		return s.handleSlackMessage(ctx, event)
-	case slack.EventTypeSlashCommand:
-		return s.handleSlackSlashCommand(ctx, event)
-	case slack.EventTypeAppMention:
-		return s.handleSlackAppMention(ctx, event)
-	default:
-		slog.Debug("unhandled Slack event type", "event_type", event.EventType)
-		return nil
-	}
-}
-
+// handleGitHubEvent processes GitHub webhook events - simplified for installation-only approach
 func (s *service) handleGitHubEvent(ctx context.Context, event github.WebhookEvent) error {
-	slog.Info("handling GitHub event",
-		"event_type", event.EventType,
-		"installation_id", event.InstallationID,
-		"repository_name", event.RepositoryName,
-		"sender_login", event.SenderLogin)
+	// Only handle installation events
+	if event.EventType != github.EventTypeInstallation {
+		slog.Debug("ignoring non-installation event", "event_type", event.EventType)
+		return nil
+	}
 
-	switch event.EventType {
-	case github.EventTypePush:
-		return s.handleGitHubPush(ctx, event)
-	case github.EventTypePullRequest:
-		return s.handleGitHubPullRequest(ctx, event)
-	case github.EventTypeInstallation:
-		return s.handleGitHubInstallation(ctx, event)
+	slog.Info("handling GitHub installation event",
+		"action", event.InstallationAction,
+		"installation_id", event.InstallationID,
+		"sender_login", event.SenderLogin,
+		"repositories_added", len(event.RepositoriesAdded),
+		"repositories_removed", len(event.RepositoriesRemoved))
+
+	// Validate event has required fields
+	if event.InstallationID == 0 {
+		slog.Warn("GitHub event missing installation ID")
+		return fmt.Errorf("missing installation ID in GitHub event")
+	}
+
+	// Process installation events
+	switch event.InstallationAction {
+	case "created":
+		return s.handleInstallationCreated(ctx, event)
+	case "deleted":
+		return s.handleInstallationDeleted(ctx, event)
+	case "added":
+		return s.handleInstallationRepositoriesAdded(ctx, event)
+	case "removed":
+		return s.handleInstallationRepositoriesRemoved(ctx, event)
 	default:
-		slog.Debug("unhandled GitHub event type", "event_type", event.EventType)
+		slog.Debug("unhandled installation action", "action", event.InstallationAction)
 		return nil
 	}
 }
 
-func (s *service) handleSlackMessage(ctx context.Context, event slack.MessageEvent) error {
-	// TODO: Implement Slack message processing logic
-	// This could involve parsing commands, triggering workflows, etc.
-	slog.Info("processing Slack message", "text", event.Text, "channel", event.ChannelID)
-	return nil
-}
-
-func (s *service) handleSlackSlashCommand(ctx context.Context, event slack.MessageEvent) error {
-	// TODO: Implement Slack slash command processing logic
-	slog.Info("processing Slack slash command", "command", event.Command, "text", event.Text)
-	return nil
-}
-
-func (s *service) handleSlackAppMention(ctx context.Context, event slack.MessageEvent) error {
-	// TODO: Implement Slack app mention processing logic
-	slog.Info("processing Slack app mention", "text", event.Text, "channel", event.ChannelID)
-	return nil
-}
-
-func (s *service) handleGitHubPush(ctx context.Context, event github.WebhookEvent) error {
-	// TODO: Implement GitHub push event processing logic
-	slog.Info("processing GitHub push", "repository", event.RepositoryName, "branch", event.Branch, "commit", event.CommitSHA)
-	return nil
-}
-
-func (s *service) handleGitHubPullRequest(ctx context.Context, event github.WebhookEvent) error {
-	// TODO: Implement GitHub pull request processing logic
-	slog.Info("processing GitHub pull request",
-		"repository", event.RepositoryName,
-		"pr_number", event.PullRequestNumber,
-		"action", event.Action,
-		"title", event.PullRequestTitle)
-	return nil
-}
-
-func (s *service) handleGitHubInstallation(ctx context.Context, event github.WebhookEvent) error {
-	// TODO: Implement GitHub installation event processing logic
-	slog.Info("processing GitHub installation",
+// handleInstallationCreated processes GitHub App installation created events
+func (s *service) handleInstallationCreated(ctx context.Context, event github.WebhookEvent) error {
+	slog.Info("GitHub App installation created",
 		"installation_id", event.InstallationID,
-		"action", event.InstallationAction,
-		"repositories_added", event.RepositoriesAdded,
-		"repositories_removed", event.RepositoriesRemoved)
+		"sender", event.SenderLogin,
+		"repositories", len(event.RepositoriesAdded))
+
+	// Log the installation for monitoring purposes
+	// In a full implementation, you might want to:
+	// 1. Store installation metadata
+	// 2. Send notifications to relevant channels
+	// 3. Update integration status
+
+	return nil
+}
+
+// handleInstallationDeleted processes GitHub App installation deleted events
+func (s *service) handleInstallationDeleted(ctx context.Context, event github.WebhookEvent) error {
+	slog.Info("GitHub App installation deleted",
+		"installation_id", event.InstallationID,
+		"sender", event.SenderLogin)
+
+	// Log the uninstallation for monitoring purposes
+	// In a full implementation, you might want to:
+	// 1. Update integration status to inactive
+	// 2. Revoke stored credentials
+	// 3. Send notifications
+
+	return nil
+}
+
+// handleInstallationRepositoriesAdded processes repository access added events
+func (s *service) handleInstallationRepositoriesAdded(ctx context.Context, event github.WebhookEvent) error {
+	slog.Info("GitHub App repository access added",
+		"installation_id", event.InstallationID,
+		"repositories", event.RepositoriesAdded)
+
+	// Log the repository access change for monitoring purposes
+
+	return nil
+}
+
+// handleInstallationRepositoriesRemoved processes repository access removed events
+func (s *service) handleInstallationRepositoriesRemoved(ctx context.Context, event github.WebhookEvent) error {
+	slog.Info("GitHub App repository access removed",
+		"installation_id", event.InstallationID,
+		"repositories", event.RepositoriesRemoved)
+
+	// Log the repository access change for monitoring purposes
+
 	return nil
 }

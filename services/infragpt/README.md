@@ -62,6 +62,7 @@ The service follows clean architecture principles with clear separation of conce
 ```
 ├── cmd/main.go                    # Application entry point
 ├── config.yaml                    # Configuration file
+├── .env.example                   # Environment variables template
 ├── integration.go                 # Integration service interface  
 ├── identity.go                    # Identity service interface
 ├── spec.go                        # Main service interface
@@ -111,7 +112,9 @@ The service follows clean architecture principles with clear separation of conce
 └── docs/                         # Documentation
     ├── CONTRIBUTING.md            # Development guidelines
     ├── IMPLEMENTATION.md          # Implementation overview
-    └── INTEGRATION_SYSTEM.md     # Integration system design
+    ├── INTEGRATION_SYSTEM.md     # Integration system design
+    ├── GITHUB_APP_SETUP.md       # Complete GitHub App setup guide
+    └── GITHUB_APP_QUICK_REFERENCE.md # GitHub App quick reference
 ```
 
 ## Implementation Status
@@ -171,7 +174,7 @@ The service follows clean architecture principles with clear separation of conce
 
 ## Configuration
 
-The service is configured via `config.yaml`:
+The service is configured via `config.yaml` and environment variables. Copy `.env.example` to `.env` and customize your values:
 
 ```yaml
 port: 8080                # HTTP server port
@@ -213,6 +216,7 @@ integrations:
     private_key: "..."    # GitHub App private key (PEM)
     webhook_secret: "..." # Webhook signature validation
     webhook_port: 8081    # Dedicated webhook server port
+    # See docs/GITHUB_APP_SETUP.md for complete setup instructions
     
   # Additional connectors: GCP, AWS, PagerDuty, Datadog
   # See docs/INTEGRATION_SYSTEM.md for complete configuration

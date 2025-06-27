@@ -3,26 +3,45 @@ package github
 import (
 	"context"
 	"crypto/hmac"
+	"crypto/rsa"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/priyanshujain/infragpt/services/infragpt"
 )
 
 type githubConnector struct {
-	config Config
-	client *http.Client
+	config     Config
+	client     *http.Client
+	privateKey *rsa.PrivateKey
 }
 
 func (g *githubConnector) InitiateAuthorization(organizationID string, userID string) (infragpt.IntegrationAuthorizationIntent, error) {
-	state := fmt.Sprintf("%s:%s:%d", organizationID, userID, time.Now().Unix())
+	// Create state as base64 encoded JSON
+	stateData := map[string]interface{}{
+		"organization_id": organizationID,
+		"user_id":         userID,
+		"timestamp":       time.Now().Unix(),
+	}
+
+	stateJSON, err := json.Marshal(stateData)
+	if err != nil {
+		return infragpt.IntegrationAuthorizationIntent{}, fmt.Errorf("failed to marshal state data: %w", err)
+	}
+
+	state := base64.URLEncoding.EncodeToString(stateJSON)
 
 	params := url.Values{}
 	params.Set("state", state)
@@ -39,12 +58,39 @@ func (g *githubConnector) InitiateAuthorization(organizationID string, userID st
 }
 
 func (g *githubConnector) ParseState(state string) (organizationID string, userID string, err error) {
-	parts := strings.Split(state, ":")
-	if len(parts) < 3 {
-		return "", "", fmt.Errorf("invalid state format, expected organizationID:userID:timestamp")
+	// Decode base64 state
+	stateJSON, err := base64.URLEncoding.DecodeString(state)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid state format, failed to decode base64: %w", err)
 	}
-	
-	return parts[0], parts[1], nil
+
+	// Parse JSON state data
+	var stateData map[string]interface{}
+	if err := json.Unmarshal(stateJSON, &stateData); err != nil {
+		return "", "", fmt.Errorf("invalid state format, failed to parse JSON: %w", err)
+	}
+
+	// Extract organization_id
+	orgID, exists := stateData["organization_id"]
+	if !exists {
+		return "", "", fmt.Errorf("organization_id not found in state")
+	}
+	organizationID, ok := orgID.(string)
+	if !ok {
+		return "", "", fmt.Errorf("organization_id must be a string")
+	}
+
+	// Extract user_id
+	uID, exists := stateData["user_id"]
+	if !exists {
+		return "", "", fmt.Errorf("user_id not found in state")
+	}
+	userID, ok = uID.(string)
+	if !ok {
+		return "", "", fmt.Errorf("user_id must be a string")
+	}
+
+	return organizationID, userID, nil
 }
 
 func (g *githubConnector) CompleteAuthorization(authData infragpt.AuthorizationData) (infragpt.Credentials, error) {
@@ -149,10 +195,31 @@ func (g *githubConnector) RefreshCredentials(creds infragpt.Credentials) (infrag
 }
 
 func (g *githubConnector) RevokeCredentials(creds infragpt.Credentials) error {
+	// Simple stub implementation - just log the revocation
+	installationID, exists := creds.Data["installation_id"]
+	if !exists {
+		return fmt.Errorf("installation ID not found in credentials")
+	}
+
+	slog.Info("GitHub credentials revoked", "installation_id", installationID)
 	return nil
 }
 
 func (g *githubConnector) ConfigureWebhooks(integrationID string, creds infragpt.Credentials) error {
+	// Simple stub implementation for installation webhook only
+	installationID, exists := creds.Data["installation_id"]
+	if !exists {
+		return fmt.Errorf("installation ID not found in credentials")
+	}
+
+	webhookURL := g.buildWebhookURL(integrationID)
+	if webhookURL == "" {
+		return fmt.Errorf("webhook URL configuration missing: redirect_url is required")
+	}
+
+	slog.Info("GitHub installation webhook configured",
+		"installation_id", installationID,
+		"webhook_url", webhookURL)
 	return nil
 }
 
@@ -170,8 +237,56 @@ func (g *githubConnector) ValidateWebhookSignature(payload []byte, signature str
 	return nil
 }
 
+func (g *githubConnector) ProcessEvent(ctx context.Context, event any) error {
+	webhookEvent, ok := event.(WebhookEvent)
+	if !ok {
+		return fmt.Errorf("invalid event type: expected WebhookEvent")
+	}
+
+	// Only handle installation events
+	switch webhookEvent.EventType {
+	case EventTypeInstallation:
+		return g.handleInstallationEvent(ctx, webhookEvent)
+	default:
+		slog.Debug("ignoring non-installation event",
+			"event_type", webhookEvent.EventType,
+			"installation_id", webhookEvent.InstallationID)
+		return nil
+	}
+}
+
+func (g *githubConnector) Subscribe(ctx context.Context, handler func(ctx context.Context, event any) error) error {
+	if g.config.WebhookPort == 0 {
+		return fmt.Errorf("github: webhook port is required for webhook server")
+	}
+
+	webhookConfig := webhookServerConfig{
+		port:                g.config.WebhookPort,
+		webhookSecret:       g.config.WebhookSecret,
+		callbackHandlerFunc: handler,
+	}
+
+	return webhookConfig.startWebhookServer(ctx)
+}
+
 func (g *githubConnector) generateJWT() (string, error) {
-	return "", fmt.Errorf("JWT generation not implemented - requires private key parsing")
+	if g.privateKey == nil {
+		return "", fmt.Errorf("private key not configured")
+	}
+
+	now := time.Now()
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+		"iat": now.Unix(),
+		"exp": now.Add(10 * time.Minute).Unix(),
+		"iss": g.config.AppID,
+	})
+
+	tokenString, err := token.SignedString(g.privateKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to sign JWT: %w", err)
+	}
+
+	return tokenString, nil
 }
 
 func (g *githubConnector) getInstallationAccessToken(jwt string, installationID int64) (*accessTokenResponse, error) {
@@ -248,6 +363,49 @@ func (g *githubConnector) computeSignature(payload []byte, secret string) string
 	return fmt.Sprintf("sha256=%s", hex.EncodeToString(h.Sum(nil)))
 }
 
+func (g *githubConnector) buildWebhookURL(integrationID string) string {
+	baseURL := g.config.RedirectURL
+	if baseURL == "" {
+		return ""
+	}
+	
+	baseURL = strings.TrimSuffix(baseURL, "/")
+	return fmt.Sprintf("%s/webhooks/github", baseURL)
+}
+
+func (g *githubConnector) handleInstallationEvent(ctx context.Context, event WebhookEvent) error {
+	slog.Info("handling GitHub installation event",
+		"action", event.InstallationAction,
+		"installation_id", event.InstallationID,
+		"account_login", event.SenderLogin,
+		"repositories_added", len(event.RepositoriesAdded),
+		"repositories_removed", len(event.RepositoriesRemoved))
+
+	// Simple event processing - just log the installation event
+	switch event.InstallationAction {
+	case "created":
+		slog.Info("GitHub App installed",
+			"installation_id", event.InstallationID,
+			"account", event.SenderLogin)
+	case "deleted":
+		slog.Info("GitHub App uninstalled",
+			"installation_id", event.InstallationID,
+			"account", event.SenderLogin)
+	case "added":
+		slog.Info("GitHub App repository access added",
+			"installation_id", event.InstallationID,
+			"repositories", event.RepositoriesAdded)
+	case "removed":
+		slog.Info("GitHub App repository access removed",
+			"installation_id", event.InstallationID,
+			"repositories", event.RepositoriesRemoved)
+	}
+
+	return nil
+}
+
+// Type definitions for GitHub API responses
+
 type accessTokenResponse struct {
 	Token     string    `json:"token"`
 	ExpiresAt time.Time `json:"expires_at"`
@@ -267,16 +425,193 @@ type accountResponse struct {
 	Type  string `json:"type"`
 }
 
-func (g *githubConnector) Subscribe(ctx context.Context, handler func(ctx context.Context, event any) error) error {
-	if g.config.WebhookPort == 0 {
-		return fmt.Errorf("github: webhook port is required for webhook server")
+// Webhook server configuration and implementation
+type webhookServerConfig struct {
+	port                int
+	webhookSecret       string
+	callbackHandlerFunc func(ctx context.Context, event any) error
+}
+
+func (c webhookServerConfig) startWebhookServer(ctx context.Context) error {
+	h := &webhookHandler{
+		callbackHandlerFunc: c.callbackHandlerFunc,
+	}
+	h.init()
+
+	httpServer := &http.Server{
+		Addr:        fmt.Sprintf(":%d", c.port),
+		BaseContext: func(net.Listener) context.Context { return ctx },
+		Handler:     panicMiddleware(webhookValidationMiddleware(c.webhookSecret, h)),
 	}
 
-	webhookConfig := webhookServerConfig{
-		port:                g.config.WebhookPort,
-		webhookSecret:       g.config.WebhookSecret,
-		callbackHandlerFunc: handler,
+	return httpServer.ListenAndServe()
+}
+
+type webhookHandler struct {
+	http.ServeMux
+	callbackHandlerFunc func(ctx context.Context, event any) error
+}
+
+func (wh *webhookHandler) init() {
+	wh.HandleFunc("/webhooks/github", wh.handler())
+}
+
+func (wh *webhookHandler) handler() func(w http.ResponseWriter, r *http.Request) {
+	type response struct{}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		eventType := r.Header.Get("X-GitHub-Event")
+		if eventType == "" {
+			http.Error(w, "Missing X-GitHub-Event header", http.StatusBadRequest)
+			return
+		}
+
+		// Only process installation events
+		if eventType != "installation" && eventType != "installation_repositories" {
+			slog.Debug("ignoring non-installation event", "event_type", eventType)
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(response{})
+			return
+		}
+
+		payload, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read payload", http.StatusBadRequest)
+			return
+		}
+
+		var rawPayload map[string]any
+		if err := json.Unmarshal(payload, &rawPayload); err != nil {
+			http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+
+		webhookEvent, err := wh.convertToWebhookEvent(eventType, rawPayload)
+		if err != nil {
+			slog.Error("failed to convert GitHub webhook event", "event_type", eventType, "error", err)
+			http.Error(w, "Failed to process event", http.StatusInternalServerError)
+			return
+		}
+
+		if err := wh.callbackHandlerFunc(ctx, webhookEvent); err != nil {
+			slog.Error("error handling GitHub webhook event", "event_type", eventType, "error", err)
+			http.Error(w, "Failed to handle event", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(response{})
+	}
+}
+
+func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map[string]any) (WebhookEvent, error) {
+	event := WebhookEvent{
+		EventType:  EventType(eventType),
+		RawPayload: rawPayload,
+		CreatedAt:  time.Now(),
 	}
 
-	return webhookConfig.startWebhookServer(ctx)
+	// Extract common fields
+	if installation, ok := rawPayload["installation"].(map[string]any); ok {
+		if id, ok := installation["id"].(float64); ok {
+			event.InstallationID = int64(id)
+		}
+	}
+
+	if sender, ok := rawPayload["sender"].(map[string]any); ok {
+		if id, ok := sender["id"].(float64); ok {
+			event.SenderID = int64(id)
+		}
+		if login, ok := sender["login"].(string); ok {
+			event.SenderLogin = login
+		}
+	}
+
+	if action, ok := rawPayload["action"].(string); ok {
+		event.Action = action
+		event.InstallationAction = action
+	}
+
+	// Handle repository changes for installation events
+	if eventType == "installation" || eventType == "installation_repositories" {
+		if repositories, ok := rawPayload["repositories"].([]any); ok {
+			for _, repo := range repositories {
+				if repoMap, ok := repo.(map[string]any); ok {
+					if fullName, ok := repoMap["full_name"].(string); ok {
+						event.RepositoriesAdded = append(event.RepositoriesAdded, fullName)
+					}
+				}
+			}
+		}
+
+		if repositoriesRemoved, ok := rawPayload["repositories_removed"].([]any); ok {
+			for _, repo := range repositoriesRemoved {
+				if repoMap, ok := repo.(map[string]any); ok {
+					if fullName, ok := repoMap["full_name"].(string); ok {
+						event.RepositoriesRemoved = append(event.RepositoriesRemoved, fullName)
+					}
+				}
+			}
+		}
+	}
+
+	return event, nil
+}
+
+func panicMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("github: panic while handling http request", "recover", r)
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+		}()
+		h.ServeHTTP(w, r)
+	})
+}
+
+func webhookValidationMiddleware(webhookSecret string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if webhookSecret == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		signature := r.Header.Get("X-Hub-Signature-256")
+		if signature == "" {
+			slog.Info("github: missing webhook signature")
+			http.Error(w, "Missing webhook signature", http.StatusUnauthorized)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read request body", http.StatusBadRequest)
+			return
+		}
+
+		if !validateGitHubSignature(body, signature, webhookSecret) {
+			slog.Info("github: webhook validation failed", "signature", signature)
+			http.Error(w, "Invalid webhook signature", http.StatusUnauthorized)
+			return
+		}
+
+		r.Body = io.NopCloser(strings.NewReader(string(body)))
+		next.ServeHTTP(w, r)
+	})
+}
+
+func validateGitHubSignature(payload []byte, signature string, secret string) bool {
+	if !strings.HasPrefix(signature, "sha256=") {
+		return false
+	}
+
+	expectedHash := strings.TrimPrefix(signature, "sha256=")
+	h := hmac.New(sha256.New, []byte(secret))
+	h.Write(payload)
+	actualHash := hex.EncodeToString(h.Sum(nil))
+
+	return hmac.Equal([]byte(expectedHash), []byte(actualHash))
 }
