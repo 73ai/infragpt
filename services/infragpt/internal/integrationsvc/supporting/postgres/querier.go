@@ -36,6 +36,7 @@ type Querier interface {
 	UpdateCredential(ctx context.Context, arg UpdateCredentialParams) error
 	UpdateGitHubRepositoryLastSyncTime(ctx context.Context, arg UpdateGitHubRepositoryLastSyncTimeParams) error
 	UpdateGitHubRepositoryPermissions(ctx context.Context, arg UpdateGitHubRepositoryPermissionsParams) error
+	UpdateIntegration(ctx context.Context, arg UpdateIntegrationParams) error
 	UpdateIntegrationLastUsed(ctx context.Context, id uuid.UUID) error
 	UpdateIntegrationMetadata(ctx context.Context, arg UpdateIntegrationMetadataParams) error
 	UpdateIntegrationStatus(ctx context.Context, arg UpdateIntegrationStatusParams) error

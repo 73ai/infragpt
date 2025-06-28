@@ -24,4 +24,7 @@ type Connector interface {
 
 	// Event processing method - each connector processes its own events
 	ProcessEvent(ctx context.Context, event any) error
+
+	// Sync method - performs connector-specific synchronization operations
+	Sync(ctx context.Context, integration infragpt.Integration, params map[string]string) error
 }

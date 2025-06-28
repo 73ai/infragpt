@@ -85,7 +85,7 @@ type OrganizationInfo struct {
 type IntegrationService interface {
 	NewIntegration(ctx context.Context, cmd NewIntegrationCommand) (IntegrationAuthorizationIntent, error)
 	AuthorizeIntegration(ctx context.Context, cmd AuthorizeIntegrationCommand) (Integration, error)
-	ConfigureIntegration(ctx context.Context, cmd ConfigureIntegrationCommand) (Integration, error)
+	SyncIntegration(ctx context.Context, cmd SyncIntegrationCommand) error
 	RevokeIntegration(ctx context.Context, cmd RevokeIntegrationCommand) error
 	RefreshIntegration(ctx context.Context, cmd RefreshIntegrationCommand) error
 	Integrations(ctx context.Context, query IntegrationsQuery) ([]Integration, error)
@@ -106,13 +106,6 @@ type AuthorizeIntegrationCommand struct {
 	InstallationID string
 }
 
-type ConfigureIntegrationCommand struct {
-	OrganizationID string
-	UserID         string
-	ConnectorType  ConnectorType
-	InstallationID string
-	SetupAction    string
-}
 
 type RevokeIntegrationCommand struct {
 	IntegrationID  string
@@ -132,4 +125,10 @@ type IntegrationQuery struct {
 type RefreshIntegrationCommand struct {
 	IntegrationID  string
 	OrganizationID string
+}
+
+type SyncIntegrationCommand struct {
+	IntegrationID  string
+	OrganizationID string
+	Parameters     map[string]string
 }

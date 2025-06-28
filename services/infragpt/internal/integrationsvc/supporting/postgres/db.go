@@ -93,6 +93,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateGitHubRepositoryPermissionsStmt, err = db.PrepareContext(ctx, updateGitHubRepositoryPermissions); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateGitHubRepositoryPermissions: %w", err)
 	}
+	if q.updateIntegrationStmt, err = db.PrepareContext(ctx, updateIntegration); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateIntegration: %w", err)
+	}
 	if q.updateIntegrationLastUsedStmt, err = db.PrepareContext(ctx, updateIntegrationLastUsed); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateIntegrationLastUsed: %w", err)
 	}
@@ -225,6 +228,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateGitHubRepositoryPermissionsStmt: %w", cerr)
 		}
 	}
+	if q.updateIntegrationStmt != nil {
+		if cerr := q.updateIntegrationStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateIntegrationStmt: %w", cerr)
+		}
+	}
 	if q.updateIntegrationLastUsedStmt != nil {
 		if cerr := q.updateIntegrationLastUsedStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateIntegrationLastUsedStmt: %w", cerr)
@@ -307,6 +315,7 @@ type Queries struct {
 	updateCredentialStmt                          *sql.Stmt
 	updateGitHubRepositoryLastSyncTimeStmt        *sql.Stmt
 	updateGitHubRepositoryPermissionsStmt         *sql.Stmt
+	updateIntegrationStmt                         *sql.Stmt
 	updateIntegrationLastUsedStmt                 *sql.Stmt
 	updateIntegrationMetadataStmt                 *sql.Stmt
 	updateIntegrationStatusStmt                   *sql.Stmt
@@ -340,6 +349,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		updateCredentialStmt:                          q.updateCredentialStmt,
 		updateGitHubRepositoryLastSyncTimeStmt:        q.updateGitHubRepositoryLastSyncTimeStmt,
 		updateGitHubRepositoryPermissionsStmt:         q.updateGitHubRepositoryPermissionsStmt,
+		updateIntegrationStmt:                         q.updateIntegrationStmt,
 		updateIntegrationLastUsedStmt:                 q.updateIntegrationLastUsedStmt,
 		updateIntegrationMetadataStmt:                 q.updateIntegrationMetadataStmt,
 		updateIntegrationStatusStmt:                   q.updateIntegrationStatusStmt,

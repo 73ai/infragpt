@@ -577,3 +577,220 @@ type accountResponse struct {
 	Login string `json:"login"`
 	Type  string `json:"type"`
 }
+
+func (g *githubConnector) Sync(ctx context.Context, integration infragpt.Integration, params map[string]string) error {
+	// Sync repositories - check for new repositories and update existing ones
+	if err := g.syncRepositoriesForIntegration(ctx, integration); err != nil {
+		return fmt.Errorf("failed to sync repositories: %w", err)
+	}
+
+	// Check and update repository permissions and status
+	if err := g.syncRepositoryPermissions(ctx, integration); err != nil {
+		return fmt.Errorf("failed to sync repository permissions: %w", err)
+	}
+
+	return nil
+}
+
+func (g *githubConnector) syncRepositoryPermissions(ctx context.Context, integration infragpt.Integration) error {
+	integrationUUID, err := uuid.Parse(integration.ID)
+	if err != nil {
+		return fmt.Errorf("failed to parse integration ID: %w", err)
+	}
+
+	installationID := integration.BotID
+	if installationID == "" {
+		return fmt.Errorf("installation ID not found in integration")
+	}
+
+	// Generate JWT and get installation access token
+	jwt, err := g.generateJWT()
+	if err != nil {
+		return fmt.Errorf("failed to generate JWT: %w", err)
+	}
+
+	accessToken, err := g.getInstallationAccessToken(jwt, installationID)
+	if err != nil {
+		return fmt.Errorf("failed to get access token: %w", err)
+	}
+
+	// Fetch current installation details to check permissions
+	installationDetails, err := g.getInstallationDetails(jwt, installationID)
+	if err != nil {
+		return fmt.Errorf("failed to get installation details: %w", err)
+	}
+
+	// Fetch repositories from GitHub API with updated permissions
+	repositories, err := g.fetchInstallationRepositories(accessToken.Token)
+	if err != nil {
+		return fmt.Errorf("failed to fetch repositories: %w", err)
+	}
+
+	// Update existing repositories with current permissions and status
+	// For GitHub App installations, all repositories have the same permissions as defined in the installation
+	defaultPermissions := RepositoryPermissions{
+		Admin: false, // Apps typically don't get admin access
+		Push:  true,  // Most installations need push access
+		Pull:  true,  // All installations need pull access
+	}
+
+	for _, repo := range repositories {
+		if err := g.config.GitHubRepositoryRepo.UpdatePermissions(ctx, integrationUUID, repo.ID, defaultPermissions); err != nil {
+			slog.Error("failed to update repository permissions",
+				"integration_id", integration.ID,
+				"repository_id", repo.ID,
+				"repository_name", repo.FullName,
+				"error", err)
+			continue
+		}
+	}
+
+	slog.Info("synced repository permissions",
+		"integration_id", integration.ID,
+		"installation_id", installationID,
+		"repository_count", len(repositories),
+		"permissions", g.formatPermissions(installationDetails.Permissions))
+
+	return nil
+}
+
+func (g *githubConnector) syncInstallation(ctx context.Context, integration infragpt.Integration, params map[string]string) error {
+	installationID := params["installation_id"]
+	if installationID == "" {
+		installationID = integration.BotID
+	}
+	if installationID == "" {
+		return fmt.Errorf("installation_id is required for GitHub installation sync")
+	}
+
+	// This handles the case where a user is redirected back from GitHub
+	// after installing the app and needs to claim the installation
+	return g.claimInstallationForExistingIntegration(ctx, integration, installationID)
+}
+
+func (g *githubConnector) syncRepositoriesForIntegration(ctx context.Context, integration infragpt.Integration) error {
+	integrationUUID, err := uuid.Parse(integration.ID)
+	if err != nil {
+		return fmt.Errorf("failed to parse integration ID: %w", err)
+	}
+
+	installationID := integration.BotID
+	if installationID == "" {
+		return fmt.Errorf("installation ID not found in integration")
+	}
+
+	return g.syncRepositories(ctx, integrationUUID, installationID)
+}
+
+func (g *githubConnector) claimInstallationForExistingIntegration(ctx context.Context, integration infragpt.Integration, installationID string) error {
+	// Get unclaimed installation from database
+	unclaimed, err := g.config.UnclaimedInstallationRepo.GetByInstallationID(ctx, installationID)
+	if err != nil {
+		return fmt.Errorf("failed to get unclaimed installation: %w", err)
+	}
+	if unclaimed.ID == uuid.Nil {
+		return fmt.Errorf("unclaimed installation not found for ID %s", installationID)
+	}
+
+	// Update existing integration with installation details
+	connectorOrgID := strconv.FormatInt(unclaimed.GitHubAccountID, 10)
+	updatedIntegration := integration
+	updatedIntegration.BotID = installationID
+	updatedIntegration.ConnectorUserID = unclaimed.GitHubAccountLogin
+	updatedIntegration.ConnectorOrganizationID = connectorOrgID
+	updatedIntegration.Status = infragpt.IntegrationStatusActive
+	updatedIntegration.UpdatedAt = time.Now()
+
+	// Update metadata
+	if updatedIntegration.Metadata == nil {
+		updatedIntegration.Metadata = make(map[string]string)
+	}
+	updatedIntegration.Metadata["github_installation_id"] = unclaimed.GitHubInstallationID
+	updatedIntegration.Metadata["github_app_id"] = strconv.FormatInt(unclaimed.GitHubAppID, 10)
+	updatedIntegration.Metadata["github_account_id"] = strconv.FormatInt(unclaimed.GitHubAccountID, 10)
+	updatedIntegration.Metadata["github_account_login"] = unclaimed.GitHubAccountLogin
+	updatedIntegration.Metadata["github_account_type"] = unclaimed.GitHubAccountType
+	updatedIntegration.Metadata["repository_selection"] = unclaimed.RepositorySelection
+
+	// Update integration in database
+	if err := g.config.IntegrationRepository.Update(ctx, updatedIntegration); err != nil {
+		return fmt.Errorf("failed to update integration: %w", err)
+	}
+
+	// Generate and store/update credentials
+	jwt, err := g.generateJWT()
+	if err != nil {
+		return fmt.Errorf("failed to generate JWT: %w", err)
+	}
+
+	accessToken, err := g.getInstallationAccessToken(jwt, installationID)
+	if err != nil {
+		return fmt.Errorf("failed to get access token: %w", err)
+	}
+
+	credentialData := map[string]string{
+		"installation_id": installationID,
+		"access_token":    accessToken.Token,
+		"account_login":   unclaimed.GitHubAccountLogin,
+		"account_id":      strconv.FormatInt(unclaimed.GitHubAccountID, 10),
+		"account_type":    unclaimed.GitHubAccountType,
+	}
+
+	var expiresAt *time.Time
+	if !accessToken.ExpiresAt.IsZero() {
+		expiresAt = &accessToken.ExpiresAt
+	}
+
+	// Try to find existing credential first
+	existingCredential, err := g.config.CredentialRepository.FindByIntegration(ctx, integration.ID)
+	if err == nil {
+		// Update existing credential
+		existingCredential.Data = credentialData
+		existingCredential.ExpiresAt = expiresAt
+		existingCredential.UpdatedAt = time.Now()
+		
+		if err := g.config.CredentialRepository.Update(ctx, existingCredential); err != nil {
+			return fmt.Errorf("failed to update credentials: %w", err)
+		}
+	} else {
+		// Create new credential
+		credentialRecord := domain.IntegrationCredential{
+			ID:              uuid.New().String(),
+			IntegrationID:   integration.ID,
+			CredentialType:  infragpt.CredentialTypeToken,
+			Data:            credentialData,
+			ExpiresAt:       expiresAt,
+			EncryptionKeyID: "v1",
+			CreatedAt:       time.Now(),
+			UpdatedAt:       time.Now(),
+		}
+
+		if err := g.config.CredentialRepository.Store(ctx, credentialRecord); err != nil {
+			return fmt.Errorf("failed to store credentials: %w", err)
+		}
+	}
+
+	// Sync repositories
+	integrationUUID, err := uuid.Parse(integration.ID)
+	if err != nil {
+		return fmt.Errorf("failed to parse integration ID: %w", err)
+	}
+
+	if err := g.syncRepositories(ctx, integrationUUID, installationID); err != nil {
+		slog.Error("failed to sync repositories during installation claim",
+			"integration_id", integration.ID,
+			"installation_id", installationID,
+			"error", err)
+	}
+
+	// Mark installation as claimed
+	orgUUID := uuid.MustParse(integration.OrganizationID)
+	userUUID := uuid.MustParse(integration.UserID)
+	if err := g.config.UnclaimedInstallationRepo.MarkAsClaimed(ctx, installationID, orgUUID, userUUID); err != nil {
+		slog.Error("failed to mark installation as claimed",
+			"installation_id", installationID,
+			"error", err)
+	}
+
+	return nil
+}

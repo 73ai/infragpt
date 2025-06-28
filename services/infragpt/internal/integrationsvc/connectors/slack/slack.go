@@ -236,3 +236,35 @@ func (s *slackConnector) ProcessEvent(ctx context.Context, event any) error {
 	// This is a no-op implementation
 	return nil
 }
+
+func (s *slackConnector) Sync(ctx context.Context, integration infragpt.Integration, params map[string]string) error {
+	// Sync workspace information and validate credentials
+	if err := s.syncWorkspace(ctx, integration); err != nil {
+		return fmt.Errorf("failed to sync workspace: %w", err)
+	}
+
+	// Sync channels information
+	if err := s.syncChannels(ctx, integration); err != nil {
+		return fmt.Errorf("failed to sync channels: %w", err)
+	}
+
+	return nil
+}
+
+func (s *slackConnector) syncWorkspace(ctx context.Context, integration infragpt.Integration) error {
+	// TODO: Implement workspace synchronization
+	// This could validate credentials and update workspace information
+	return s.ValidateCredentials(infragpt.Credentials{
+		Type: infragpt.CredentialTypeOAuth2,
+		Data: map[string]string{
+			"bot_access_token": integration.Metadata["bot_access_token"],
+		},
+	})
+}
+
+func (s *slackConnector) syncChannels(ctx context.Context, integration infragpt.Integration) error {
+	// TODO: Implement channel synchronization  
+	// This could fetch and store channel information for the workspace
+	// For now, this is a no-op
+	return nil
+}

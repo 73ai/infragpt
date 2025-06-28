@@ -55,3 +55,15 @@ WHERE bot_id = $1 AND connector_type = $2;
 UPDATE integrations
 SET metadata = $2, updated_at = NOW()
 WHERE id = $1;
+
+-- name: UpdateIntegration :exec
+UPDATE integrations
+SET connector_type = $2,
+    status = $3,
+    bot_id = $4,
+    connector_user_id = $5,
+    connector_organization_id = $6,
+    metadata = $7,
+    updated_at = $8,
+    last_used_at = $9
+WHERE id = $1;

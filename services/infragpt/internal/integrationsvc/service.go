@@ -139,67 +139,6 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 	return integration, nil
 }
 
-func (s *service) ConfigureIntegration(ctx context.Context, cmd infragpt.ConfigureIntegrationCommand) (infragpt.Integration, error) {
-	// This method handles the case where a user is redirected back from GitHub
-	// after installing the app and needs to claim the installation
-
-	slog.Info("configuring integration",
-		"organization_id", cmd.OrganizationID,
-		"user_id", cmd.UserID,
-		"connector_type", cmd.ConnectorType,
-		"installation_id", cmd.InstallationID)
-
-	// Validate that organization ID and user ID are valid UUIDs
-	if _, err := uuid.Parse(cmd.OrganizationID); err != nil {
-		return infragpt.Integration{}, fmt.Errorf("invalid organization ID: %w", err)
-	}
-	if _, err := uuid.Parse(cmd.UserID); err != nil {
-		return infragpt.Integration{}, fmt.Errorf("invalid user ID: %w", err)
-	}
-
-	// Check if integration already exists for this org and connector type
-	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, cmd.OrganizationID, cmd.ConnectorType)
-	if err != nil {
-		return infragpt.Integration{}, fmt.Errorf("failed to check existing integrations: %w", err)
-	}
-
-	if len(existingIntegrations) > 0 {
-		return infragpt.Integration{}, fmt.Errorf("integration already exists for connector type %s in organization %s", cmd.ConnectorType, cmd.OrganizationID)
-	}
-
-	connector, exists := s.connectors[cmd.ConnectorType]
-	if !exists {
-		return infragpt.Integration{}, fmt.Errorf("unsupported connector type: %s", cmd.ConnectorType)
-	}
-
-	// For GitHub, we need to handle the installation claiming process
-	if cmd.ConnectorType == infragpt.ConnectorTypeGithub {
-		return s.configureGitHubIntegration(ctx, cmd, connector)
-	}
-
-	return infragpt.Integration{}, fmt.Errorf("configure integration not implemented for connector type: %s", cmd.ConnectorType)
-}
-
-func (s *service) configureGitHubIntegration(ctx context.Context, cmd infragpt.ConfigureIntegrationCommand, connector domain.Connector) (infragpt.Integration, error) {
-	// Cast to GitHub connector to access GitHub-specific methods
-	githubConnector, ok := connector.(github.GitHubConnector)
-	if !ok {
-		return infragpt.Integration{}, fmt.Errorf("invalid GitHub connector type")
-	}
-
-	// Delegate complete installation claiming to GitHub connector
-	integration, err := githubConnector.ClaimInstallation(ctx, cmd.InstallationID, cmd.OrganizationID, cmd.UserID)
-	if err != nil {
-		return infragpt.Integration{}, fmt.Errorf("failed to claim GitHub installation: %w", err)
-	}
-
-	slog.Info("GitHub integration configured successfully",
-		"integration_id", integration.ID,
-		"installation_id", cmd.InstallationID,
-		"organization_id", cmd.OrganizationID)
-
-	return *integration, nil
-}
 
 func (s *service) RevokeIntegration(ctx context.Context, cmd infragpt.RevokeIntegrationCommand) error {
 	integration, err := s.integrationRepository.FindByID(ctx, cmd.IntegrationID)
@@ -306,6 +245,37 @@ func (s *service) RefreshIntegration(ctx context.Context, cmd infragpt.RefreshIn
 
 	if err := s.credentialRepository.Update(ctx, updatedCredential); err != nil {
 		return fmt.Errorf("failed to update credentials: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) SyncIntegration(ctx context.Context, cmd infragpt.SyncIntegrationCommand) error {
+	integration, err := s.integrationRepository.FindByID(ctx, cmd.IntegrationID)
+	if err != nil {
+		return fmt.Errorf("failed to find integration: %w", err)
+	}
+
+	if integration.OrganizationID != cmd.OrganizationID {
+		return fmt.Errorf("integration not found for organization")
+	}
+
+	connector, exists := s.connectors[integration.ConnectorType]
+	if !exists {
+		return fmt.Errorf("unsupported connector type: %s", integration.ConnectorType)
+	}
+
+	if err := connector.Sync(ctx, integration, cmd.Parameters); err != nil {
+		return fmt.Errorf("failed to sync integration: %w", err)
+	}
+
+	// Update last used timestamp
+	now := time.Now()
+	integration.LastUsedAt = &now
+	integration.UpdatedAt = now
+
+	if err := s.integrationRepository.Update(ctx, integration); err != nil {
+		return fmt.Errorf("failed to update integration: %w", err)
 	}
 
 	return nil

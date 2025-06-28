@@ -223,6 +223,46 @@ func (q *Queries) StoreIntegration(ctx context.Context, arg StoreIntegrationPara
 	return err
 }
 
+const updateIntegration = `-- name: UpdateIntegration :exec
+UPDATE integrations
+SET connector_type = $2,
+    status = $3,
+    bot_id = $4,
+    connector_user_id = $5,
+    connector_organization_id = $6,
+    metadata = $7,
+    updated_at = $8,
+    last_used_at = $9
+WHERE id = $1
+`
+
+type UpdateIntegrationParams struct {
+	ID                      uuid.UUID             `json:"id"`
+	ConnectorType           string                `json:"connector_type"`
+	Status                  string                `json:"status"`
+	BotID                   sql.NullString        `json:"bot_id"`
+	ConnectorUserID         sql.NullString        `json:"connector_user_id"`
+	ConnectorOrganizationID sql.NullString        `json:"connector_organization_id"`
+	Metadata                pqtype.NullRawMessage `json:"metadata"`
+	UpdatedAt               time.Time             `json:"updated_at"`
+	LastUsedAt              sql.NullTime          `json:"last_used_at"`
+}
+
+func (q *Queries) UpdateIntegration(ctx context.Context, arg UpdateIntegrationParams) error {
+	_, err := q.exec(ctx, q.updateIntegrationStmt, updateIntegration,
+		arg.ID,
+		arg.ConnectorType,
+		arg.Status,
+		arg.BotID,
+		arg.ConnectorUserID,
+		arg.ConnectorOrganizationID,
+		arg.Metadata,
+		arg.UpdatedAt,
+		arg.LastUsedAt,
+	)
+	return err
+}
+
 const updateIntegrationLastUsed = `-- name: UpdateIntegrationLastUsed :exec
 UPDATE integrations
 SET last_used_at = NOW(), updated_at = NOW()

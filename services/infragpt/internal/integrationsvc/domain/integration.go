@@ -8,6 +8,7 @@ import (
 
 type IntegrationRepository interface {
 	Store(ctx context.Context, integration infragpt.Integration) error
+	Update(ctx context.Context, integration infragpt.Integration) error
 	FindByID(ctx context.Context, id string) (infragpt.Integration, error)
 	FindByOrganization(ctx context.Context, orgID string) ([]infragpt.Integration, error)
 	FindByOrganizationAndType(ctx context.Context, orgID string, connectorType infragpt.ConnectorType) ([]infragpt.Integration, error)

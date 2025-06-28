@@ -85,6 +85,55 @@ func (r *integrationRepository) Store(ctx context.Context, integration infragpt.
 	})
 }
 
+func (r *integrationRepository) Update(ctx context.Context, integration infragpt.Integration) error {
+	metadata := make(map[string]any)
+	for k, v := range integration.Metadata {
+		metadata[k] = v
+	}
+
+	metadataJSON, err := json.Marshal(metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	integrationID, err := uuid.Parse(integration.ID)
+	if err != nil {
+		return fmt.Errorf("invalid integration ID: %w", err)
+	}
+
+	var botID sql.NullString
+	if integration.BotID != "" {
+		botID = sql.NullString{String: integration.BotID, Valid: true}
+	}
+
+	var connectorUserID sql.NullString
+	if integration.ConnectorUserID != "" {
+		connectorUserID = sql.NullString{String: integration.ConnectorUserID, Valid: true}
+	}
+
+	var connectorOrganizationID sql.NullString
+	if integration.ConnectorOrganizationID != "" {
+		connectorOrganizationID = sql.NullString{String: integration.ConnectorOrganizationID, Valid: true}
+	}
+
+	var lastUsedAt sql.NullTime
+	if integration.LastUsedAt != nil {
+		lastUsedAt = sql.NullTime{Time: *integration.LastUsedAt, Valid: true}
+	}
+
+	return r.queries.UpdateIntegration(ctx, UpdateIntegrationParams{
+		ID:                      integrationID,
+		ConnectorType:           string(integration.ConnectorType),
+		Status:                  string(integration.Status),
+		BotID:                   botID,
+		ConnectorUserID:         connectorUserID,
+		ConnectorOrganizationID: connectorOrganizationID,
+		Metadata:                pqtype.NullRawMessage{RawMessage: metadataJSON, Valid: true},
+		UpdatedAt:               integration.UpdatedAt,
+		LastUsedAt:              lastUsedAt,
+	})
+}
+
 func (r *integrationRepository) FindByID(ctx context.Context, id string) (infragpt.Integration, error) {
 	integrationID, err := uuid.Parse(id)
 	if err != nil {
