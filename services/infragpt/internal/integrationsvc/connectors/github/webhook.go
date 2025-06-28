@@ -107,22 +107,22 @@ func (g *githubConnector) handleInstallationEvent(ctx context.Context, event Web
 	}
 }
 
-func (g *githubConnector) parseInstallationEvent(rawPayload map[string]any) (*InstallationEvent, error) {
+func (g *githubConnector) parseInstallationEvent(rawPayload map[string]any) (InstallationEvent, error) {
 	payloadBytes, err := json.Marshal(rawPayload)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal raw payload: %w", err)
+		return InstallationEvent{}, fmt.Errorf("failed to marshal raw payload: %w", err)
 	}
 
 	var installationEvent InstallationEvent
 	if err := json.Unmarshal(payloadBytes, &installationEvent); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal installation event: %w", err)
+		return InstallationEvent{}, fmt.Errorf("failed to unmarshal installation event: %w", err)
 	}
 
 	installationEvent.RawPayload = rawPayload
-	return &installationEvent, nil
+	return installationEvent, nil
 }
 
-func (g *githubConnector) handleInstallationCreated(ctx context.Context, event *InstallationEvent) error {
+func (g *githubConnector) handleInstallationCreated(ctx context.Context, event InstallationEvent) error {
 	slog.Info("GitHub App installation created",
 		"installation_id", event.Installation.ID,
 		"account", event.Installation.Account.Login,
@@ -162,7 +162,7 @@ func (g *githubConnector) handleInstallationCreated(ctx context.Context, event *
 	return nil
 }
 
-func (g *githubConnector) handleInstallationDeleted(ctx context.Context, event *InstallationEvent) error {
+func (g *githubConnector) handleInstallationDeleted(ctx context.Context, event InstallationEvent) error {
 	slog.Info("GitHub App installation deleted",
 		"installation_id", event.Installation.ID,
 		"account", event.Installation.Account.Login)
@@ -183,7 +183,7 @@ func (g *githubConnector) handleInstallationDeleted(ctx context.Context, event *
 	return nil
 }
 
-func (g *githubConnector) handleInstallationSuspended(ctx context.Context, event *InstallationEvent) error {
+func (g *githubConnector) handleInstallationSuspended(ctx context.Context, event InstallationEvent) error {
 	slog.Info("GitHub App installation suspended",
 		"installation_id", event.Installation.ID,
 		"account", event.Installation.Account.Login,
@@ -195,7 +195,7 @@ func (g *githubConnector) handleInstallationSuspended(ctx context.Context, event
 	return nil
 }
 
-func (g *githubConnector) handleInstallationUnsuspended(ctx context.Context, event *InstallationEvent) error {
+func (g *githubConnector) handleInstallationUnsuspended(ctx context.Context, event InstallationEvent) error {
 	slog.Info("GitHub App installation unsuspended",
 		"installation_id", event.Installation.ID,
 		"account", event.Installation.Account.Login)
@@ -206,7 +206,7 @@ func (g *githubConnector) handleInstallationUnsuspended(ctx context.Context, eve
 	return nil
 }
 
-func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event *InstallationEvent) error {
+func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event InstallationEvent) error {
 	slog.Info("GitHub App permissions updated",
 		"installation_id", event.Installation.ID,
 		"account", event.Installation.Account.Login,
@@ -243,7 +243,7 @@ func (g *githubConnector) handleInstallationRepositoriesEvent(ctx context.Contex
 	}
 }
 
-func (g *githubConnector) handleRepositoriesAdded(ctx context.Context, event *InstallationEvent) error {
+func (g *githubConnector) handleRepositoriesAdded(ctx context.Context, event InstallationEvent) error {
 	slog.Info("GitHub App repositories added",
 		"installation_id", event.Installation.ID,
 		"account", event.Installation.Account.Login,
@@ -267,7 +267,7 @@ func (g *githubConnector) handleRepositoriesAdded(ctx context.Context, event *In
 	return nil
 }
 
-func (g *githubConnector) handleRepositoriesRemoved(ctx context.Context, event *InstallationEvent) error {
+func (g *githubConnector) handleRepositoriesRemoved(ctx context.Context, event InstallationEvent) error {
 	slog.Info("GitHub App repositories removed",
 		"installation_id", event.Installation.ID,
 		"account", event.Installation.Account.Login,
