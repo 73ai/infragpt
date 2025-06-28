@@ -10,6 +10,14 @@ import (
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/connectors/github"
 )
 
+// timeFromNullTime converts sql.NullTime to time.Time
+func timeFromNullTime(nt sql.NullTime) time.Time {
+	if nt.Valid {
+		return nt.Time
+	}
+	return time.Time{}
+}
+
 type githubRepositoryRepository struct {
 	queries *Queries
 }

@@ -14,10 +14,8 @@ import (
 type Querier interface {
 	BulkDeleteGitHubRepositories(ctx context.Context, arg BulkDeleteGitHubRepositoriesParams) error
 	DeleteCredential(ctx context.Context, integrationID uuid.UUID) error
-	DeleteExpiredUnclaimedInstallations(ctx context.Context) error
 	DeleteGitHubRepositoryByGitHubID(ctx context.Context, arg DeleteGitHubRepositoryByGitHubIDParams) error
 	DeleteIntegration(ctx context.Context, id uuid.UUID) error
-	DeleteUnclaimedInstallation(ctx context.Context, githubInstallationID string) error
 	FindCredentialByIntegration(ctx context.Context, integrationID uuid.UUID) (IntegrationCredential, error)
 	FindExpiringCredentials(ctx context.Context, expiresAt sql.NullTime) ([]IntegrationCredential, error)
 	FindGitHubRepositoriesByIntegrationID(ctx context.Context, integrationID uuid.UUID) ([]GithubRepository, error)
@@ -26,13 +24,8 @@ type Querier interface {
 	FindIntegrationByID(ctx context.Context, id uuid.UUID) (Integration, error)
 	FindIntegrationsByOrganization(ctx context.Context, organizationID uuid.UUID) ([]Integration, error)
 	FindIntegrationsByOrganizationAndType(ctx context.Context, arg FindIntegrationsByOrganizationAndTypeParams) ([]Integration, error)
-	FindUnclaimedInstallationByInstallationID(ctx context.Context, githubInstallationID string) (UnclaimedInstallation, error)
-	FindUnclaimedInstallations(ctx context.Context, limit int32) ([]UnclaimedInstallation, error)
-	MarkUnclaimedInstallationAsClaimed(ctx context.Context, arg MarkUnclaimedInstallationAsClaimedParams) error
 	StoreCredential(ctx context.Context, arg StoreCredentialParams) error
 	StoreIntegration(ctx context.Context, arg StoreIntegrationParams) error
-	// Unclaimed Installation Queries
-	StoreUnclaimedInstallation(ctx context.Context, arg StoreUnclaimedInstallationParams) error
 	UpdateCredential(ctx context.Context, arg UpdateCredentialParams) error
 	UpdateGitHubRepositoryLastSyncTime(ctx context.Context, arg UpdateGitHubRepositoryLastSyncTimeParams) error
 	UpdateGitHubRepositoryPermissions(ctx context.Context, arg UpdateGitHubRepositoryPermissionsParams) error

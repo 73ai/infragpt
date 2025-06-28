@@ -128,35 +128,12 @@ func (g *githubConnector) handleInstallationCreated(ctx context.Context, event I
 		"repository_selection", event.Installation.RepositorySelection,
 		"repository_count", len(event.Repositories))
 
-	// Store in unclaimed_installations table for later processing
-	unclaimedInstallation := UnclaimedInstallation{
-		ID:                   uuid.New(),
-		GitHubInstallationID: strconv.FormatInt(event.Installation.ID, 10),
-		GitHubAppID:          event.Installation.AppID,
-		GitHubAccountID:      event.Installation.Account.ID,
-		GitHubAccountLogin:   event.Installation.Account.Login,
-		GitHubAccountType:    event.Installation.Account.Type,
-		RepositorySelection:  event.Installation.RepositorySelection,
-		Permissions:          event.Installation.Permissions,
-		Events:               event.Installation.Events,
-		AccessTokensURL:      event.Installation.AccessTokensURL,
-		RepositoriesURL:      event.Installation.RepositoriesURL,
-		HTMLURL:              event.Installation.HTMLURL,
-		AppSlug:              event.Installation.AppSlug,
-		SuspendedAt:          timeValueFromPointer(event.Installation.SuspendedAt),
-		SuspendedBy:          convertUserToMap(&event.Sender),
-		WebhookSender:        convertUserToMap(&event.Sender),
-		RawWebhookPayload:    event.RawPayload,
-		CreatedAt:            time.Now(),
-		GitHubCreatedAt:      event.Installation.CreatedAt,
-		GitHubUpdatedAt:      event.Installation.UpdatedAt,
-		ExpiresAt:            time.Now().Add(7 * 24 * time.Hour), // 7 days from now
-	}
-
-	// Store unclaimed installation directly using config repository
-	if err := g.config.UnclaimedInstallationRepo.Create(ctx, unclaimedInstallation); err != nil {
-		return fmt.Errorf("failed to store unclaimed installation: %w", err)
-	}
+	// Simply log the installation creation - no storage needed
+	// The installation will be claimed directly when user completes authorization flow
+	slog.Info("GitHub installation created - will be claimed during authorization flow",
+		"installation_id", event.Installation.ID,
+		"account_login", event.Installation.Account.Login,
+		"account_type", event.Installation.Account.Type)
 
 	return nil
 }
@@ -166,19 +143,27 @@ func (g *githubConnector) handleInstallationDeleted(ctx context.Context, event I
 		"installation_id", event.Installation.ID,
 		"account", event.Installation.Account.Login)
 
-	// Find integration by GitHub installation ID - we need to search across all organizations
-	// Since we don't have organization context here, we'll need to add a method to find by connector type
-	// For now, we'll just log the deletion since we can't find the specific integration
-	slog.Info("GitHub installation deleted - skipping integration cleanup (no organization context)",
-		"installation_id", event.Installation.ID)
-
-	// Clean up unclaimed installations
+	// Find integration by GitHub installation ID and mark as deleted
 	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
-	if err := g.config.UnclaimedInstallationRepo.Delete(ctx, installationIDStr); err != nil {
-		slog.Error("failed to clean up unclaimed installation",
-			"installation_id", event.Installation.ID,
-			"error", err)
+	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			slog.Debug("integration not found for deleted installation",
+				"installation_id", event.Installation.ID)
+			return nil // Not an error if integration doesn't exist
+		}
+		return fmt.Errorf("failed to find integration for deleted installation %d: %w", event.Installation.ID, err)
 	}
+
+	// Update integration status to deleted/inactive
+	if err := g.config.IntegrationRepository.UpdateStatus(ctx, integration.ID, infragpt.IntegrationStatusInactive); err != nil {
+		return fmt.Errorf("failed to update integration status for deleted installation %d: %w", event.Installation.ID, err)
+	}
+
+	slog.Info("GitHub integration marked as inactive due to installation deletion",
+		"installation_id", event.Installation.ID,
+		"integration_id", integration.ID,
+		"organization_id", integration.OrganizationID)
 
 	return nil
 }

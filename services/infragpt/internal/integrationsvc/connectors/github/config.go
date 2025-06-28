@@ -19,10 +19,9 @@ type Config struct {
 	WebhookPort   int    `mapstructure:"webhook_port"`
 
 	// Repository dependencies
-	UnclaimedInstallationRepo UnclaimedInstallationRepository
-	GitHubRepositoryRepo      GitHubRepositoryRepository
-	IntegrationRepository     domain.IntegrationRepository
-	CredentialRepository      domain.CredentialRepository
+	GitHubRepositoryRepo  GitHubRepositoryRepository
+	IntegrationRepository domain.IntegrationRepository
+	CredentialRepository  domain.CredentialRepository
 }
 
 func (c Config) NewConnector() domain.Connector {

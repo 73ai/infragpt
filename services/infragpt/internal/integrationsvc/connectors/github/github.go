@@ -20,8 +20,7 @@ import (
 )
 
 type GitHubConnector interface {
-	ClaimInstallation(ctx context.Context, installationID string, organizationID, userID string) (*infragpt.Integration, error)
-	GetUnclaimedInstallations(ctx context.Context) ([]UnclaimedInstallation, error)
+	ClaimInstallation(ctx context.Context, installationID string, organizationID, userID uuid.UUID) (*infragpt.Integration, error)
 }
 
 type githubConnector struct {
@@ -304,17 +303,20 @@ func (g *githubConnector) buildWebhookURL(integrationID string) string {
 }
 
 func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID string, organizationID, userID uuid.UUID) (*infragpt.Integration, error) {
-	// Get unclaimed installation from database
-	unclaimed, err := g.config.UnclaimedInstallationRepo.GetByInstallationID(ctx, installationID)
+	// Generate JWT to access GitHub API
+	jwt, err := g.generateJWT()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get unclaimed installation: %w", err)
-	}
-	if unclaimed.ID == uuid.Nil {
-		return nil, fmt.Errorf("unclaimed installation not found for ID %s", installationID)
+		return nil, fmt.Errorf("failed to generate JWT: %w", err)
 	}
 
-	// Create integration record
-	connectorOrgID := strconv.FormatInt(unclaimed.GitHubAccountID, 10)
+	// Get installation details directly from GitHub API
+	installationDetails, err := g.getInstallationDetails(jwt, installationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get installation details from GitHub: %w", err)
+	}
+
+	// Create integration record with data from GitHub API
+	connectorOrgID := strconv.FormatInt(installationDetails.Account.ID, 10)
 	integration := &infragpt.Integration{
 		ID:                      uuid.New(),
 		OrganizationID:          organizationID,
@@ -322,15 +324,15 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 		ConnectorType:           infragpt.ConnectorTypeGithub,
 		Status:                  infragpt.IntegrationStatusActive,
 		BotID:                   installationID,
-		ConnectorUserID:         unclaimed.GitHubAccountLogin,
+		ConnectorUserID:         installationDetails.Account.Login,
 		ConnectorOrganizationID: connectorOrgID,
 		Metadata: map[string]string{
-			"github_installation_id": unclaimed.GitHubInstallationID,
-			"github_app_id":          strconv.FormatInt(unclaimed.GitHubAppID, 10),
-			"github_account_id":      strconv.FormatInt(unclaimed.GitHubAccountID, 10),
-			"github_account_login":   unclaimed.GitHubAccountLogin,
-			"github_account_type":    unclaimed.GitHubAccountType,
-			"repository_selection":   unclaimed.RepositorySelection,
+			"github_installation_id": installationID,
+			"github_app_id":          g.config.AppID,
+			"github_account_id":      strconv.FormatInt(installationDetails.Account.ID, 10),
+			"github_account_login":   installationDetails.Account.Login,
+			"github_account_type":    installationDetails.Account.Type,
+			"target_type":            installationDetails.TargetType,
 		},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -342,11 +344,6 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 	}
 
 	// Generate and store credentials
-	jwt, err := g.generateJWT()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate JWT: %w", err)
-	}
-
 	accessToken, err := g.getInstallationAccessToken(jwt, installationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get access token: %w", err)
@@ -355,9 +352,9 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 	credentialData := map[string]string{
 		"installation_id": installationID,
 		"access_token":    accessToken.Token,
-		"account_login":   unclaimed.GitHubAccountLogin,
-		"account_id":      strconv.FormatInt(unclaimed.GitHubAccountID, 10),
-		"account_type":    unclaimed.GitHubAccountType,
+		"account_login":   installationDetails.Account.Login,
+		"account_id":      strconv.FormatInt(installationDetails.Account.ID, 10),
+		"account_type":    installationDetails.Account.Type,
 	}
 
 	var expiresAt *time.Time
@@ -380,6 +377,7 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 		return nil, fmt.Errorf("failed to store credentials: %w", err)
 	}
 
+	// Sync repositories
 	if err := g.syncRepositories(ctx, integration.ID, installationID); err != nil {
 		slog.Error("failed to sync repositories during installation claim",
 			"integration_id", integration.ID,
@@ -387,17 +385,7 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 			"error", err)
 	}
 
-	if err := g.config.UnclaimedInstallationRepo.MarkAsClaimed(ctx, installationID, organizationID, userID); err != nil {
-		slog.Error("failed to mark installation as claimed",
-			"installation_id", installationID,
-			"error", err)
-	}
-
 	return integration, nil
-}
-
-func (g *githubConnector) GetUnclaimedInstallations(ctx context.Context) ([]UnclaimedInstallation, error) {
-	return g.config.UnclaimedInstallationRepo.List(ctx, 100)
 }
 
 func (g *githubConnector) syncRepositories(ctx context.Context, integrationID uuid.UUID, installationID string) error {
@@ -654,9 +642,8 @@ func (g *githubConnector) syncInstallation(ctx context.Context, integration infr
 		return fmt.Errorf("installation_id is required for GitHub installation sync")
 	}
 
-	// This handles the case where a user is redirected back from GitHub
-	// after installing the app and needs to claim the installation
-	return g.claimInstallationForExistingIntegration(ctx, integration, installationID)
+	// Simply sync repositories for the existing integration
+	return g.syncRepositoriesForIntegration(ctx, integration)
 }
 
 func (g *githubConnector) syncRepositoriesForIntegration(ctx context.Context, integration infragpt.Integration) error {
@@ -668,114 +655,4 @@ func (g *githubConnector) syncRepositoriesForIntegration(ctx context.Context, in
 	}
 
 	return g.syncRepositories(ctx, integrationUUID, installationID)
-}
-
-func (g *githubConnector) claimInstallationForExistingIntegration(ctx context.Context, integration infragpt.Integration, installationID string) error {
-	// Get unclaimed installation from database
-	unclaimed, err := g.config.UnclaimedInstallationRepo.GetByInstallationID(ctx, installationID)
-	if err != nil {
-		return fmt.Errorf("failed to get unclaimed installation: %w", err)
-	}
-	if unclaimed.ID == uuid.Nil {
-		return fmt.Errorf("unclaimed installation not found for ID %s", installationID)
-	}
-
-	// Update existing integration with installation details
-	connectorOrgID := strconv.FormatInt(unclaimed.GitHubAccountID, 10)
-	updatedIntegration := integration
-	updatedIntegration.BotID = installationID
-	updatedIntegration.ConnectorUserID = unclaimed.GitHubAccountLogin
-	updatedIntegration.ConnectorOrganizationID = connectorOrgID
-	updatedIntegration.Status = infragpt.IntegrationStatusActive
-	updatedIntegration.UpdatedAt = time.Now()
-
-	// Update metadata
-	if updatedIntegration.Metadata == nil {
-		updatedIntegration.Metadata = make(map[string]string)
-	}
-	updatedIntegration.Metadata["github_installation_id"] = unclaimed.GitHubInstallationID
-	updatedIntegration.Metadata["github_app_id"] = strconv.FormatInt(unclaimed.GitHubAppID, 10)
-	updatedIntegration.Metadata["github_account_id"] = strconv.FormatInt(unclaimed.GitHubAccountID, 10)
-	updatedIntegration.Metadata["github_account_login"] = unclaimed.GitHubAccountLogin
-	updatedIntegration.Metadata["github_account_type"] = unclaimed.GitHubAccountType
-	updatedIntegration.Metadata["repository_selection"] = unclaimed.RepositorySelection
-
-	// Update integration in database
-	if err := g.config.IntegrationRepository.Update(ctx, updatedIntegration); err != nil {
-		return fmt.Errorf("failed to update integration: %w", err)
-	}
-
-	// Generate and store/update credentials
-	jwt, err := g.generateJWT()
-	if err != nil {
-		return fmt.Errorf("failed to generate JWT: %w", err)
-	}
-
-	accessToken, err := g.getInstallationAccessToken(jwt, installationID)
-	if err != nil {
-		return fmt.Errorf("failed to get access token: %w", err)
-	}
-
-	credentialData := map[string]string{
-		"installation_id": installationID,
-		"access_token":    accessToken.Token,
-		"account_login":   unclaimed.GitHubAccountLogin,
-		"account_id":      strconv.FormatInt(unclaimed.GitHubAccountID, 10),
-		"account_type":    unclaimed.GitHubAccountType,
-	}
-
-	var expiresAt *time.Time
-	if !accessToken.ExpiresAt.IsZero() {
-		expiresAt = &accessToken.ExpiresAt
-	}
-
-	// Try to find existing credential first
-	existingCredential, err := g.config.CredentialRepository.FindByIntegration(ctx, integration.ID)
-	if err == nil {
-		// Update existing credential
-		existingCredential.Data = credentialData
-		existingCredential.ExpiresAt = expiresAt
-		existingCredential.UpdatedAt = time.Now()
-
-		if err := g.config.CredentialRepository.Update(ctx, existingCredential); err != nil {
-			return fmt.Errorf("failed to update credentials: %w", err)
-		}
-	} else {
-		// Create new credential
-		credentialRecord := domain.IntegrationCredential{
-			ID:              uuid.New(),
-			IntegrationID:   integration.ID,
-			CredentialType:  infragpt.CredentialTypeToken,
-			Data:            credentialData,
-			ExpiresAt:       expiresAt,
-			EncryptionKeyID: "v1",
-			CreatedAt:       time.Now(),
-			UpdatedAt:       time.Now(),
-		}
-
-		if err := g.config.CredentialRepository.Store(ctx, credentialRecord); err != nil {
-			return fmt.Errorf("failed to store credentials: %w", err)
-		}
-	}
-
-	// Sync repositories
-	integrationUUID := integration.ID
-
-	if err := g.syncRepositories(ctx, integrationUUID, installationID); err != nil {
-		slog.Error("failed to sync repositories during installation claim",
-			"integration_id", integration.ID,
-			"installation_id", installationID,
-			"error", err)
-	}
-
-	// Mark installation as claimed
-	orgUUID := integration.OrganizationID
-	userUUID := integration.UserID
-	if err := g.config.UnclaimedInstallationRepo.MarkAsClaimed(ctx, installationID, orgUUID, userUUID); err != nil {
-		slog.Error("failed to mark installation as claimed",
-			"installation_id", installationID,
-			"error", err)
-	}
-
-	return nil
 }

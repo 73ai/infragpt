@@ -7,15 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type UnclaimedInstallationRepository interface {
-	Create(ctx context.Context, installation UnclaimedInstallation) error
-	GetByInstallationID(ctx context.Context, installationID string) (UnclaimedInstallation, error)
-	MarkAsClaimed(ctx context.Context, installationID string, organizationID, userID uuid.UUID) error
-	DeleteExpired(ctx context.Context) error
-	List(ctx context.Context, limit int) ([]UnclaimedInstallation, error)
-	Delete(ctx context.Context, installationID string) error
-}
-
 type GitHubRepositoryRepository interface {
 	Store(ctx context.Context, repo GitHubRepository) error
 	ListByIntegrationID(ctx context.Context, integrationID uuid.UUID) ([]GitHubRepository, error)
@@ -24,33 +15,6 @@ type GitHubRepositoryRepository interface {
 	UpdatePermissions(ctx context.Context, integrationID uuid.UUID, repositoryID int64, permissions RepositoryPermissions) error
 	BulkDelete(ctx context.Context, integrationID uuid.UUID, repositoryIDs []int64) error
 	UpdateLastSyncTime(ctx context.Context, integrationID uuid.UUID, syncTime time.Time) error
-}
-
-type UnclaimedInstallation struct {
-	ID                      uuid.UUID
-	GitHubInstallationID    string
-	GitHubAppID             int64
-	GitHubAccountID         int64
-	GitHubAccountLogin      string
-	GitHubAccountType       string
-	RepositorySelection     string
-	Permissions             map[string]string
-	Events                  []string
-	AccessTokensURL         string
-	RepositoriesURL         string
-	HTMLURL                 string
-	AppSlug                 string
-	SuspendedAt             time.Time
-	SuspendedBy             map[string]any
-	WebhookSender           map[string]any
-	RawWebhookPayload       map[string]any
-	CreatedAt               time.Time
-	GitHubCreatedAt         time.Time
-	GitHubUpdatedAt         time.Time
-	ExpiresAt               time.Time
-	ClaimedAt               time.Time
-	ClaimedByOrganizationID uuid.UUID
-	ClaimedByUserID         uuid.UUID
 }
 
 type GitHubRepository struct {
