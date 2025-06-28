@@ -130,7 +130,7 @@ func (g *githubConnector) handleInstallationCreated(ctx context.Context, event *
 		"repository_count", len(event.Repositories))
 
 	// Store in unclaimed_installations table for later processing
-	unclaimedInstallation := &UnclaimedInstallation{
+	unclaimedInstallation := UnclaimedInstallation{
 		ID:                   uuid.New(),
 		GitHubInstallationID: event.Installation.ID,
 		GitHubAppID:          event.Installation.AppID,

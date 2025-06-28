@@ -20,7 +20,7 @@ func NewUnclaimedInstallationRepository(db *sql.DB) github.UnclaimedInstallation
 	return &unclaimedInstallationRepository{queries: New(db)}
 }
 
-func (r *unclaimedInstallationRepository) Create(ctx context.Context, installation *github.UnclaimedInstallation) error {
+func (r *unclaimedInstallationRepository) Create(ctx context.Context, installation github.UnclaimedInstallation) error {
 	permissionsJSON, err := json.Marshal(installation.Permissions)
 	if err != nil {
 		return fmt.Errorf("failed to marshal permissions: %w", err)
