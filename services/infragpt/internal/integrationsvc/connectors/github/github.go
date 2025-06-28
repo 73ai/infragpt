@@ -38,11 +38,8 @@ func (g *githubConnector) InitiateAuthorization(organizationID string, userID st
 
 	params := url.Values{}
 	params.Set("state", state)
-	if g.config.RedirectURL != "" {
-		params.Set("redirect_url", g.config.RedirectURL)
-	}
 
-	installURL := fmt.Sprintf("https://github.com/apps/%s/installations/new?%s", g.config.AppID, params.Encode())
+	installURL := fmt.Sprintf("https://github.com/apps/%s/installations/new?%s", g.config.AppName, params.Encode())
 
 	return infragpt.IntegrationAuthorizationIntent{
 		Type: infragpt.AuthorizationTypeInstallation,

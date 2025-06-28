@@ -10,6 +10,7 @@ import (
 
 type Config struct {
 	AppID         string `mapstructure:"app_id"`
+	AppName       string `mapstructure:"app_name"`
 	PrivateKey    string `mapstructure:"private_key"`
 	WebhookSecret string `mapstructure:"webhook_secret"`
 	RedirectURL   string `mapstructure:"redirect_url"`
