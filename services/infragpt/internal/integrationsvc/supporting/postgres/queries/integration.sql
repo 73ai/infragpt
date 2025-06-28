@@ -30,6 +30,22 @@ FROM integrations
 WHERE organization_id = $1 AND connector_type = $2
 ORDER BY created_at DESC;
 
+-- name: FindIntegrationsByOrganizationAndStatus :many
+SELECT id, organization_id, user_id, connector_type, status,
+       bot_id, connector_user_id, connector_organization_id,
+       metadata, created_at, updated_at, last_used_at
+FROM integrations
+WHERE organization_id = $1 AND status = $2
+ORDER BY created_at DESC;
+
+-- name: FindIntegrationsByOrganizationTypeAndStatus :many
+SELECT id, organization_id, user_id, connector_type, status,
+       bot_id, connector_user_id, connector_organization_id,
+       metadata, created_at, updated_at, last_used_at
+FROM integrations
+WHERE organization_id = $1 AND connector_type = $2 AND status = $3
+ORDER BY created_at DESC;
+
 -- name: UpdateIntegrationStatus :exec
 UPDATE integrations
 SET status = $2, updated_at = NOW()

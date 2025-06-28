@@ -23,7 +23,9 @@ type Querier interface {
 	FindIntegrationByBotIDAndType(ctx context.Context, arg FindIntegrationByBotIDAndTypeParams) (Integration, error)
 	FindIntegrationByID(ctx context.Context, id uuid.UUID) (Integration, error)
 	FindIntegrationsByOrganization(ctx context.Context, organizationID uuid.UUID) ([]Integration, error)
+	FindIntegrationsByOrganizationAndStatus(ctx context.Context, arg FindIntegrationsByOrganizationAndStatusParams) ([]Integration, error)
 	FindIntegrationsByOrganizationAndType(ctx context.Context, arg FindIntegrationsByOrganizationAndTypeParams) ([]Integration, error)
+	FindIntegrationsByOrganizationTypeAndStatus(ctx context.Context, arg FindIntegrationsByOrganizationTypeAndStatusParams) ([]Integration, error)
 	StoreCredential(ctx context.Context, arg StoreCredentialParams) error
 	StoreIntegration(ctx context.Context, arg StoreIntegrationParams) error
 	UpdateCredential(ctx context.Context, arg UpdateCredentialParams) error

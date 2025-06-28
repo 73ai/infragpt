@@ -115,6 +115,7 @@ type RevokeIntegrationCommand struct {
 type IntegrationsQuery struct {
 	OrganizationID uuid.UUID
 	ConnectorType  ConnectorType
+	Status         IntegrationStatus
 }
 
 type IntegrationQuery struct {

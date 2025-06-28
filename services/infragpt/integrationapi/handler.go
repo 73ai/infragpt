@@ -165,6 +165,7 @@ func (h *httpHandler) list() func(w http.ResponseWriter, r *http.Request) {
 
 		query := infragpt.IntegrationsQuery{
 			OrganizationID: organizationID,
+			Status:         infragpt.IntegrationStatusActive,
 		}
 
 		if req.ConnectorType != "" {

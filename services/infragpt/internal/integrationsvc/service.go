@@ -193,8 +193,16 @@ func (s *service) RevokeIntegration(ctx context.Context, cmd infragpt.RevokeInte
 }
 
 func (s *service) Integrations(ctx context.Context, query infragpt.IntegrationsQuery) ([]infragpt.Integration, error) {
+	if query.ConnectorType != "" && query.Status != "" {
+		return s.integrationRepository.FindByOrganizationTypeAndStatus(ctx, query.OrganizationID, query.ConnectorType, query.Status)
+	}
+
 	if query.ConnectorType != "" {
 		return s.integrationRepository.FindByOrganizationAndType(ctx, query.OrganizationID, query.ConnectorType)
+	}
+
+	if query.Status != "" {
+		return s.integrationRepository.FindByOrganizationAndStatus(ctx, query.OrganizationID, query.Status)
 	}
 
 	return s.integrationRepository.FindByOrganization(ctx, query.OrganizationID)

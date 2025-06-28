@@ -57,8 +57,14 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.findIntegrationsByOrganizationStmt, err = db.PrepareContext(ctx, findIntegrationsByOrganization); err != nil {
 		return nil, fmt.Errorf("error preparing query FindIntegrationsByOrganization: %w", err)
 	}
+	if q.findIntegrationsByOrganizationAndStatusStmt, err = db.PrepareContext(ctx, findIntegrationsByOrganizationAndStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query FindIntegrationsByOrganizationAndStatus: %w", err)
+	}
 	if q.findIntegrationsByOrganizationAndTypeStmt, err = db.PrepareContext(ctx, findIntegrationsByOrganizationAndType); err != nil {
 		return nil, fmt.Errorf("error preparing query FindIntegrationsByOrganizationAndType: %w", err)
+	}
+	if q.findIntegrationsByOrganizationTypeAndStatusStmt, err = db.PrepareContext(ctx, findIntegrationsByOrganizationTypeAndStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query FindIntegrationsByOrganizationTypeAndStatus: %w", err)
 	}
 	if q.storeCredentialStmt, err = db.PrepareContext(ctx, storeCredential); err != nil {
 		return nil, fmt.Errorf("error preparing query StoreCredential: %w", err)
@@ -150,9 +156,19 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing findIntegrationsByOrganizationStmt: %w", cerr)
 		}
 	}
+	if q.findIntegrationsByOrganizationAndStatusStmt != nil {
+		if cerr := q.findIntegrationsByOrganizationAndStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findIntegrationsByOrganizationAndStatusStmt: %w", cerr)
+		}
+	}
 	if q.findIntegrationsByOrganizationAndTypeStmt != nil {
 		if cerr := q.findIntegrationsByOrganizationAndTypeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing findIntegrationsByOrganizationAndTypeStmt: %w", cerr)
+		}
+	}
+	if q.findIntegrationsByOrganizationTypeAndStatusStmt != nil {
+		if cerr := q.findIntegrationsByOrganizationTypeAndStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findIntegrationsByOrganizationTypeAndStatusStmt: %w", cerr)
 		}
 	}
 	if q.storeCredentialStmt != nil {
@@ -242,30 +258,32 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                                        DBTX
-	tx                                        *sql.Tx
-	bulkDeleteGitHubRepositoriesStmt          *sql.Stmt
-	deleteCredentialStmt                      *sql.Stmt
-	deleteGitHubRepositoryByGitHubIDStmt      *sql.Stmt
-	deleteIntegrationStmt                     *sql.Stmt
-	findCredentialByIntegrationStmt           *sql.Stmt
-	findExpiringCredentialsStmt               *sql.Stmt
-	findGitHubRepositoriesByIntegrationIDStmt *sql.Stmt
-	findGitHubRepositoryByGitHubIDStmt        *sql.Stmt
-	findIntegrationByBotIDAndTypeStmt         *sql.Stmt
-	findIntegrationByIDStmt                   *sql.Stmt
-	findIntegrationsByOrganizationStmt        *sql.Stmt
-	findIntegrationsByOrganizationAndTypeStmt *sql.Stmt
-	storeCredentialStmt                       *sql.Stmt
-	storeIntegrationStmt                      *sql.Stmt
-	updateCredentialStmt                      *sql.Stmt
-	updateGitHubRepositoryLastSyncTimeStmt    *sql.Stmt
-	updateGitHubRepositoryPermissionsStmt     *sql.Stmt
-	updateIntegrationStmt                     *sql.Stmt
-	updateIntegrationLastUsedStmt             *sql.Stmt
-	updateIntegrationMetadataStmt             *sql.Stmt
-	updateIntegrationStatusStmt               *sql.Stmt
-	upsertGitHubRepositoryStmt                *sql.Stmt
+	db                                              DBTX
+	tx                                              *sql.Tx
+	bulkDeleteGitHubRepositoriesStmt                *sql.Stmt
+	deleteCredentialStmt                            *sql.Stmt
+	deleteGitHubRepositoryByGitHubIDStmt            *sql.Stmt
+	deleteIntegrationStmt                           *sql.Stmt
+	findCredentialByIntegrationStmt                 *sql.Stmt
+	findExpiringCredentialsStmt                     *sql.Stmt
+	findGitHubRepositoriesByIntegrationIDStmt       *sql.Stmt
+	findGitHubRepositoryByGitHubIDStmt              *sql.Stmt
+	findIntegrationByBotIDAndTypeStmt               *sql.Stmt
+	findIntegrationByIDStmt                         *sql.Stmt
+	findIntegrationsByOrganizationStmt              *sql.Stmt
+	findIntegrationsByOrganizationAndStatusStmt     *sql.Stmt
+	findIntegrationsByOrganizationAndTypeStmt       *sql.Stmt
+	findIntegrationsByOrganizationTypeAndStatusStmt *sql.Stmt
+	storeCredentialStmt                             *sql.Stmt
+	storeIntegrationStmt                            *sql.Stmt
+	updateCredentialStmt                            *sql.Stmt
+	updateGitHubRepositoryLastSyncTimeStmt          *sql.Stmt
+	updateGitHubRepositoryPermissionsStmt           *sql.Stmt
+	updateIntegrationStmt                           *sql.Stmt
+	updateIntegrationLastUsedStmt                   *sql.Stmt
+	updateIntegrationMetadataStmt                   *sql.Stmt
+	updateIntegrationStatusStmt                     *sql.Stmt
+	upsertGitHubRepositoryStmt                      *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -278,21 +296,23 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		deleteIntegrationStmt:                q.deleteIntegrationStmt,
 		findCredentialByIntegrationStmt:      q.findCredentialByIntegrationStmt,
 		findExpiringCredentialsStmt:          q.findExpiringCredentialsStmt,
-		findGitHubRepositoriesByIntegrationIDStmt: q.findGitHubRepositoriesByIntegrationIDStmt,
-		findGitHubRepositoryByGitHubIDStmt:        q.findGitHubRepositoryByGitHubIDStmt,
-		findIntegrationByBotIDAndTypeStmt:         q.findIntegrationByBotIDAndTypeStmt,
-		findIntegrationByIDStmt:                   q.findIntegrationByIDStmt,
-		findIntegrationsByOrganizationStmt:        q.findIntegrationsByOrganizationStmt,
-		findIntegrationsByOrganizationAndTypeStmt: q.findIntegrationsByOrganizationAndTypeStmt,
-		storeCredentialStmt:                       q.storeCredentialStmt,
-		storeIntegrationStmt:                      q.storeIntegrationStmt,
-		updateCredentialStmt:                      q.updateCredentialStmt,
-		updateGitHubRepositoryLastSyncTimeStmt:    q.updateGitHubRepositoryLastSyncTimeStmt,
-		updateGitHubRepositoryPermissionsStmt:     q.updateGitHubRepositoryPermissionsStmt,
-		updateIntegrationStmt:                     q.updateIntegrationStmt,
-		updateIntegrationLastUsedStmt:             q.updateIntegrationLastUsedStmt,
-		updateIntegrationMetadataStmt:             q.updateIntegrationMetadataStmt,
-		updateIntegrationStatusStmt:               q.updateIntegrationStatusStmt,
-		upsertGitHubRepositoryStmt:                q.upsertGitHubRepositoryStmt,
+		findGitHubRepositoriesByIntegrationIDStmt:       q.findGitHubRepositoriesByIntegrationIDStmt,
+		findGitHubRepositoryByGitHubIDStmt:              q.findGitHubRepositoryByGitHubIDStmt,
+		findIntegrationByBotIDAndTypeStmt:               q.findIntegrationByBotIDAndTypeStmt,
+		findIntegrationByIDStmt:                         q.findIntegrationByIDStmt,
+		findIntegrationsByOrganizationStmt:              q.findIntegrationsByOrganizationStmt,
+		findIntegrationsByOrganizationAndStatusStmt:     q.findIntegrationsByOrganizationAndStatusStmt,
+		findIntegrationsByOrganizationAndTypeStmt:       q.findIntegrationsByOrganizationAndTypeStmt,
+		findIntegrationsByOrganizationTypeAndStatusStmt: q.findIntegrationsByOrganizationTypeAndStatusStmt,
+		storeCredentialStmt:                             q.storeCredentialStmt,
+		storeIntegrationStmt:                            q.storeIntegrationStmt,
+		updateCredentialStmt:                            q.updateCredentialStmt,
+		updateGitHubRepositoryLastSyncTimeStmt:          q.updateGitHubRepositoryLastSyncTimeStmt,
+		updateGitHubRepositoryPermissionsStmt:           q.updateGitHubRepositoryPermissionsStmt,
+		updateIntegrationStmt:                           q.updateIntegrationStmt,
+		updateIntegrationLastUsedStmt:                   q.updateIntegrationLastUsedStmt,
+		updateIntegrationMetadataStmt:                   q.updateIntegrationMetadataStmt,
+		updateIntegrationStatusStmt:                     q.updateIntegrationStatusStmt,
+		upsertGitHubRepositoryStmt:                      q.upsertGitHubRepositoryStmt,
 	}
 }

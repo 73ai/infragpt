@@ -130,6 +130,56 @@ func (q *Queries) FindIntegrationsByOrganization(ctx context.Context, organizati
 	return items, nil
 }
 
+const findIntegrationsByOrganizationAndStatus = `-- name: FindIntegrationsByOrganizationAndStatus :many
+SELECT id, organization_id, user_id, connector_type, status,
+       bot_id, connector_user_id, connector_organization_id,
+       metadata, created_at, updated_at, last_used_at
+FROM integrations
+WHERE organization_id = $1 AND status = $2
+ORDER BY created_at DESC
+`
+
+type FindIntegrationsByOrganizationAndStatusParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Status         string    `json:"status"`
+}
+
+func (q *Queries) FindIntegrationsByOrganizationAndStatus(ctx context.Context, arg FindIntegrationsByOrganizationAndStatusParams) ([]Integration, error) {
+	rows, err := q.query(ctx, q.findIntegrationsByOrganizationAndStatusStmt, findIntegrationsByOrganizationAndStatus, arg.OrganizationID, arg.Status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Integration
+	for rows.Next() {
+		var i Integration
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.UserID,
+			&i.ConnectorType,
+			&i.Status,
+			&i.BotID,
+			&i.ConnectorUserID,
+			&i.ConnectorOrganizationID,
+			&i.Metadata,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.LastUsedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findIntegrationsByOrganizationAndType = `-- name: FindIntegrationsByOrganizationAndType :many
 SELECT id, organization_id, user_id, connector_type, status,
        bot_id, connector_user_id, connector_organization_id,
@@ -146,6 +196,57 @@ type FindIntegrationsByOrganizationAndTypeParams struct {
 
 func (q *Queries) FindIntegrationsByOrganizationAndType(ctx context.Context, arg FindIntegrationsByOrganizationAndTypeParams) ([]Integration, error) {
 	rows, err := q.query(ctx, q.findIntegrationsByOrganizationAndTypeStmt, findIntegrationsByOrganizationAndType, arg.OrganizationID, arg.ConnectorType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Integration
+	for rows.Next() {
+		var i Integration
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.UserID,
+			&i.ConnectorType,
+			&i.Status,
+			&i.BotID,
+			&i.ConnectorUserID,
+			&i.ConnectorOrganizationID,
+			&i.Metadata,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.LastUsedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findIntegrationsByOrganizationTypeAndStatus = `-- name: FindIntegrationsByOrganizationTypeAndStatus :many
+SELECT id, organization_id, user_id, connector_type, status,
+       bot_id, connector_user_id, connector_organization_id,
+       metadata, created_at, updated_at, last_used_at
+FROM integrations
+WHERE organization_id = $1 AND connector_type = $2 AND status = $3
+ORDER BY created_at DESC
+`
+
+type FindIntegrationsByOrganizationTypeAndStatusParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ConnectorType  string    `json:"connector_type"`
+	Status         string    `json:"status"`
+}
+
+func (q *Queries) FindIntegrationsByOrganizationTypeAndStatus(ctx context.Context, arg FindIntegrationsByOrganizationTypeAndStatusParams) ([]Integration, error) {
+	rows, err := q.query(ctx, q.findIntegrationsByOrganizationTypeAndStatusStmt, findIntegrationsByOrganizationTypeAndStatus, arg.OrganizationID, arg.ConnectorType, arg.Status)
 	if err != nil {
 		return nil, err
 	}

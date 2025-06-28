@@ -168,6 +168,49 @@ func (r *integrationRepository) FindByOrganizationAndType(ctx context.Context, o
 	return integrations, nil
 }
 
+func (r *integrationRepository) FindByOrganizationAndStatus(ctx context.Context, orgID uuid.UUID, status infragpt.IntegrationStatus) ([]infragpt.Integration, error) {
+	dbIntegrations, err := r.queries.FindIntegrationsByOrganizationAndStatus(ctx, FindIntegrationsByOrganizationAndStatusParams{
+		OrganizationID: orgID,
+		Status:         string(status),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to find integrations: %w", err)
+	}
+
+	integrations := make([]infragpt.Integration, len(dbIntegrations))
+	for i, dbIntegration := range dbIntegrations {
+		integration, err := r.toSpecIntegration(dbIntegration)
+		if err != nil {
+			return nil, fmt.Errorf("failed to map integration: %w", err)
+		}
+		integrations[i] = integration
+	}
+
+	return integrations, nil
+}
+
+func (r *integrationRepository) FindByOrganizationTypeAndStatus(ctx context.Context, orgID uuid.UUID, connectorType infragpt.ConnectorType, status infragpt.IntegrationStatus) ([]infragpt.Integration, error) {
+	dbIntegrations, err := r.queries.FindIntegrationsByOrganizationTypeAndStatus(ctx, FindIntegrationsByOrganizationTypeAndStatusParams{
+		OrganizationID: orgID,
+		ConnectorType:  string(connectorType),
+		Status:         string(status),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to find integrations: %w", err)
+	}
+
+	integrations := make([]infragpt.Integration, len(dbIntegrations))
+	for i, dbIntegration := range dbIntegrations {
+		integration, err := r.toSpecIntegration(dbIntegration)
+		if err != nil {
+			return nil, fmt.Errorf("failed to map integration: %w", err)
+		}
+		integrations[i] = integration
+	}
+
+	return integrations, nil
+}
+
 func (r *integrationRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status infragpt.IntegrationStatus) error {
 	return r.queries.UpdateIntegrationStatus(ctx, UpdateIntegrationStatusParams{
 		ID:     id,
