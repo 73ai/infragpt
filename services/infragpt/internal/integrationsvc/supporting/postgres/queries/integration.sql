@@ -50,3 +50,8 @@ SELECT id, organization_id, user_id, connector_type, status,
        metadata, created_at, updated_at, last_used_at
 FROM integrations
 WHERE bot_id = $1 AND connector_type = $2;
+
+-- name: UpdateIntegrationMetadata :exec
+UPDATE integrations
+SET metadata = $2, updated_at = NOW()
+WHERE id = $1;

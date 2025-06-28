@@ -169,6 +169,29 @@ func (r *integrationRepository) UpdateLastUsed(ctx context.Context, id string) e
 	return r.queries.UpdateIntegrationLastUsed(ctx, integrationID)
 }
 
+func (r *integrationRepository) UpdateMetadata(ctx context.Context, id string, metadata map[string]string) error {
+	integrationID, err := uuid.Parse(id)
+	if err != nil {
+		return fmt.Errorf("invalid integration ID: %w", err)
+	}
+
+	// Convert metadata to map[string]any for JSON marshaling
+	metadataMap := make(map[string]any)
+	for k, v := range metadata {
+		metadataMap[k] = v
+	}
+
+	metadataJSON, err := json.Marshal(metadataMap)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	return r.queries.UpdateIntegrationMetadata(ctx, UpdateIntegrationMetadataParams{
+		ID:       integrationID,
+		Metadata: pqtype.NullRawMessage{RawMessage: metadataJSON, Valid: true},
+	})
+}
+
 func (r *integrationRepository) Delete(ctx context.Context, id string) error {
 	integrationID, err := uuid.Parse(id)
 	if err != nil {

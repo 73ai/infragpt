@@ -14,5 +14,6 @@ type IntegrationRepository interface {
 	FindByBotIDAndType(ctx context.Context, botID string, connectorType infragpt.ConnectorType) (infragpt.Integration, error)
 	UpdateStatus(ctx context.Context, id string, status infragpt.IntegrationStatus) error
 	UpdateLastUsed(ctx context.Context, id string) error
+	UpdateMetadata(ctx context.Context, id string, metadata map[string]string) error
 	Delete(ctx context.Context, id string) error
 }

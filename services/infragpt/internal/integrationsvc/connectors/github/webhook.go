@@ -263,8 +263,40 @@ func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event In
 		return nil
 	}
 
-	// TODO: Update permissions in database
-	// TODO: Sync repository access based on new permissions
+	// Find integration by GitHub installation ID
+	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			slog.Debug("integration not found for permissions update",
+				"installation_id", event.Installation.ID)
+			return nil // Not an error if integration doesn't exist
+		}
+		return fmt.Errorf("failed to find integration for permissions update %d: %w", event.Installation.ID, err)
+	}
+
+	// Prepare updated metadata with new permissions
+	updatedMetadata := make(map[string]string)
+	// Copy existing metadata
+	for k, v := range integration.Metadata {
+		updatedMetadata[k] = v
+	}
+
+	// Convert permissions map to string values and update metadata
+	for permission, access := range event.Installation.Permissions {
+		updatedMetadata["permission_"+permission] = access
+	}
+
+	// Update integration metadata with new permissions
+	if err := g.config.IntegrationRepository.UpdateMetadata(ctx, integration.ID, updatedMetadata); err != nil {
+		return fmt.Errorf("failed to update integration metadata for installation %d: %w", event.Installation.ID, err)
+	}
+
+	slog.Info("GitHub integration permissions updated successfully",
+		"installation_id", event.Installation.ID,
+		"integration_id", integration.ID,
+		"organization_id", integration.OrganizationID,
+		"permissions_count", len(event.Installation.Permissions))
 
 	return nil
 }

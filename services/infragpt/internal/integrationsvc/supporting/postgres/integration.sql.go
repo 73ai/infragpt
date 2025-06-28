@@ -234,6 +234,22 @@ func (q *Queries) UpdateIntegrationLastUsed(ctx context.Context, id uuid.UUID) e
 	return err
 }
 
+const updateIntegrationMetadata = `-- name: UpdateIntegrationMetadata :exec
+UPDATE integrations
+SET metadata = $2, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateIntegrationMetadataParams struct {
+	ID       uuid.UUID             `json:"id"`
+	Metadata pqtype.NullRawMessage `json:"metadata"`
+}
+
+func (q *Queries) UpdateIntegrationMetadata(ctx context.Context, arg UpdateIntegrationMetadataParams) error {
+	_, err := q.exec(ctx, q.updateIntegrationMetadataStmt, updateIntegrationMetadata, arg.ID, arg.Metadata)
+	return err
+}
+
 const updateIntegrationStatus = `-- name: UpdateIntegrationStatus :exec
 UPDATE integrations
 SET status = $2, updated_at = NOW()

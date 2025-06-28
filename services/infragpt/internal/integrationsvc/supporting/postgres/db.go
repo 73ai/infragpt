@@ -96,6 +96,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateIntegrationLastUsedStmt, err = db.PrepareContext(ctx, updateIntegrationLastUsed); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateIntegrationLastUsed: %w", err)
 	}
+	if q.updateIntegrationMetadataStmt, err = db.PrepareContext(ctx, updateIntegrationMetadata); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateIntegrationMetadata: %w", err)
+	}
 	if q.updateIntegrationStatusStmt, err = db.PrepareContext(ctx, updateIntegrationStatus); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateIntegrationStatus: %w", err)
 	}
@@ -227,6 +230,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateIntegrationLastUsedStmt: %w", cerr)
 		}
 	}
+	if q.updateIntegrationMetadataStmt != nil {
+		if cerr := q.updateIntegrationMetadataStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateIntegrationMetadataStmt: %w", cerr)
+		}
+	}
 	if q.updateIntegrationStatusStmt != nil {
 		if cerr := q.updateIntegrationStatusStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateIntegrationStatusStmt: %w", cerr)
@@ -300,6 +308,7 @@ type Queries struct {
 	updateGitHubRepositoryLastSyncTimeStmt        *sql.Stmt
 	updateGitHubRepositoryPermissionsStmt         *sql.Stmt
 	updateIntegrationLastUsedStmt                 *sql.Stmt
+	updateIntegrationMetadataStmt                 *sql.Stmt
 	updateIntegrationStatusStmt                   *sql.Stmt
 	upsertGitHubRepositoryStmt                    *sql.Stmt
 }
@@ -332,6 +341,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		updateGitHubRepositoryLastSyncTimeStmt:        q.updateGitHubRepositoryLastSyncTimeStmt,
 		updateGitHubRepositoryPermissionsStmt:         q.updateGitHubRepositoryPermissionsStmt,
 		updateIntegrationLastUsedStmt:                 q.updateIntegrationLastUsedStmt,
+		updateIntegrationMetadataStmt:                 q.updateIntegrationMetadataStmt,
 		updateIntegrationStatusStmt:                   q.updateIntegrationStatusStmt,
 		upsertGitHubRepositoryStmt:                    q.upsertGitHubRepositoryStmt,
 	}
