@@ -22,6 +22,7 @@ type Querier interface {
 	FindExpiringCredentials(ctx context.Context, expiresAt sql.NullTime) ([]IntegrationCredential, error)
 	FindGitHubRepositoriesByIntegrationID(ctx context.Context, integrationID uuid.UUID) ([]GithubRepository, error)
 	FindGitHubRepositoryByGitHubID(ctx context.Context, arg FindGitHubRepositoryByGitHubIDParams) (GithubRepository, error)
+	FindIntegrationByBotIDAndType(ctx context.Context, arg FindIntegrationByBotIDAndTypeParams) (Integration, error)
 	FindIntegrationByID(ctx context.Context, id uuid.UUID) (Integration, error)
 	FindIntegrationsByOrganization(ctx context.Context, organizationID uuid.UUID) ([]Integration, error)
 	FindIntegrationsByOrganizationAndType(ctx context.Context, arg FindIntegrationsByOrganizationAndTypeParams) ([]Integration, error)

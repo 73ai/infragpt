@@ -54,6 +54,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.findGitHubRepositoryByGitHubIDStmt, err = db.PrepareContext(ctx, findGitHubRepositoryByGitHubID); err != nil {
 		return nil, fmt.Errorf("error preparing query FindGitHubRepositoryByGitHubID: %w", err)
 	}
+	if q.findIntegrationByBotIDAndTypeStmt, err = db.PrepareContext(ctx, findIntegrationByBotIDAndType); err != nil {
+		return nil, fmt.Errorf("error preparing query FindIntegrationByBotIDAndType: %w", err)
+	}
 	if q.findIntegrationByIDStmt, err = db.PrepareContext(ctx, findIntegrationByID); err != nil {
 		return nil, fmt.Errorf("error preparing query FindIntegrationByID: %w", err)
 	}
@@ -152,6 +155,11 @@ func (q *Queries) Close() error {
 	if q.findGitHubRepositoryByGitHubIDStmt != nil {
 		if cerr := q.findGitHubRepositoryByGitHubIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing findGitHubRepositoryByGitHubIDStmt: %w", cerr)
+		}
+	}
+	if q.findIntegrationByBotIDAndTypeStmt != nil {
+		if cerr := q.findIntegrationByBotIDAndTypeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findIntegrationByBotIDAndTypeStmt: %w", cerr)
 		}
 	}
 	if q.findIntegrationByIDStmt != nil {
@@ -278,6 +286,7 @@ type Queries struct {
 	findExpiringCredentialsStmt                   *sql.Stmt
 	findGitHubRepositoriesByIntegrationIDStmt     *sql.Stmt
 	findGitHubRepositoryByGitHubIDStmt            *sql.Stmt
+	findIntegrationByBotIDAndTypeStmt             *sql.Stmt
 	findIntegrationByIDStmt                       *sql.Stmt
 	findIntegrationsByOrganizationStmt            *sql.Stmt
 	findIntegrationsByOrganizationAndTypeStmt     *sql.Stmt
@@ -309,6 +318,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		findExpiringCredentialsStmt:                   q.findExpiringCredentialsStmt,
 		findGitHubRepositoriesByIntegrationIDStmt:     q.findGitHubRepositoriesByIntegrationIDStmt,
 		findGitHubRepositoryByGitHubIDStmt:            q.findGitHubRepositoryByGitHubIDStmt,
+		findIntegrationByBotIDAndTypeStmt:             q.findIntegrationByBotIDAndTypeStmt,
 		findIntegrationByIDStmt:                       q.findIntegrationByIDStmt,
 		findIntegrationsByOrganizationStmt:            q.findIntegrationsByOrganizationStmt,
 		findIntegrationsByOrganizationAndTypeStmt:     q.findIntegrationsByOrganizationAndTypeStmt,

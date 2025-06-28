@@ -96,7 +96,7 @@ func (r *integrationRepository) FindByID(ctx context.Context, id string) (infrag
 		return infragpt.Integration{}, fmt.Errorf("failed to find integration: %w", err)
 	}
 
-	return r.mapToIntegration(dbIntegration)
+	return r.toSpecIntegration(dbIntegration)
 }
 
 func (r *integrationRepository) FindByOrganization(ctx context.Context, orgID string) ([]infragpt.Integration, error) {
@@ -112,7 +112,7 @@ func (r *integrationRepository) FindByOrganization(ctx context.Context, orgID st
 
 	integrations := make([]infragpt.Integration, len(dbIntegrations))
 	for i, dbIntegration := range dbIntegrations {
-		integration, err := r.mapToIntegration(dbIntegration)
+		integration, err := r.toSpecIntegration(dbIntegration)
 		if err != nil {
 			return nil, fmt.Errorf("failed to map integration: %w", err)
 		}
@@ -138,7 +138,7 @@ func (r *integrationRepository) FindByOrganizationAndType(ctx context.Context, o
 
 	integrations := make([]infragpt.Integration, len(dbIntegrations))
 	for i, dbIntegration := range dbIntegrations {
-		integration, err := r.mapToIntegration(dbIntegration)
+		integration, err := r.toSpecIntegration(dbIntegration)
 		if err != nil {
 			return nil, fmt.Errorf("failed to map integration: %w", err)
 		}
@@ -178,7 +178,19 @@ func (r *integrationRepository) Delete(ctx context.Context, id string) error {
 	return r.queries.DeleteIntegration(ctx, integrationID)
 }
 
-func (r *integrationRepository) mapToIntegration(dbIntegration Integration) (infragpt.Integration, error) {
+func (r *integrationRepository) FindByBotIDAndType(ctx context.Context, botID string, connectorType infragpt.ConnectorType) (infragpt.Integration, error) {
+	dbIntegration, err := r.queries.FindIntegrationByBotIDAndType(ctx, FindIntegrationByBotIDAndTypeParams{
+		BotID:         sql.NullString{String: botID, Valid: true},
+		ConnectorType: string(connectorType),
+	})
+	if err != nil {
+		return infragpt.Integration{}, fmt.Errorf("failed to find integration by bot ID: %w", err)
+	}
+
+	return r.toSpecIntegration(dbIntegration)
+}
+
+func (r *integrationRepository) toSpecIntegration(dbIntegration Integration) (infragpt.Integration, error) {
 	metadata := make(map[string]string)
 	if dbIntegration.Metadata.Valid {
 		var metadataMap map[string]any

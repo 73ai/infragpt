@@ -334,6 +334,7 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 		UserID:                  userID,
 		ConnectorType:           infragpt.ConnectorTypeGithub,
 		Status:                  infragpt.IntegrationStatusActive,
+		BotID:                   strconv.FormatInt(installationID, 10),
 		ConnectorUserID:         unclaimed.GitHubAccountLogin,
 		ConnectorOrganizationID: connectorOrgID,
 		Metadata: map[string]string{

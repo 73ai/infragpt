@@ -24,6 +24,39 @@ func (q *Queries) DeleteIntegration(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const findIntegrationByBotIDAndType = `-- name: FindIntegrationByBotIDAndType :one
+SELECT id, organization_id, user_id, connector_type, status,
+       bot_id, connector_user_id, connector_organization_id,
+       metadata, created_at, updated_at, last_used_at
+FROM integrations
+WHERE bot_id = $1 AND connector_type = $2
+`
+
+type FindIntegrationByBotIDAndTypeParams struct {
+	BotID         sql.NullString `json:"bot_id"`
+	ConnectorType string         `json:"connector_type"`
+}
+
+func (q *Queries) FindIntegrationByBotIDAndType(ctx context.Context, arg FindIntegrationByBotIDAndTypeParams) (Integration, error) {
+	row := q.queryRow(ctx, q.findIntegrationByBotIDAndTypeStmt, findIntegrationByBotIDAndType, arg.BotID, arg.ConnectorType)
+	var i Integration
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.UserID,
+		&i.ConnectorType,
+		&i.Status,
+		&i.BotID,
+		&i.ConnectorUserID,
+		&i.ConnectorOrganizationID,
+		&i.Metadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastUsedAt,
+	)
+	return i, err
+}
+
 const findIntegrationByID = `-- name: FindIntegrationByID :one
 SELECT id, organization_id, user_id, connector_type, status,
        bot_id, connector_user_id, connector_organization_id,

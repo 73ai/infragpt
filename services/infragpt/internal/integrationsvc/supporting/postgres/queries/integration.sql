@@ -43,3 +43,10 @@ WHERE id = $1;
 -- name: DeleteIntegration :exec
 DELETE FROM integrations
 WHERE id = $1;
+
+-- name: FindIntegrationByBotIDAndType :one
+SELECT id, organization_id, user_id, connector_type, status,
+       bot_id, connector_user_id, connector_organization_id,
+       metadata, created_at, updated_at, last_used_at
+FROM integrations
+WHERE bot_id = $1 AND connector_type = $2;

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,10 +12,12 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/priyanshujain/infragpt/services/infragpt"
 )
 
 func (g *githubConnector) ValidateWebhookSignature(payload []byte, signature string, secret string) error {
@@ -293,11 +296,28 @@ func (g *githubConnector) handleRepositoriesRemoved(ctx context.Context, event *
 }
 
 func (g *githubConnector) findIntegrationIDByInstallationID(ctx context.Context, installationID int64) (uuid.UUID, error) {
-	// TODO: This needs to be fixed with a proper search method that can find integrations by installation ID
-	// across all organizations, or we need organization context in webhook events
-	slog.Debug("findIntegrationIDByInstallationID not implemented - repository events will be skipped",
-		"installation_id", installationID)
-	return uuid.Nil, nil // Not found
+	botID := strconv.FormatInt(installationID, 10)
+	
+	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, botID, infragpt.ConnectorTypeGithub)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			slog.Debug("integration not found for installation ID", "installation_id", installationID)
+			return uuid.Nil, nil // Not found, but not an error
+		}
+		return uuid.Nil, fmt.Errorf("failed to find integration by installation ID: %w", err)
+	}
+	
+	integrationUUID, err := uuid.Parse(integration.ID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid integration ID format: %w", err)
+	}
+	
+	slog.Debug("found integration for installation ID", 
+		"installation_id", installationID,
+		"integration_id", integration.ID,
+		"organization_id", integration.OrganizationID)
+	
+	return integrationUUID, nil
 }
 
 func convertUserToMap(user *User) map[string]any {
