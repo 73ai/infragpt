@@ -19,19 +19,21 @@ type Config struct {
 
 func (c Config) NewConnector() domain.Connector {
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(c.PrivateKey))
-	if err != nil {
-		// Return a connector with nil private key that will fail during JWT generation
-		// This allows the error to be handled at runtime rather than during initialization
-		return &githubConnector{
-			config:     c,
-			client:     &http.Client{Timeout: 30 * time.Second},
-			privateKey: nil,
-		}
-	}
-
-	return &githubConnector{
+	
+	connector := &githubConnector{
 		config:     c,
 		client:     &http.Client{Timeout: 30 * time.Second},
 		privateKey: privateKey,
 	}
+	
+	// Initialize repository service with the connector
+	connector.repositoryService = NewRepositoryService(connector)
+	
+	if err != nil {
+		// Return a connector with nil private key that will fail during JWT generation
+		// This allows the error to be handled at runtime rather than during initialization
+		connector.privateKey = nil
+	}
+
+	return connector
 }

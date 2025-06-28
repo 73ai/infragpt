@@ -139,6 +139,135 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 	return integration, nil
 }
 
+func (s *service) ConfigureIntegration(ctx context.Context, cmd infragpt.ConfigureIntegrationCommand) (infragpt.Integration, error) {
+	// This method handles the case where a user is redirected back from GitHub
+	// after installing the app and needs to claim the installation
+	
+	slog.Info("configuring integration",
+		"organization_id", cmd.OrganizationID,
+		"user_id", cmd.UserID,
+		"connector_type", cmd.ConnectorType,
+		"installation_id", cmd.InstallationID)
+
+	// Validate that organization ID and user ID are valid UUIDs
+	if _, err := uuid.Parse(cmd.OrganizationID); err != nil {
+		return infragpt.Integration{}, fmt.Errorf("invalid organization ID: %w", err)
+	}
+	if _, err := uuid.Parse(cmd.UserID); err != nil {
+		return infragpt.Integration{}, fmt.Errorf("invalid user ID: %w", err)
+	}
+
+	// Check if integration already exists for this org and connector type
+	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, cmd.OrganizationID, cmd.ConnectorType)
+	if err != nil {
+		return infragpt.Integration{}, fmt.Errorf("failed to check existing integrations: %w", err)
+	}
+
+	if len(existingIntegrations) > 0 {
+		return infragpt.Integration{}, fmt.Errorf("integration already exists for connector type %s in organization %s", cmd.ConnectorType, cmd.OrganizationID)
+	}
+
+	connector, exists := s.connectors[cmd.ConnectorType]
+	if !exists {
+		return infragpt.Integration{}, fmt.Errorf("unsupported connector type: %s", cmd.ConnectorType)
+	}
+
+	// For GitHub, we need to handle the installation claiming process
+	if cmd.ConnectorType == infragpt.ConnectorTypeGithub {
+		return s.configureGitHubIntegration(ctx, cmd, connector)
+	}
+
+	return infragpt.Integration{}, fmt.Errorf("configure integration not implemented for connector type: %s", cmd.ConnectorType)
+}
+
+func (s *service) configureGitHubIntegration(ctx context.Context, cmd infragpt.ConfigureIntegrationCommand, connector domain.Connector) (infragpt.Integration, error) {
+	// For now, just use the connector interface without accessing private fields
+	// In a full implementation, we would add methods to access the repository service
+	// or pass it as a separate parameter
+	
+	slog.Debug("configuring GitHub integration via connector interface")
+
+	// TODO: Get the repository service from the GitHub connector
+	// This requires making the repositoryService field accessible or adding a getter method
+	
+	// For now, simulate the process without the actual database operations
+	slog.Info("GitHub integration configuration started",
+		"installation_id", cmd.InstallationID,
+		"organization_id", cmd.OrganizationID)
+
+	// Create mock credentials for the installation
+	// In a real implementation, this would:
+	// 1. Check if unclaimed installation exists
+	// 2. Generate installation access token
+	// 3. Get installation details from GitHub API
+	// 4. Create integration and credentials records
+	// 5. Sync repositories
+	// 6. Mark unclaimed installation as claimed
+
+	authData := infragpt.AuthorizationData{
+		InstallationID: cmd.InstallationID,
+	}
+
+	credentials, err := connector.CompleteAuthorization(authData)
+	if err != nil {
+		return infragpt.Integration{}, fmt.Errorf("failed to complete GitHub authorization: %w", err)
+	}
+
+	now := time.Now()
+	integration := infragpt.Integration{
+		ID:             uuid.New().String(),
+		OrganizationID: cmd.OrganizationID,
+		UserID:         cmd.UserID,
+		ConnectorType:  cmd.ConnectorType,
+		Status:         infragpt.IntegrationStatusActive,
+		BotID:          cmd.InstallationID,
+		Metadata:       make(map[string]string),
+		CreatedAt:      now,
+		UpdatedAt:      now,
+		LastUsedAt:     &now,
+	}
+
+	// Store connector organization info
+	if credentials.OrganizationInfo != nil {
+		integration.ConnectorOrganizationID = credentials.OrganizationInfo.ExternalID
+		integration.Metadata["connector_org_name"] = credentials.OrganizationInfo.Name
+		for k, v := range credentials.OrganizationInfo.Metadata {
+			integration.Metadata[k] = v
+		}
+	}
+
+	// Store integration
+	if err := s.integrationRepository.Store(ctx, integration); err != nil {
+		return infragpt.Integration{}, fmt.Errorf("failed to store integration: %w", err)
+	}
+
+	// Store credentials
+	credentialRecord := domain.IntegrationCredential{
+		ID:              uuid.New().String(),
+		IntegrationID:   integration.ID,
+		CredentialType:  credentials.Type,
+		Data:            credentials.Data,
+		ExpiresAt:       credentials.ExpiresAt,
+		EncryptionKeyID: "v1",
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+
+	if err := s.credentialRepository.Store(ctx, credentialRecord); err != nil {
+		return infragpt.Integration{}, fmt.Errorf("failed to store credentials: %w", err)
+	}
+
+	// TODO: Sync repositories using repository service
+	// githubConnector.repositoryService.SyncRepositories(ctx, integration.ID, installationID)
+
+	slog.Info("GitHub integration configured successfully",
+		"integration_id", integration.ID,
+		"installation_id", cmd.InstallationID,
+		"organization_id", cmd.OrganizationID)
+
+	return integration, nil
+}
+
 func (s *service) RevokeIntegration(ctx context.Context, cmd infragpt.RevokeIntegrationCommand) error {
 	integration, err := s.integrationRepository.FindByID(ctx, cmd.IntegrationID)
 	if err != nil {

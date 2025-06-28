@@ -19,6 +19,7 @@ type httpHandler struct {
 func (h *httpHandler) init() {
 	h.HandleFunc("/integrations/initiate/", h.initiate())
 	h.HandleFunc("/integrations/authorize/", h.authorize())
+	h.HandleFunc("/integrations/configure/", h.configure())
 	h.HandleFunc("/integrations/list/", h.list())
 	h.HandleFunc("/integrations/revoke/", h.revoke())
 	h.HandleFunc("/integrations/refresh/", h.refresh())
@@ -277,6 +278,67 @@ func (h *httpHandler) status() func(w http.ResponseWriter, r *http.Request) {
 			CreatedAt:               integration.CreatedAt.Format(time.RFC3339),
 			UpdatedAt:               integration.UpdatedAt.Format(time.RFC3339),
 			HealthStatus:            healthStatus,
+		}
+
+		if integration.LastUsedAt != nil {
+			resp.LastUsedAt = integration.LastUsedAt.Format(time.RFC3339)
+		}
+
+		return resp, nil
+	})
+}
+
+func (h *httpHandler) configure() func(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		OrganizationID  string `json:"organization_id"`
+		UserID          string `json:"user_id"`
+		ConnectorType   string `json:"connector_type"`
+		InstallationID  string `json:"installation_id"`
+		SetupAction     string `json:"setup_action,omitempty"`
+	}
+	type response struct {
+		ID                      string            `json:"id"`
+		OrganizationID          string            `json:"organization_id"`
+		UserID                  string            `json:"user_id"`
+		ConnectorType           string            `json:"connector_type"`
+		Status                  string            `json:"status"`
+		BotID                   string            `json:"bot_id,omitempty"`
+		ConnectorUserID         string            `json:"connector_user_id,omitempty"`
+		ConnectorOrganizationID string            `json:"connector_organization_id,omitempty"`
+		Metadata                map[string]string `json:"metadata"`
+		CreatedAt               string            `json:"created_at"`
+		UpdatedAt               string            `json:"updated_at"`
+		LastUsedAt              string            `json:"last_used_at,omitempty"`
+		Message                 string            `json:"message,omitempty"`
+	}
+
+	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
+		cmd := infragpt.ConfigureIntegrationCommand{
+			OrganizationID: req.OrganizationID,
+			UserID:         req.UserID,
+			ConnectorType:  infragpt.ConnectorType(req.ConnectorType),
+			InstallationID: req.InstallationID,
+			SetupAction:    req.SetupAction,
+		}
+
+		integration, err := h.svc.ConfigureIntegration(ctx, cmd)
+		if err != nil {
+			return response{}, err
+		}
+
+		resp := response{
+			ID:                      integration.ID,
+			OrganizationID:          integration.OrganizationID,
+			UserID:                  integration.UserID,
+			ConnectorType:           string(integration.ConnectorType),
+			Status:                  string(integration.Status),
+			BotID:                   integration.BotID,
+			ConnectorUserID:         integration.ConnectorUserID,
+			ConnectorOrganizationID: integration.ConnectorOrganizationID,
+			Metadata:                integration.Metadata,
+			CreatedAt:               integration.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:               integration.UpdatedAt.Format(time.RFC3339),
+			Message:                 "Integration configured successfully",
 		}
 
 		if integration.LastUsedAt != nil {

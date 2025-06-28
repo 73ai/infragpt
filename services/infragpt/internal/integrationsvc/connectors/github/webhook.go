@@ -35,10 +35,12 @@ func (g *githubConnector) ProcessEvent(ctx context.Context, event any) error {
 		return fmt.Errorf("invalid event type: expected WebhookEvent")
 	}
 
-	// Only handle installation events
+	// Handle installation and repository events
 	switch webhookEvent.EventType {
 	case EventTypeInstallation:
 		return g.handleInstallationEvent(ctx, webhookEvent)
+	case "installation_repositories":
+		return g.handleInstallationRepositoriesEvent(ctx, webhookEvent)
 	default:
 		slog.Debug("ignoring non-installation event",
 			"event_type", webhookEvent.EventType,
@@ -76,27 +78,228 @@ func (g *githubConnector) handleInstallationEvent(ctx context.Context, event Web
 		"repositories_added", len(event.RepositoriesAdded),
 		"repositories_removed", len(event.RepositoriesRemoved))
 
-	// Simple event processing - just log the installation event
-	switch event.InstallationAction {
+	// Parse the raw payload into proper Installation Event structure
+	installationEvent, err := g.parseInstallationEvent(event.RawPayload)
+	if err != nil {
+		return fmt.Errorf("failed to parse installation event: %w", err)
+	}
+
+	// Handle different installation actions
+	switch installationEvent.Action {
 	case "created":
-		slog.Info("GitHub App installed",
-			"installation_id", event.InstallationID,
-			"account", event.SenderLogin)
+		return g.handleInstallationCreated(ctx, installationEvent)
 	case "deleted":
-		slog.Info("GitHub App uninstalled",
-			"installation_id", event.InstallationID,
-			"account", event.SenderLogin)
-	case "added":
-		slog.Info("GitHub App repository access added",
-			"installation_id", event.InstallationID,
-			"repositories", event.RepositoriesAdded)
-	case "removed":
-		slog.Info("GitHub App repository access removed",
-			"installation_id", event.InstallationID,
-			"repositories", event.RepositoriesRemoved)
+		return g.handleInstallationDeleted(ctx, installationEvent)
+	case "suspend":
+		return g.handleInstallationSuspended(ctx, installationEvent)
+	case "unsuspend":
+		return g.handleInstallationUnsuspended(ctx, installationEvent)
+	case "new_permissions_accepted":
+		return g.handlePermissionsUpdated(ctx, installationEvent)
+	default:
+		slog.Debug("unhandled installation action", "action", installationEvent.Action)
+		return nil
+	}
+}
+
+func (g *githubConnector) parseInstallationEvent(rawPayload map[string]any) (*InstallationEvent, error) {
+	payloadBytes, err := json.Marshal(rawPayload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal raw payload: %w", err)
+	}
+
+	var installationEvent InstallationEvent
+	if err := json.Unmarshal(payloadBytes, &installationEvent); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal installation event: %w", err)
+	}
+
+	installationEvent.RawPayload = rawPayload
+	return &installationEvent, nil
+}
+
+func (g *githubConnector) handleInstallationCreated(ctx context.Context, event *InstallationEvent) error {
+	slog.Info("GitHub App installation created",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login,
+		"repository_selection", event.Installation.RepositorySelection,
+		"repository_count", len(event.Repositories))
+
+	// Store in unclaimed_installations table for later processing
+	unclaimedInstallation := UnclaimedInstallation{
+		GitHubInstallationID: event.Installation.ID,
+		GitHubAppID:          event.Installation.AppID,
+		GitHubAccountID:      event.Installation.Account.ID,
+		GitHubAccountLogin:   event.Installation.Account.Login,
+		GitHubAccountType:    event.Installation.Account.Type,
+		RepositorySelection:  event.Installation.RepositorySelection,
+		Permissions:          event.Installation.Permissions,
+		Events:               event.Installation.Events,
+		AccessTokensURL:      event.Installation.AccessTokensURL,
+		RepositoriesURL:      event.Installation.RepositoriesURL,
+		HTMLURL:              event.Installation.HTMLURL,
+		AppSlug:              event.Installation.AppSlug,
+		SuspendedAt:          event.Installation.SuspendedAt,
+		SuspendedBy:          event.Installation.SuspendedBy,
+		WebhookSender:        &event.Sender,
+		RawWebhookPayload:    event.RawPayload,
+		GitHubCreatedAt:      event.Installation.CreatedAt,
+		GitHubUpdatedAt:      event.Installation.UpdatedAt,
+	}
+
+	// Store unclaimed installation using repository service
+	if err := g.repositoryService.StoreUnclaimedInstallation(ctx, &unclaimedInstallation); err != nil {
+		return fmt.Errorf("failed to store unclaimed installation: %w", err)
 	}
 
 	return nil
+}
+
+func (g *githubConnector) handleInstallationDeleted(ctx context.Context, event *InstallationEvent) error {
+	slog.Info("GitHub App installation deleted",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login)
+
+	// TODO: Mark installation as deleted in database
+	// TODO: Revoke any active integrations for this installation
+	// TODO: Clean up repository permissions tracking
+
+	return nil
+}
+
+func (g *githubConnector) handleInstallationSuspended(ctx context.Context, event *InstallationEvent) error {
+	slog.Info("GitHub App installation suspended",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login,
+		"suspended_by", event.Installation.SuspendedBy)
+
+	// TODO: Update installation status in database
+	// TODO: Disable webhook processing for this installation
+
+	return nil
+}
+
+func (g *githubConnector) handleInstallationUnsuspended(ctx context.Context, event *InstallationEvent) error {
+	slog.Info("GitHub App installation unsuspended",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login)
+
+	// TODO: Update installation status in database
+	// TODO: Re-enable webhook processing for this installation
+
+	return nil
+}
+
+func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event *InstallationEvent) error {
+	slog.Info("GitHub App permissions updated",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login,
+		"permissions", event.Installation.Permissions)
+
+	// TODO: Update permissions in database
+	// TODO: Sync repository access based on new permissions
+
+	return nil
+}
+
+func (g *githubConnector) handleInstallationRepositoriesEvent(ctx context.Context, event WebhookEvent) error {
+	slog.Info("handling GitHub installation repositories event",
+		"action", event.Action,
+		"installation_id", event.InstallationID,
+		"repositories_added", len(event.RepositoriesAdded),
+		"repositories_removed", len(event.RepositoriesRemoved))
+
+	// Parse the raw payload into proper Installation Event structure
+	installationEvent, err := g.parseInstallationEvent(event.RawPayload)
+	if err != nil {
+		return fmt.Errorf("failed to parse installation repositories event: %w", err)
+	}
+
+	// Handle repository additions and removals
+	switch installationEvent.Action {
+	case "added":
+		return g.handleRepositoriesAdded(ctx, installationEvent)
+	case "removed":
+		return g.handleRepositoriesRemoved(ctx, installationEvent)
+	default:
+		slog.Debug("unhandled installation repositories action", "action", installationEvent.Action)
+		return nil
+	}
+}
+
+func (g *githubConnector) handleRepositoriesAdded(ctx context.Context, event *InstallationEvent) error {
+	slog.Info("GitHub App repositories added",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login,
+		"repositories_count", len(event.RepositoriesAdded))
+
+	for _, repo := range event.RepositoriesAdded {
+		slog.Debug("repository added",
+			"installation_id", event.Installation.ID,
+			"repository_id", repo.ID,
+			"repository_name", repo.FullName)
+	}
+
+	// Update repository permissions tracking using repository service
+	// TODO: Get integration ID from installation ID
+	// integrationID := getIntegrationIDFromInstallationID(event.Installation.ID)
+	// if integrationID != "" {
+	//     if err := g.repositoryService.AddRepositories(ctx, integrationID, event.RepositoriesAdded); err != nil {
+	//         return fmt.Errorf("failed to add repositories: %w", err)
+	//     }
+	// }
+
+	return nil
+}
+
+func (g *githubConnector) handleRepositoriesRemoved(ctx context.Context, event *InstallationEvent) error {
+	slog.Info("GitHub App repositories removed",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login,
+		"repositories_count", len(event.RepositoriesRemoved))
+
+	for _, repo := range event.RepositoriesRemoved {
+		slog.Debug("repository removed",
+			"installation_id", event.Installation.ID,
+			"repository_id", repo.ID,
+			"repository_name", repo.FullName)
+	}
+
+	// Remove repository permissions using repository service
+	// TODO: Get integration ID from installation ID
+	// integrationID := getIntegrationIDFromInstallationID(event.Installation.ID)
+	// if integrationID != "" {
+	//     var repoIDs []int64
+	//     for _, repo := range event.RepositoriesRemoved {
+	//         repoIDs = append(repoIDs, repo.ID)
+	//     }
+	//     if err := g.repositoryService.RemoveRepositories(ctx, integrationID, repoIDs); err != nil {
+	//         return fmt.Errorf("failed to remove repositories: %w", err)
+	//     }
+	// }
+
+	return nil
+}
+
+// UnclaimedInstallation represents an installation waiting to be claimed
+type UnclaimedInstallation struct {
+	GitHubInstallationID int64
+	GitHubAppID          int64
+	GitHubAccountID      int64
+	GitHubAccountLogin   string
+	GitHubAccountType    string
+	RepositorySelection  string
+	Permissions          map[string]string
+	Events               []string
+	AccessTokensURL      string
+	RepositoriesURL      string
+	HTMLURL              string
+	AppSlug              string
+	SuspendedAt          *time.Time
+	SuspendedBy          *User
+	WebhookSender        *User
+	RawWebhookPayload    map[string]any
+	GitHubCreatedAt      time.Time
+	GitHubUpdatedAt      time.Time
 }
 
 // Webhook server configuration and implementation

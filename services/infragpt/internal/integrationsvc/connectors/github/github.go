@@ -17,9 +17,10 @@ import (
 )
 
 type githubConnector struct {
-	config     Config
-	client     *http.Client
-	privateKey *rsa.PrivateKey
+	config            Config
+	client            *http.Client
+	privateKey        *rsa.PrivateKey
+	repositoryService RepositoryService
 }
 
 func (g *githubConnector) InitiateAuthorization(organizationID string, userID string) (infragpt.IntegrationAuthorizationIntent, error) {
