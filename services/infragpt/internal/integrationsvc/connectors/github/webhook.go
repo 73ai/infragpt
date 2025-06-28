@@ -250,6 +250,19 @@ func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event In
 		"account", event.Installation.Account.Login,
 		"permissions", event.Installation.Permissions)
 
+	// Check if installation is suspended before processing
+	isSuspended, err := g.isInstallationSuspended(ctx, event.Installation.ID)
+	if err != nil {
+		return fmt.Errorf("failed to check installation suspension status: %w", err)
+	}
+
+	if isSuspended {
+		slog.Info("skipping permissions update processing for suspended installation",
+			"installation_id", event.Installation.ID,
+			"account", event.Installation.Account.Login)
+		return nil
+	}
+
 	// TODO: Update permissions in database
 	// TODO: Sync repository access based on new permissions
 
