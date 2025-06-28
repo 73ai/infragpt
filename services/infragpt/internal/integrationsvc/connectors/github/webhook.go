@@ -300,28 +300,22 @@ func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event In
 
 	// Sync repositories after permissions update if integration is active
 	if integration.Status == infragpt.IntegrationStatusActive {
-		integrationUUID, err := uuid.Parse(integration.ID)
-		if err != nil {
-			slog.Error("failed to parse integration ID for repository sync",
+		integrationUUID := integration.ID
+
+		slog.Info("syncing repositories after permissions update",
+			"installation_id", event.Installation.ID,
+			"integration_id", integration.ID)
+
+		if err := g.syncRepositories(ctx, integrationUUID, installationIDStr); err != nil {
+			slog.Error("failed to sync repositories after permissions update",
 				"installation_id", event.Installation.ID,
 				"integration_id", integration.ID,
 				"error", err)
+			// Continue execution - repository sync failure shouldn't fail the permissions update
 		} else {
-			slog.Info("syncing repositories after permissions update",
+			slog.Info("repository sync completed successfully after permissions update",
 				"installation_id", event.Installation.ID,
 				"integration_id", integration.ID)
-
-			if err := g.syncRepositories(ctx, integrationUUID, installationIDStr); err != nil {
-				slog.Error("failed to sync repositories after permissions update",
-					"installation_id", event.Installation.ID,
-					"integration_id", integration.ID,
-					"error", err)
-				// Continue execution - repository sync failure shouldn't fail the permissions update
-			} else {
-				slog.Info("repository sync completed successfully after permissions update",
-					"installation_id", event.Installation.ID,
-					"integration_id", integration.ID)
-			}
 		}
 	} else {
 		slog.Info("skipping repository sync for inactive integration",
@@ -465,10 +459,7 @@ func (g *githubConnector) findIntegrationIDByInstallationID(ctx context.Context,
 		return uuid.Nil, fmt.Errorf("failed to find integration by installation ID: %w", err)
 	}
 
-	integrationUUID, err := uuid.Parse(integration.ID)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("invalid integration ID format: %w", err)
-	}
+	integrationUUID := integration.ID
 
 	slog.Debug("found integration for installation ID",
 		"installation_id", installationID,

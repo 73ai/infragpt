@@ -47,7 +47,7 @@ func (s *service) NewIntegration(ctx context.Context, cmd infragpt.NewIntegratio
 		return infragpt.IntegrationAuthorizationIntent{}, fmt.Errorf("unsupported connector type: %s", cmd.ConnectorType)
 	}
 
-	return connector.InitiateAuthorization(cmd.OrganizationID, cmd.UserID)
+	return connector.InitiateAuthorization(cmd.OrganizationID.String(), cmd.UserID.String())
 }
 
 func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.AuthorizeIntegrationCommand) (infragpt.Integration, error) {
@@ -95,14 +95,6 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 		return infragpt.Integration{}, fmt.Errorf("failed to parse state: %w", err)
 	}
 
-	// Validate that organization ID and user ID are valid UUIDs
-	if _, err := uuid.Parse(organizationID); err != nil {
-		return infragpt.Integration{}, fmt.Errorf("invalid organization ID in state: %w", err)
-	}
-	if _, err := uuid.Parse(userID); err != nil {
-		return infragpt.Integration{}, fmt.Errorf("invalid user ID in state: %w", err)
-	}
-
 	// Check if integration already exists for this org and connector type
 	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, organizationID, cmd.ConnectorType)
 	if err != nil {
@@ -115,7 +107,7 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 
 	now := time.Now()
 	integration := infragpt.Integration{
-		ID:             uuid.New().String(),
+		ID:             uuid.New(),
 		OrganizationID: organizationID,
 		UserID:         userID,
 		ConnectorType:  cmd.ConnectorType,
@@ -144,7 +136,7 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 	}
 
 	credentialRecord := domain.IntegrationCredential{
-		ID:              uuid.New().String(),
+		ID:              uuid.New(),
 		IntegrationID:   integration.ID,
 		CredentialType:  credentials.Type,
 		Data:            credentials.Data,

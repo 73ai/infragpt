@@ -3,6 +3,8 @@ package infragpt
 import (
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type ConnectorType string
@@ -44,9 +46,9 @@ const (
 )
 
 type Integration struct {
-	ID                      string
-	OrganizationID          string
-	UserID                  string
+	ID                      uuid.UUID
+	OrganizationID          uuid.UUID
+	UserID                  uuid.UUID
 	ConnectorType           ConnectorType
 	Status                  IntegrationStatus
 	BotID                   string
@@ -93,8 +95,8 @@ type IntegrationService interface {
 }
 
 type NewIntegrationCommand struct {
-	OrganizationID string
-	UserID         string
+	OrganizationID uuid.UUID
+	UserID         uuid.UUID
 	ConnectorType  ConnectorType
 }
 
@@ -106,22 +108,22 @@ type AuthorizeIntegrationCommand struct {
 }
 
 type RevokeIntegrationCommand struct {
-	IntegrationID  string
-	OrganizationID string
+	IntegrationID  uuid.UUID
+	OrganizationID uuid.UUID
 }
 
 type IntegrationsQuery struct {
-	OrganizationID string
+	OrganizationID uuid.UUID
 	ConnectorType  ConnectorType
 }
 
 type IntegrationQuery struct {
-	IntegrationID  string
-	OrganizationID string
+	IntegrationID  uuid.UUID
+	OrganizationID uuid.UUID
 }
 
 type SyncIntegrationCommand struct {
-	IntegrationID  string
-	OrganizationID string
+	IntegrationID  uuid.UUID
+	OrganizationID uuid.UUID
 	Parameters     map[string]string
 }

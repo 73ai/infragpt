@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
 )
 
@@ -13,6 +14,6 @@ type Integration struct {
 }
 
 type IntegrationRepository interface {
-	Integrations(ctx context.Context, businessID string) ([]Integration, error)
+	Integrations(ctx context.Context, businessID uuid.UUID) ([]Integration, error)
 	SaveIntegration(ctx context.Context, integration Integration) error
 }

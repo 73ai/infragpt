@@ -34,15 +34,8 @@ func (r *credentialRepository) Store(ctx context.Context, cred domain.Integratio
 		return fmt.Errorf("failed to encrypt credential data: %w", err)
 	}
 
-	credentialID, err := uuid.Parse(cred.ID)
-	if err != nil {
-		return fmt.Errorf("invalid credential ID: %w", err)
-	}
-
-	integrationID, err := uuid.Parse(cred.IntegrationID)
-	if err != nil {
-		return fmt.Errorf("invalid integration ID: %w", err)
-	}
+	credentialID := cred.ID
+	integrationID := cred.IntegrationID
 
 	var expiresAt sql.NullTime
 	if cred.ExpiresAt != nil {
@@ -61,13 +54,8 @@ func (r *credentialRepository) Store(ctx context.Context, cred domain.Integratio
 	})
 }
 
-func (r *credentialRepository) FindByIntegration(ctx context.Context, integrationID string) (domain.IntegrationCredential, error) {
-	integrationUUID, err := uuid.Parse(integrationID)
-	if err != nil {
-		return domain.IntegrationCredential{}, fmt.Errorf("invalid integration ID: %w", err)
-	}
-
-	dbCredential, err := r.queries.FindCredentialByIntegration(ctx, integrationUUID)
+func (r *credentialRepository) FindByIntegration(ctx context.Context, integrationID uuid.UUID) (domain.IntegrationCredential, error) {
+	dbCredential, err := r.queries.FindCredentialByIntegration(ctx, integrationID)
 	if err != nil {
 		return domain.IntegrationCredential{}, fmt.Errorf("failed to find credential: %w", err)
 	}
@@ -81,10 +69,7 @@ func (r *credentialRepository) Update(ctx context.Context, cred domain.Integrati
 		return fmt.Errorf("failed to encrypt credential data: %w", err)
 	}
 
-	integrationID, err := uuid.Parse(cred.IntegrationID)
-	if err != nil {
-		return fmt.Errorf("invalid integration ID: %w", err)
-	}
+	integrationID := cred.IntegrationID
 
 	var expiresAt sql.NullTime
 	if cred.ExpiresAt != nil {
@@ -100,13 +85,9 @@ func (r *credentialRepository) Update(ctx context.Context, cred domain.Integrati
 	})
 }
 
-func (r *credentialRepository) Delete(ctx context.Context, integrationID string) error {
-	integrationUUID, err := uuid.Parse(integrationID)
-	if err != nil {
-		return fmt.Errorf("invalid integration ID: %w", err)
-	}
+func (r *credentialRepository) Delete(ctx context.Context, integrationID uuid.UUID) error {
 
-	return r.queries.DeleteCredential(ctx, integrationUUID)
+	return r.queries.DeleteCredential(ctx, integrationID)
 }
 
 func (r *credentialRepository) FindExpiring(ctx context.Context, before time.Time) ([]domain.IntegrationCredential, error) {
@@ -139,8 +120,8 @@ func (r *credentialRepository) mapToCredential(dbCredential IntegrationCredentia
 	}
 
 	return domain.IntegrationCredential{
-		ID:              dbCredential.ID.String(),
-		IntegrationID:   dbCredential.IntegrationID.String(),
+		ID:              dbCredential.ID,
+		IntegrationID:   dbCredential.IntegrationID,
 		CredentialType:  infragpt.CredentialType(dbCredential.CredentialType),
 		Data:            decryptedData,
 		ExpiresAt:       expiresAt,

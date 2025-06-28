@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
 	"github.com/slack-go/slack"
 )
@@ -39,13 +40,23 @@ func (s *slackConnector) InitiateAuthorization(organizationID string, userID str
 	}, nil
 }
 
-func (s *slackConnector) ParseState(state string) (organizationID string, userID string, err error) {
+func (s *slackConnector) ParseState(state string) (organizationID uuid.UUID, userID uuid.UUID, err error) {
 	parts := strings.Split(state, ":")
 	if len(parts) < 3 {
-		return "", "", fmt.Errorf("invalid state format, expected organizationID:userID:timestamp")
+		return uuid.Nil, uuid.Nil, fmt.Errorf("invalid state format, expected organizationID:userID:timestamp")
 	}
 
-	return parts[0], parts[1], nil
+	organizationID, err = uuid.Parse(parts[0])
+	if err != nil {
+		return uuid.Nil, uuid.Nil, fmt.Errorf("invalid organization ID: %w", err)
+	}
+
+	userID, err = uuid.Parse(parts[1])
+	if err != nil {
+		return uuid.Nil, uuid.Nil, fmt.Errorf("invalid user ID: %w", err)
+	}
+
+	return organizationID, userID, nil
 }
 
 func (s *slackConnector) CompleteAuthorization(authData infragpt.AuthorizationData) (infragpt.Credentials, error) {

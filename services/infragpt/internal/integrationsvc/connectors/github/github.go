@@ -55,33 +55,41 @@ func (g *githubConnector) InitiateAuthorization(organizationID string, userID st
 	}, nil
 }
 
-func (g *githubConnector) ParseState(state string) (organizationID string, userID string, err error) {
+func (g *githubConnector) ParseState(state string) (organizationID uuid.UUID, userID uuid.UUID, err error) {
 	stateJSON, err := base64.URLEncoding.DecodeString(state)
 	if err != nil {
-		return "", "", fmt.Errorf("invalid state format, failed to decode base64: %w", err)
+		return uuid.Nil, uuid.Nil, fmt.Errorf("invalid state format, failed to decode base64: %w", err)
 	}
 
 	var stateData map[string]interface{}
 	if err := json.Unmarshal(stateJSON, &stateData); err != nil {
-		return "", "", fmt.Errorf("invalid state format, failed to parse JSON: %w", err)
+		return uuid.Nil, uuid.Nil, fmt.Errorf("invalid state format, failed to parse JSON: %w", err)
 	}
 
 	orgID, exists := stateData["organization_id"]
 	if !exists {
-		return "", "", fmt.Errorf("organization_id not found in state")
+		return uuid.Nil, uuid.Nil, fmt.Errorf("organization_id not found in state")
 	}
-	organizationID, ok := orgID.(string)
+	orgIDStr, ok := orgID.(string)
 	if !ok {
-		return "", "", fmt.Errorf("organization_id must be a string")
+		return uuid.Nil, uuid.Nil, fmt.Errorf("organization_id must be a string")
+	}
+	organizationID, err = uuid.Parse(orgIDStr)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, fmt.Errorf("invalid organization_id format: %w", err)
 	}
 
 	uID, exists := stateData["user_id"]
 	if !exists {
-		return "", "", fmt.Errorf("user_id not found in state")
+		return uuid.Nil, uuid.Nil, fmt.Errorf("user_id not found in state")
 	}
-	userID, ok = uID.(string)
+	userIDStr, ok := uID.(string)
 	if !ok {
-		return "", "", fmt.Errorf("user_id must be a string")
+		return uuid.Nil, uuid.Nil, fmt.Errorf("user_id must be a string")
+	}
+	userID, err = uuid.Parse(userIDStr)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, fmt.Errorf("invalid user_id format: %w", err)
 	}
 
 	return organizationID, userID, nil
@@ -295,7 +303,7 @@ func (g *githubConnector) buildWebhookURL(integrationID string) string {
 	return fmt.Sprintf("%s/webhooks/github", baseURL)
 }
 
-func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID string, organizationID, userID string) (*infragpt.Integration, error) {
+func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID string, organizationID, userID uuid.UUID) (*infragpt.Integration, error) {
 	// Get unclaimed installation from database
 	unclaimed, err := g.config.UnclaimedInstallationRepo.GetByInstallationID(ctx, installationID)
 	if err != nil {
@@ -308,7 +316,7 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 	// Create integration record
 	connectorOrgID := strconv.FormatInt(unclaimed.GitHubAccountID, 10)
 	integration := &infragpt.Integration{
-		ID:                      uuid.New().String(),
+		ID:                      uuid.New(),
 		OrganizationID:          organizationID,
 		UserID:                  userID,
 		ConnectorType:           infragpt.ConnectorTypeGithub,
@@ -358,7 +366,7 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 	}
 
 	credentialRecord := domain.IntegrationCredential{
-		ID:              uuid.New().String(),
+		ID:              uuid.New(),
 		IntegrationID:   integration.ID,
 		CredentialType:  infragpt.CredentialTypeToken,
 		Data:            credentialData,
@@ -372,23 +380,14 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 		return nil, fmt.Errorf("failed to store credentials: %w", err)
 	}
 
-	// Sync repositories
-	integrationUUID, err := uuid.Parse(integration.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse integration ID: %w", err)
-	}
-
-	if err := g.syncRepositories(ctx, integrationUUID, installationID); err != nil {
+	if err := g.syncRepositories(ctx, integration.ID, installationID); err != nil {
 		slog.Error("failed to sync repositories during installation claim",
 			"integration_id", integration.ID,
 			"installation_id", installationID,
 			"error", err)
 	}
 
-	// Mark installation as claimed
-	orgUUID := uuid.MustParse(organizationID)
-	userUUID := uuid.MustParse(userID)
-	if err := g.config.UnclaimedInstallationRepo.MarkAsClaimed(ctx, installationID, orgUUID, userUUID); err != nil {
+	if err := g.config.UnclaimedInstallationRepo.MarkAsClaimed(ctx, installationID, organizationID, userID); err != nil {
 		slog.Error("failed to mark installation as claimed",
 			"installation_id", installationID,
 			"error", err)
@@ -588,10 +587,7 @@ func (g *githubConnector) Sync(ctx context.Context, integration infragpt.Integra
 }
 
 func (g *githubConnector) syncRepositoryPermissions(ctx context.Context, integration infragpt.Integration) error {
-	integrationUUID, err := uuid.Parse(integration.ID)
-	if err != nil {
-		return fmt.Errorf("failed to parse integration ID: %w", err)
-	}
+	integrationUUID := integration.ID
 
 	installationID := integration.BotID
 	if installationID == "" {
@@ -664,10 +660,7 @@ func (g *githubConnector) syncInstallation(ctx context.Context, integration infr
 }
 
 func (g *githubConnector) syncRepositoriesForIntegration(ctx context.Context, integration infragpt.Integration) error {
-	integrationUUID, err := uuid.Parse(integration.ID)
-	if err != nil {
-		return fmt.Errorf("failed to parse integration ID: %w", err)
-	}
+	integrationUUID := integration.ID
 
 	installationID := integration.BotID
 	if installationID == "" {
@@ -750,7 +743,7 @@ func (g *githubConnector) claimInstallationForExistingIntegration(ctx context.Co
 	} else {
 		// Create new credential
 		credentialRecord := domain.IntegrationCredential{
-			ID:              uuid.New().String(),
+			ID:              uuid.New(),
 			IntegrationID:   integration.ID,
 			CredentialType:  infragpt.CredentialTypeToken,
 			Data:            credentialData,
@@ -766,10 +759,7 @@ func (g *githubConnector) claimInstallationForExistingIntegration(ctx context.Co
 	}
 
 	// Sync repositories
-	integrationUUID, err := uuid.Parse(integration.ID)
-	if err != nil {
-		return fmt.Errorf("failed to parse integration ID: %w", err)
-	}
+	integrationUUID := integration.ID
 
 	if err := g.syncRepositories(ctx, integrationUUID, installationID); err != nil {
 		slog.Error("failed to sync repositories during installation claim",
@@ -779,8 +769,8 @@ func (g *githubConnector) claimInstallationForExistingIntegration(ctx context.Co
 	}
 
 	// Mark installation as claimed
-	orgUUID := uuid.MustParse(integration.OrganizationID)
-	userUUID := uuid.MustParse(integration.UserID)
+	orgUUID := integration.OrganizationID
+	userUUID := integration.UserID
 	if err := g.config.UnclaimedInstallationRepo.MarkAsClaimed(ctx, installationID, orgUUID, userUUID); err != nil {
 		slog.Error("failed to mark installation as claimed",
 			"installation_id", installationID,

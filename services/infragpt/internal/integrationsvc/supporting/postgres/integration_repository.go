@@ -34,20 +34,9 @@ func (r *integrationRepository) Store(ctx context.Context, integration infragpt.
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 
-	integrationID, err := uuid.Parse(integration.ID)
-	if err != nil {
-		return fmt.Errorf("invalid integration ID: %w", err)
-	}
-
-	organizationID, err := uuid.Parse(integration.OrganizationID)
-	if err != nil {
-		return fmt.Errorf("invalid organization ID: %w", err)
-	}
-
-	userID, err := uuid.Parse(integration.UserID)
-	if err != nil {
-		return fmt.Errorf("invalid user ID: %w", err)
-	}
+	integrationID := integration.ID
+	organizationID := integration.OrganizationID
+	userID := integration.UserID
 
 	var botID sql.NullString
 	if integration.BotID != "" {
@@ -96,10 +85,7 @@ func (r *integrationRepository) Update(ctx context.Context, integration infragpt
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 
-	integrationID, err := uuid.Parse(integration.ID)
-	if err != nil {
-		return fmt.Errorf("invalid integration ID: %w", err)
-	}
+	integrationID := integration.ID
 
 	var botID sql.NullString
 	if integration.BotID != "" {
@@ -134,13 +120,8 @@ func (r *integrationRepository) Update(ctx context.Context, integration infragpt
 	})
 }
 
-func (r *integrationRepository) FindByID(ctx context.Context, id string) (infragpt.Integration, error) {
-	integrationID, err := uuid.Parse(id)
-	if err != nil {
-		return infragpt.Integration{}, fmt.Errorf("invalid integration ID: %w", err)
-	}
-
-	dbIntegration, err := r.queries.FindIntegrationByID(ctx, integrationID)
+func (r *integrationRepository) FindByID(ctx context.Context, id uuid.UUID) (infragpt.Integration, error) {
+	dbIntegration, err := r.queries.FindIntegrationByID(ctx, id)
 	if err != nil {
 		return infragpt.Integration{}, fmt.Errorf("failed to find integration: %w", err)
 	}
@@ -148,13 +129,8 @@ func (r *integrationRepository) FindByID(ctx context.Context, id string) (infrag
 	return r.toSpecIntegration(dbIntegration)
 }
 
-func (r *integrationRepository) FindByOrganization(ctx context.Context, orgID string) ([]infragpt.Integration, error) {
-	organizationID, err := uuid.Parse(orgID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid organization ID: %w", err)
-	}
-
-	dbIntegrations, err := r.queries.FindIntegrationsByOrganization(ctx, organizationID)
+func (r *integrationRepository) FindByOrganization(ctx context.Context, orgID uuid.UUID) ([]infragpt.Integration, error) {
+	dbIntegrations, err := r.queries.FindIntegrationsByOrganization(ctx, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find integrations: %w", err)
 	}
@@ -171,14 +147,9 @@ func (r *integrationRepository) FindByOrganization(ctx context.Context, orgID st
 	return integrations, nil
 }
 
-func (r *integrationRepository) FindByOrganizationAndType(ctx context.Context, orgID string, connectorType infragpt.ConnectorType) ([]infragpt.Integration, error) {
-	organizationID, err := uuid.Parse(orgID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid organization ID: %w", err)
-	}
-
+func (r *integrationRepository) FindByOrganizationAndType(ctx context.Context, orgID uuid.UUID, connectorType infragpt.ConnectorType) ([]infragpt.Integration, error) {
 	dbIntegrations, err := r.queries.FindIntegrationsByOrganizationAndType(ctx, FindIntegrationsByOrganizationAndTypeParams{
-		OrganizationID: organizationID,
+		OrganizationID: orgID,
 		ConnectorType:  string(connectorType),
 	})
 	if err != nil {
@@ -197,33 +168,18 @@ func (r *integrationRepository) FindByOrganizationAndType(ctx context.Context, o
 	return integrations, nil
 }
 
-func (r *integrationRepository) UpdateStatus(ctx context.Context, id string, status infragpt.IntegrationStatus) error {
-	integrationID, err := uuid.Parse(id)
-	if err != nil {
-		return fmt.Errorf("invalid integration ID: %w", err)
-	}
-
+func (r *integrationRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status infragpt.IntegrationStatus) error {
 	return r.queries.UpdateIntegrationStatus(ctx, UpdateIntegrationStatusParams{
-		ID:     integrationID,
+		ID:     id,
 		Status: string(status),
 	})
 }
 
-func (r *integrationRepository) UpdateLastUsed(ctx context.Context, id string) error {
-	integrationID, err := uuid.Parse(id)
-	if err != nil {
-		return fmt.Errorf("invalid integration ID: %w", err)
-	}
-
-	return r.queries.UpdateIntegrationLastUsed(ctx, integrationID)
+func (r *integrationRepository) UpdateLastUsed(ctx context.Context, id uuid.UUID) error {
+	return r.queries.UpdateIntegrationLastUsed(ctx, id)
 }
 
-func (r *integrationRepository) UpdateMetadata(ctx context.Context, id string, metadata map[string]string) error {
-	integrationID, err := uuid.Parse(id)
-	if err != nil {
-		return fmt.Errorf("invalid integration ID: %w", err)
-	}
-
+func (r *integrationRepository) UpdateMetadata(ctx context.Context, id uuid.UUID, metadata map[string]string) error {
 	// Convert metadata to map[string]any for JSON marshaling
 	metadataMap := make(map[string]any)
 	for k, v := range metadata {
@@ -236,18 +192,14 @@ func (r *integrationRepository) UpdateMetadata(ctx context.Context, id string, m
 	}
 
 	return r.queries.UpdateIntegrationMetadata(ctx, UpdateIntegrationMetadataParams{
-		ID:       integrationID,
+		ID:       id,
 		Metadata: pqtype.NullRawMessage{RawMessage: metadataJSON, Valid: true},
 	})
 }
 
-func (r *integrationRepository) Delete(ctx context.Context, id string) error {
-	integrationID, err := uuid.Parse(id)
-	if err != nil {
-		return fmt.Errorf("invalid integration ID: %w", err)
-	}
+func (r *integrationRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
-	return r.queries.DeleteIntegration(ctx, integrationID)
+	return r.queries.DeleteIntegration(ctx, id)
 }
 
 func (r *integrationRepository) FindByBotIDAndType(ctx context.Context, botID string, connectorType infragpt.ConnectorType) (infragpt.Integration, error) {
@@ -283,9 +235,9 @@ func (r *integrationRepository) toSpecIntegration(dbIntegration Integration) (in
 	}
 
 	return infragpt.Integration{
-		ID:                      dbIntegration.ID.String(),
-		OrganizationID:          dbIntegration.OrganizationID.String(),
-		UserID:                  dbIntegration.UserID.String(),
+		ID:                      dbIntegration.ID,
+		OrganizationID:          dbIntegration.OrganizationID,
+		UserID:                  dbIntegration.UserID,
 		ConnectorType:           infragpt.ConnectorType(dbIntegration.ConnectorType),
 		Status:                  infragpt.IntegrationStatus(dbIntegration.Status),
 		BotID:                   dbIntegration.BotID.String,
