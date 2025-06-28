@@ -298,6 +298,38 @@ func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event In
 		"organization_id", integration.OrganizationID,
 		"permissions_count", len(event.Installation.Permissions))
 
+	// Sync repositories after permissions update if integration is active
+	if integration.Status == infragpt.IntegrationStatusActive {
+		integrationUUID, err := uuid.Parse(integration.ID)
+		if err != nil {
+			slog.Error("failed to parse integration ID for repository sync",
+				"installation_id", event.Installation.ID,
+				"integration_id", integration.ID,
+				"error", err)
+		} else {
+			slog.Info("syncing repositories after permissions update",
+				"installation_id", event.Installation.ID,
+				"integration_id", integration.ID)
+
+			if err := g.syncRepositories(ctx, integrationUUID, installationIDStr); err != nil {
+				slog.Error("failed to sync repositories after permissions update",
+					"installation_id", event.Installation.ID,
+					"integration_id", integration.ID,
+					"error", err)
+				// Continue execution - repository sync failure shouldn't fail the permissions update
+			} else {
+				slog.Info("repository sync completed successfully after permissions update",
+					"installation_id", event.Installation.ID,
+					"integration_id", integration.ID)
+			}
+		}
+	} else {
+		slog.Info("skipping repository sync for inactive integration",
+			"installation_id", event.Installation.ID,
+			"integration_id", integration.ID,
+			"status", integration.Status)
+	}
+
 	return nil
 }
 
