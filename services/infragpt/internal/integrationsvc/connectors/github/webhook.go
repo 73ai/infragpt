@@ -141,7 +141,7 @@ func (g *githubConnector) handleInstallationCreated(ctx context.Context, event *
 		RepositoriesURL:      event.Installation.RepositoriesURL,
 		HTMLURL:              event.Installation.HTMLURL,
 		AppSlug:              event.Installation.AppSlug,
-		SuspendedAt:          event.Installation.SuspendedAt,
+		SuspendedAt:          timeValueFromPointer(event.Installation.SuspendedAt),
 		SuspendedBy:          convertUserToMap(&event.Sender),
 		WebhookSender:        convertUserToMap(&event.Sender),
 		RawWebhookPayload:    event.RawPayload,
@@ -491,6 +491,13 @@ func webhookValidationMiddleware(webhookSecret string, next http.Handler) http.H
 		r.Body = io.NopCloser(strings.NewReader(string(body)))
 		next.ServeHTTP(w, r)
 	})
+}
+
+func timeValueFromPointer(t *time.Time) time.Time {
+	if t == nil {
+		return time.Time{}
+	}
+	return *t
 }
 
 func validateGitHubSignature(payload []byte, signature string, secret string) bool {

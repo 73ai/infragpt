@@ -324,7 +324,7 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get unclaimed installation: %w", err)
 	}
-	if unclaimed == nil {
+	if unclaimed.ID == uuid.Nil {
 		return nil, fmt.Errorf("unclaimed installation not found for ID %d", installationID)
 	}
 
