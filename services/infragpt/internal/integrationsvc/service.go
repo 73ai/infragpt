@@ -67,6 +67,28 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 		return infragpt.Integration{}, fmt.Errorf("failed to complete authorization: %w", err)
 	}
 
+	// Check if installation was already claimed by the connector
+	if claimed, exists := credentials.Data["claimed"]; exists && claimed == "true" {
+		// Installation was already claimed, find and return the existing integration
+		organizationID, _, err := connector.ParseState(cmd.State)
+		if err != nil {
+			return infragpt.Integration{}, fmt.Errorf("failed to parse state: %w", err)
+		}
+
+		existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, organizationID, cmd.ConnectorType)
+		if err != nil {
+			return infragpt.Integration{}, fmt.Errorf("failed to find claimed integration: %w", err)
+		}
+
+		for _, integration := range existingIntegrations {
+			if integration.BotID == cmd.InstallationID {
+				return integration, nil
+			}
+		}
+
+		return infragpt.Integration{}, fmt.Errorf("claimed integration not found")
+	}
+
 	// Parse organization ID and user ID from OAuth state using connector
 	organizationID, userID, err := connector.ParseState(cmd.State)
 	if err != nil {
@@ -79,25 +101,6 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 	}
 	if _, err := uuid.Parse(userID); err != nil {
 		return infragpt.Integration{}, fmt.Errorf("invalid user ID in state: %w", err)
-	}
-
-	// For GitHub installations, check if there's an unclaimed installation and claim it
-	if cmd.ConnectorType == infragpt.ConnectorTypeGithub && cmd.InstallationID != "" {
-		if githubConnector, ok := connector.(github.GitHubConnector); ok {
-			// Try to claim the installation if it exists as unclaimed
-			integration, err := githubConnector.ClaimInstallation(ctx, cmd.InstallationID, organizationID, userID)
-			if err == nil {
-				slog.Info("automatically claimed unclaimed GitHub installation during authorization",
-					"installation_id", cmd.InstallationID,
-					"organization_id", organizationID,
-					"integration_id", integration.ID)
-				return *integration, nil
-			}
-			// If claiming fails, continue with normal flow (the installation might not be unclaimed)
-			slog.Debug("could not claim unclaimed installation, proceeding with normal authorization flow",
-				"installation_id", cmd.InstallationID,
-				"error", err)
-		}
 	}
 
 	// Check if integration already exists for this org and connector type
