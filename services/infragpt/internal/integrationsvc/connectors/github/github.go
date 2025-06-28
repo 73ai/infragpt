@@ -19,7 +19,6 @@ import (
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/domain"
 )
 
-// GitHubConnector interface for GitHub-specific methods
 type GitHubConnector interface {
 	ClaimInstallation(ctx context.Context, installationID int64, organizationID, userID string) (*infragpt.Integration, error)
 	GetUnclaimedInstallations(ctx context.Context) ([]UnclaimedInstallation, error)
@@ -317,7 +316,6 @@ func (g *githubConnector) buildWebhookURL(integrationID string) string {
 	return fmt.Sprintf("%s/webhooks/github", baseURL)
 }
 
-// ClaimInstallation converts an unclaimed installation to an integration
 func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID int64, organizationID, userID string) (*infragpt.Integration, error) {
 	// Get unclaimed installation from database
 	unclaimed, err := g.config.UnclaimedInstallationRepo.GetByInstallationID(ctx, installationID)
@@ -419,12 +417,10 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 	return integration, nil
 }
 
-// GetUnclaimedInstallations returns unclaimed GitHub installations
 func (g *githubConnector) GetUnclaimedInstallations(ctx context.Context) ([]UnclaimedInstallation, error) {
 	return g.config.UnclaimedInstallationRepo.List(ctx, 100)
 }
 
-// SyncRepositories syncs repository data from GitHub API
 func (g *githubConnector) syncRepositories(ctx context.Context, integrationID uuid.UUID, installationID int64) error {
 	slog.Info("syncing repositories",
 		"integration_id", integrationID,
@@ -493,7 +489,6 @@ func (g *githubConnector) syncRepositories(ctx context.Context, integrationID uu
 	return nil
 }
 
-// AddRepositories handles repository addition events
 func (g *githubConnector) addRepositories(ctx context.Context, integrationID uuid.UUID, repositories []Repository) error {
 	slog.Info("adding repositories",
 		"integration_id", integrationID,
@@ -535,7 +530,6 @@ func (g *githubConnector) addRepositories(ctx context.Context, integrationID uui
 	return nil
 }
 
-// RemoveRepositories handles repository removal events
 func (g *githubConnector) removeRepositories(ctx context.Context, integrationID uuid.UUID, repositoryIDs []int64) error {
 	slog.Info("removing repositories",
 		"integration_id", integrationID,
@@ -548,7 +542,6 @@ func (g *githubConnector) removeRepositories(ctx context.Context, integrationID 
 	return nil
 }
 
-// fetchInstallationRepositories fetches repositories from GitHub API
 func (g *githubConnector) fetchInstallationRepositories(accessToken string) ([]Repository, error) {
 	req, err := http.NewRequest("GET", "https://api.github.com/installation/repositories", nil)
 	if err != nil {
@@ -580,9 +573,6 @@ func (g *githubConnector) fetchInstallationRepositories(accessToken string) ([]R
 
 	return response.Repositories, nil
 }
-
-
-// Type definitions for GitHub API responses
 
 type accessTokenResponse struct {
 	Token     string    `json:"token"`

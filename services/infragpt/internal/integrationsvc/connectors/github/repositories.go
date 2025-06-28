@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// UnclaimedInstallationRepository manages unclaimed GitHub installations
 type UnclaimedInstallationRepository interface {
 	Create(ctx context.Context, installation *UnclaimedInstallation) error
 	GetByInstallationID(ctx context.Context, installationID int64) (UnclaimedInstallation, error)
@@ -17,7 +16,6 @@ type UnclaimedInstallationRepository interface {
 	Delete(ctx context.Context, installationID int64) error
 }
 
-// GitHubRepositoryRepository manages GitHub repository permissions and tracking
 type GitHubRepositoryRepository interface {
 	Upsert(ctx context.Context, repo *GitHubRepository) error
 	ListByIntegrationID(ctx context.Context, integrationID uuid.UUID) ([]GitHubRepository, error)
@@ -28,7 +26,6 @@ type GitHubRepositoryRepository interface {
 	UpdateLastSyncTime(ctx context.Context, integrationID uuid.UUID, syncTime time.Time) error
 }
 
-// UnclaimedInstallation represents GitHub installations awaiting claim
 type UnclaimedInstallation struct {
 	ID                      uuid.UUID
 	GitHubInstallationID    int64
@@ -56,7 +53,6 @@ type UnclaimedInstallation struct {
 	ClaimedByUserID         uuid.UUID
 }
 
-// GitHubRepository represents tracked GitHub repositories
 type GitHubRepository struct {
 	ID                    uuid.UUID
 	IntegrationID         uuid.UUID
@@ -79,7 +75,6 @@ type GitHubRepository struct {
 	GitHubPushedAt        time.Time
 }
 
-// RepositoryPermissions represents repository-level permissions
 type RepositoryPermissions struct {
 	Admin bool
 	Push  bool

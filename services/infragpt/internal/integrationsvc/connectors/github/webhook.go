@@ -292,9 +292,6 @@ func (g *githubConnector) handleRepositoriesRemoved(ctx context.Context, event *
 	return nil
 }
 
-// findIntegrationIDByInstallationID finds the integration ID for a GitHub installation
-// For now, we'll return uuid.Nil since we don't have a way to search by connector type
-// This means repository add/remove events won't work until the integration is associated with an organization
 func (g *githubConnector) findIntegrationIDByInstallationID(ctx context.Context, installationID int64) (uuid.UUID, error) {
 	// TODO: This needs to be fixed with a proper search method that can find integrations by installation ID
 	// across all organizations, or we need organization context in webhook events
@@ -303,7 +300,6 @@ func (g *githubConnector) findIntegrationIDByInstallationID(ctx context.Context,
 	return uuid.Nil, nil // Not found
 }
 
-// convertUserToMap converts a User struct to map[string]any for JSON storage
 func convertUserToMap(user *User) map[string]any {
 	if user == nil {
 		return nil

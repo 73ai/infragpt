@@ -19,7 +19,6 @@ const (
 	EventSubTypeInstallationRepositories EventSubType = "installation_repositories"
 )
 
-// Installation Event represents GitHub App installation webhooks
 type InstallationEvent struct {
 	Action           string                   `json:"action"`
 	Installation     Installation            `json:"installation"`
@@ -30,7 +29,6 @@ type InstallationEvent struct {
 	RawPayload       map[string]any          `json:"-"`
 }
 
-// Installation represents a GitHub App installation
 type Installation struct {
 	ID                  int64                  `json:"id"`
 	AppID               int64                  `json:"app_id"`
@@ -50,7 +48,6 @@ type Installation struct {
 	SuspendedAt         *time.Time             `json:"suspended_at,omitempty"`
 }
 
-// Repository represents a GitHub repository
 type Repository struct {
 	ID          int64     `json:"id"`
 	Name        string    `json:"name"`
@@ -66,7 +63,6 @@ type Repository struct {
 	DefaultBranch string  `json:"default_branch"`
 }
 
-// Account represents a GitHub account (User or Organization)
 type Account struct {
 	ID    int64  `json:"id"`
 	Login string `json:"login"`
@@ -74,7 +70,6 @@ type Account struct {
 	HTMLURL string `json:"html_url"`
 }
 
-// User represents a GitHub user
 type User struct {
 	ID    int64  `json:"id"`
 	Login string `json:"login"`
