@@ -39,6 +39,8 @@ const (
 	IntegrationStatusInactive   IntegrationStatus = "inactive"
 	IntegrationStatusPending    IntegrationStatus = "pending"
 	IntegrationStatusNotStarted IntegrationStatus = "not_started"
+	IntegrationStatusSuspended  IntegrationStatus = "suspended"
+	IntegrationStatusDeleted    IntegrationStatus = "deleted"
 )
 
 type Integration struct {
@@ -85,6 +87,7 @@ type IntegrationService interface {
 	AuthorizeIntegration(ctx context.Context, cmd AuthorizeIntegrationCommand) (Integration, error)
 	ConfigureIntegration(ctx context.Context, cmd ConfigureIntegrationCommand) (Integration, error)
 	RevokeIntegration(ctx context.Context, cmd RevokeIntegrationCommand) error
+	RefreshIntegration(ctx context.Context, cmd RefreshIntegrationCommand) error
 	Integrations(ctx context.Context, query IntegrationsQuery) ([]Integration, error)
 	Integration(ctx context.Context, query IntegrationQuery) (Integration, error)
 	Subscribe(ctx context.Context) error
@@ -122,6 +125,11 @@ type IntegrationsQuery struct {
 }
 
 type IntegrationQuery struct {
+	IntegrationID  string
+	OrganizationID string
+}
+
+type RefreshIntegrationCommand struct {
 	IntegrationID  string
 	OrganizationID string
 }

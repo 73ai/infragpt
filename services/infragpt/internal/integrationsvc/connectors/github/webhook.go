@@ -68,7 +68,6 @@ func (g *githubConnector) Subscribe(ctx context.Context, handler func(ctx contex
 	return webhookConfig.startWebhookServer(ctx)
 }
 
-
 func (g *githubConnector) computeSignature(payload []byte, secret string) string {
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write(payload)
@@ -190,8 +189,27 @@ func (g *githubConnector) handleInstallationSuspended(ctx context.Context, event
 		"account", event.Installation.Account.Login,
 		"suspended_by", event.Installation.SuspendedBy)
 
-	// TODO: Update installation status in database
-	// TODO: Disable webhook processing for this installation
+	// Find integration by GitHub installation ID and update status to suspended
+	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			slog.Debug("integration not found for suspended installation",
+				"installation_id", event.Installation.ID)
+			return nil // Not an error if integration doesn't exist
+		}
+		return fmt.Errorf("failed to find integration for suspended installation %d: %w", event.Installation.ID, err)
+	}
+
+	// Update integration status to suspended
+	if err := g.config.IntegrationRepository.UpdateStatus(ctx, integration.ID, infragpt.IntegrationStatusSuspended); err != nil {
+		return fmt.Errorf("failed to update integration status to suspended for installation %d: %w", event.Installation.ID, err)
+	}
+
+	slog.Info("GitHub integration status updated to suspended",
+		"installation_id", event.Installation.ID,
+		"integration_id", integration.ID,
+		"organization_id", integration.OrganizationID)
 
 	return nil
 }
@@ -201,8 +219,27 @@ func (g *githubConnector) handleInstallationUnsuspended(ctx context.Context, eve
 		"installation_id", event.Installation.ID,
 		"account", event.Installation.Account.Login)
 
-	// TODO: Update installation status in database
-	// TODO: Re-enable webhook processing for this installation
+	// Find integration by GitHub installation ID and update status to active
+	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			slog.Debug("integration not found for unsuspended installation",
+				"installation_id", event.Installation.ID)
+			return nil // Not an error if integration doesn't exist
+		}
+		return fmt.Errorf("failed to find integration for unsuspended installation %d: %w", event.Installation.ID, err)
+	}
+
+	// Update integration status to active
+	if err := g.config.IntegrationRepository.UpdateStatus(ctx, integration.ID, infragpt.IntegrationStatusActive); err != nil {
+		return fmt.Errorf("failed to update integration status to active for installation %d: %w", event.Installation.ID, err)
+	}
+
+	slog.Info("GitHub integration status updated to active",
+		"installation_id", event.Installation.ID,
+		"integration_id", integration.ID,
+		"organization_id", integration.OrganizationID)
 
 	return nil
 }
@@ -307,17 +344,17 @@ func (g *githubConnector) findIntegrationIDByInstallationID(ctx context.Context,
 		}
 		return uuid.Nil, fmt.Errorf("failed to find integration by installation ID: %w", err)
 	}
-	
+
 	integrationUUID, err := uuid.Parse(integration.ID)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("invalid integration ID format: %w", err)
 	}
-	
-	slog.Debug("found integration for installation ID", 
+
+	slog.Debug("found integration for installation ID",
 		"installation_id", installationID,
 		"integration_id", integration.ID,
 		"organization_id", integration.OrganizationID)
-	
+
 	return integrationUUID, nil
 }
 
