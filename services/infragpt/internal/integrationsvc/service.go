@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -181,91 +182,29 @@ func (s *service) ConfigureIntegration(ctx context.Context, cmd infragpt.Configu
 }
 
 func (s *service) configureGitHubIntegration(ctx context.Context, cmd infragpt.ConfigureIntegrationCommand, connector domain.Connector) (infragpt.Integration, error) {
-	// For now, just use the connector interface without accessing private fields
-	// In a full implementation, we would add methods to access the repository service
-	// or pass it as a separate parameter
-	
-	slog.Debug("configuring GitHub integration via connector interface")
-
-	// TODO: Get the repository service from the GitHub connector
-	// This requires making the repositoryService field accessible or adding a getter method
-	
-	// For now, simulate the process without the actual database operations
-	slog.Info("GitHub integration configuration started",
-		"installation_id", cmd.InstallationID,
-		"organization_id", cmd.OrganizationID)
-
-	// Create mock credentials for the installation
-	// In a real implementation, this would:
-	// 1. Check if unclaimed installation exists
-	// 2. Generate installation access token
-	// 3. Get installation details from GitHub API
-	// 4. Create integration and credentials records
-	// 5. Sync repositories
-	// 6. Mark unclaimed installation as claimed
-
-	authData := infragpt.AuthorizationData{
-		InstallationID: cmd.InstallationID,
+	// Cast to GitHub connector to access GitHub-specific methods
+	githubConnector, ok := connector.(github.GitHubConnector)
+	if !ok {
+		return infragpt.Integration{}, fmt.Errorf("invalid GitHub connector type")
 	}
-
-	credentials, err := connector.CompleteAuthorization(authData)
+	
+	installationID, err := strconv.ParseInt(cmd.InstallationID, 10, 64)
 	if err != nil {
-		return infragpt.Integration{}, fmt.Errorf("failed to complete GitHub authorization: %w", err)
+		return infragpt.Integration{}, fmt.Errorf("invalid installation ID: %w", err)
 	}
-
-	now := time.Now()
-	integration := infragpt.Integration{
-		ID:             uuid.New().String(),
-		OrganizationID: cmd.OrganizationID,
-		UserID:         cmd.UserID,
-		ConnectorType:  cmd.ConnectorType,
-		Status:         infragpt.IntegrationStatusActive,
-		BotID:          cmd.InstallationID,
-		Metadata:       make(map[string]string),
-		CreatedAt:      now,
-		UpdatedAt:      now,
-		LastUsedAt:     &now,
+	
+	// Delegate complete installation claiming to GitHub connector
+	integration, err := githubConnector.ClaimInstallation(ctx, installationID, cmd.OrganizationID, cmd.UserID)
+	if err != nil {
+		return infragpt.Integration{}, fmt.Errorf("failed to claim GitHub installation: %w", err)
 	}
-
-	// Store connector organization info
-	if credentials.OrganizationInfo != nil {
-		integration.ConnectorOrganizationID = credentials.OrganizationInfo.ExternalID
-		integration.Metadata["connector_org_name"] = credentials.OrganizationInfo.Name
-		for k, v := range credentials.OrganizationInfo.Metadata {
-			integration.Metadata[k] = v
-		}
-	}
-
-	// Store integration
-	if err := s.integrationRepository.Store(ctx, integration); err != nil {
-		return infragpt.Integration{}, fmt.Errorf("failed to store integration: %w", err)
-	}
-
-	// Store credentials
-	credentialRecord := domain.IntegrationCredential{
-		ID:              uuid.New().String(),
-		IntegrationID:   integration.ID,
-		CredentialType:  credentials.Type,
-		Data:            credentials.Data,
-		ExpiresAt:       credentials.ExpiresAt,
-		EncryptionKeyID: "v1",
-		CreatedAt:       now,
-		UpdatedAt:       now,
-	}
-
-	if err := s.credentialRepository.Store(ctx, credentialRecord); err != nil {
-		return infragpt.Integration{}, fmt.Errorf("failed to store credentials: %w", err)
-	}
-
-	// TODO: Sync repositories using repository service
-	// githubConnector.repositoryService.SyncRepositories(ctx, integration.ID, installationID)
 
 	slog.Info("GitHub integration configured successfully",
 		"integration_id", integration.ID,
 		"installation_id", cmd.InstallationID,
 		"organization_id", cmd.OrganizationID)
 
-	return integration, nil
+	return *integration, nil
 }
 
 func (s *service) RevokeIntegration(ctx context.Context, cmd infragpt.RevokeIntegrationCommand) error {
@@ -341,103 +280,18 @@ func (s *service) Subscribe(ctx context.Context) error {
 	return nil
 }
 
-// handleConnectorEvent processes events from connectors - simplified for installation-only approach
+// handleConnectorEvent processes events from connectors - delegate to connectors for processing
 func (s *service) handleConnectorEvent(ctx context.Context, event any) error {
+	// Simple delegation - let each connector handle its own events
 	switch e := event.(type) {
 	case github.WebhookEvent:
-		return s.handleGitHubEvent(ctx, e)
+		// Get GitHub connector and delegate event processing
+		if connector, exists := s.connectors[infragpt.ConnectorTypeGithub]; exists {
+			return connector.ProcessEvent(ctx, e)
+		}
+		return fmt.Errorf("GitHub connector not found")
 	default:
 		slog.Debug("received unknown event type", "event_type", fmt.Sprintf("%T", event))
 		return nil
 	}
-}
-
-// handleGitHubEvent processes GitHub webhook events - simplified for installation-only approach
-func (s *service) handleGitHubEvent(ctx context.Context, event github.WebhookEvent) error {
-	// Only handle installation events
-	if event.EventType != github.EventTypeInstallation {
-		slog.Debug("ignoring non-installation event", "event_type", event.EventType)
-		return nil
-	}
-
-	slog.Info("handling GitHub installation event",
-		"action", event.InstallationAction,
-		"installation_id", event.InstallationID,
-		"sender_login", event.SenderLogin,
-		"repositories_added", len(event.RepositoriesAdded),
-		"repositories_removed", len(event.RepositoriesRemoved))
-
-	// Validate event has required fields
-	if event.InstallationID == 0 {
-		slog.Warn("GitHub event missing installation ID")
-		return fmt.Errorf("missing installation ID in GitHub event")
-	}
-
-	// Process installation events
-	switch event.InstallationAction {
-	case "created":
-		return s.handleInstallationCreated(ctx, event)
-	case "deleted":
-		return s.handleInstallationDeleted(ctx, event)
-	case "added":
-		return s.handleInstallationRepositoriesAdded(ctx, event)
-	case "removed":
-		return s.handleInstallationRepositoriesRemoved(ctx, event)
-	default:
-		slog.Debug("unhandled installation action", "action", event.InstallationAction)
-		return nil
-	}
-}
-
-// handleInstallationCreated processes GitHub App installation created events
-func (s *service) handleInstallationCreated(ctx context.Context, event github.WebhookEvent) error {
-	slog.Info("GitHub App installation created",
-		"installation_id", event.InstallationID,
-		"sender", event.SenderLogin,
-		"repositories", len(event.RepositoriesAdded))
-
-	// Log the installation for monitoring purposes
-	// In a full implementation, you might want to:
-	// 1. Store installation metadata
-	// 2. Send notifications to relevant channels
-	// 3. Update integration status
-
-	return nil
-}
-
-// handleInstallationDeleted processes GitHub App installation deleted events
-func (s *service) handleInstallationDeleted(ctx context.Context, event github.WebhookEvent) error {
-	slog.Info("GitHub App installation deleted",
-		"installation_id", event.InstallationID,
-		"sender", event.SenderLogin)
-
-	// Log the uninstallation for monitoring purposes
-	// In a full implementation, you might want to:
-	// 1. Update integration status to inactive
-	// 2. Revoke stored credentials
-	// 3. Send notifications
-
-	return nil
-}
-
-// handleInstallationRepositoriesAdded processes repository access added events
-func (s *service) handleInstallationRepositoriesAdded(ctx context.Context, event github.WebhookEvent) error {
-	slog.Info("GitHub App repository access added",
-		"installation_id", event.InstallationID,
-		"repositories", event.RepositoriesAdded)
-
-	// Log the repository access change for monitoring purposes
-
-	return nil
-}
-
-// handleInstallationRepositoriesRemoved processes repository access removed events
-func (s *service) handleInstallationRepositoriesRemoved(ctx context.Context, event github.WebhookEvent) error {
-	slog.Info("GitHub App repository access removed",
-		"installation_id", event.InstallationID,
-		"repositories", event.RepositoriesRemoved)
-
-	// Log the repository access change for monitoring purposes
-
-	return nil
 }

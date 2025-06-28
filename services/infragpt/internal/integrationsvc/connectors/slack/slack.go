@@ -229,3 +229,10 @@ func (s *slackConnector) convertToMessageEvent(rawEvent any) MessageEvent {
 		RawEvent:  make(map[string]any),
 	}
 }
+
+func (s *slackConnector) ProcessEvent(ctx context.Context, event any) error {
+	// Slack connector doesn't process events through this method
+	// Events are handled directly in the conversation service
+	// This is a no-op implementation
+	return nil
+}

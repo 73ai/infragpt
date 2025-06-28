@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func (g *githubConnector) ValidateWebhookSignature(payload []byte, signature string, secret string) error {
@@ -125,7 +127,8 @@ func (g *githubConnector) handleInstallationCreated(ctx context.Context, event *
 		"repository_count", len(event.Repositories))
 
 	// Store in unclaimed_installations table for later processing
-	unclaimedInstallation := UnclaimedInstallation{
+	unclaimedInstallation := &UnclaimedInstallation{
+		ID:                   uuid.New(),
 		GitHubInstallationID: event.Installation.ID,
 		GitHubAppID:          event.Installation.AppID,
 		GitHubAccountID:      event.Installation.Account.ID,
@@ -139,15 +142,17 @@ func (g *githubConnector) handleInstallationCreated(ctx context.Context, event *
 		HTMLURL:              event.Installation.HTMLURL,
 		AppSlug:              event.Installation.AppSlug,
 		SuspendedAt:          event.Installation.SuspendedAt,
-		SuspendedBy:          event.Installation.SuspendedBy,
-		WebhookSender:        &event.Sender,
+		SuspendedBy:          convertUserToMap(&event.Sender),
+		WebhookSender:        convertUserToMap(&event.Sender),
 		RawWebhookPayload:    event.RawPayload,
+		CreatedAt:            time.Now(),
 		GitHubCreatedAt:      event.Installation.CreatedAt,
 		GitHubUpdatedAt:      event.Installation.UpdatedAt,
+		ExpiresAt:            time.Now().Add(7 * 24 * time.Hour), // 7 days from now
 	}
 
-	// Store unclaimed installation using repository service
-	if err := g.repositoryService.StoreUnclaimedInstallation(ctx, &unclaimedInstallation); err != nil {
+	// Store unclaimed installation directly using config repository
+	if err := g.config.UnclaimedInstallationRepo.Create(ctx, unclaimedInstallation); err != nil {
 		return fmt.Errorf("failed to store unclaimed installation: %w", err)
 	}
 
@@ -159,9 +164,18 @@ func (g *githubConnector) handleInstallationDeleted(ctx context.Context, event *
 		"installation_id", event.Installation.ID,
 		"account", event.Installation.Account.Login)
 
-	// TODO: Mark installation as deleted in database
-	// TODO: Revoke any active integrations for this installation
-	// TODO: Clean up repository permissions tracking
+	// Find integration by GitHub installation ID - we need to search across all organizations
+	// Since we don't have organization context here, we'll need to add a method to find by connector type
+	// For now, we'll just log the deletion since we can't find the specific integration
+	slog.Info("GitHub installation deleted - skipping integration cleanup (no organization context)",
+		"installation_id", event.Installation.ID)
+
+	// Clean up unclaimed installations
+	if err := g.config.UnclaimedInstallationRepo.Delete(ctx, event.Installation.ID); err != nil {
+		slog.Error("failed to clean up unclaimed installation",
+			"installation_id", event.Installation.ID,
+			"error", err)
+	}
 
 	return nil
 }
@@ -232,21 +246,20 @@ func (g *githubConnector) handleRepositoriesAdded(ctx context.Context, event *In
 		"account", event.Installation.Account.Login,
 		"repositories_count", len(event.RepositoriesAdded))
 
-	for _, repo := range event.RepositoriesAdded {
-		slog.Debug("repository added",
+	// Find integration by GitHub installation ID
+	integrationID, err := g.findIntegrationIDByInstallationID(ctx, event.Installation.ID)
+	if err != nil {
+		slog.Error("failed to find integration for repository addition",
 			"installation_id", event.Installation.ID,
-			"repository_id", repo.ID,
-			"repository_name", repo.FullName)
+			"error", err)
+		return nil // Don't fail the webhook for this
 	}
 
-	// Update repository permissions tracking using repository service
-	// TODO: Get integration ID from installation ID
-	// integrationID := getIntegrationIDFromInstallationID(event.Installation.ID)
-	// if integrationID != "" {
-	//     if err := g.repositoryService.AddRepositories(ctx, integrationID, event.RepositoriesAdded); err != nil {
-	//         return fmt.Errorf("failed to add repositories: %w", err)
-	//     }
-	// }
+	if integrationID != uuid.Nil {
+		if err := g.addRepositories(ctx, integrationID, event.RepositoriesAdded); err != nil {
+			return fmt.Errorf("failed to add repositories: %w", err)
+		}
+	}
 
 	return nil
 }
@@ -257,49 +270,49 @@ func (g *githubConnector) handleRepositoriesRemoved(ctx context.Context, event *
 		"account", event.Installation.Account.Login,
 		"repositories_count", len(event.RepositoriesRemoved))
 
-	for _, repo := range event.RepositoriesRemoved {
-		slog.Debug("repository removed",
+	// Find integration by GitHub installation ID
+	integrationID, err := g.findIntegrationIDByInstallationID(ctx, event.Installation.ID)
+	if err != nil {
+		slog.Error("failed to find integration for repository removal",
 			"installation_id", event.Installation.ID,
-			"repository_id", repo.ID,
-			"repository_name", repo.FullName)
+			"error", err)
+		return nil // Don't fail the webhook for this
 	}
 
-	// Remove repository permissions using repository service
-	// TODO: Get integration ID from installation ID
-	// integrationID := getIntegrationIDFromInstallationID(event.Installation.ID)
-	// if integrationID != "" {
-	//     var repoIDs []int64
-	//     for _, repo := range event.RepositoriesRemoved {
-	//         repoIDs = append(repoIDs, repo.ID)
-	//     }
-	//     if err := g.repositoryService.RemoveRepositories(ctx, integrationID, repoIDs); err != nil {
-	//         return fmt.Errorf("failed to remove repositories: %w", err)
-	//     }
-	// }
+	if integrationID != uuid.Nil {
+		var repoIDs []int64
+		for _, repo := range event.RepositoriesRemoved {
+			repoIDs = append(repoIDs, repo.ID)
+		}
+		if err := g.removeRepositories(ctx, integrationID, repoIDs); err != nil {
+			return fmt.Errorf("failed to remove repositories: %w", err)
+		}
+	}
 
 	return nil
 }
 
-// UnclaimedInstallation represents an installation waiting to be claimed
-type UnclaimedInstallation struct {
-	GitHubInstallationID int64
-	GitHubAppID          int64
-	GitHubAccountID      int64
-	GitHubAccountLogin   string
-	GitHubAccountType    string
-	RepositorySelection  string
-	Permissions          map[string]string
-	Events               []string
-	AccessTokensURL      string
-	RepositoriesURL      string
-	HTMLURL              string
-	AppSlug              string
-	SuspendedAt          *time.Time
-	SuspendedBy          *User
-	WebhookSender        *User
-	RawWebhookPayload    map[string]any
-	GitHubCreatedAt      time.Time
-	GitHubUpdatedAt      time.Time
+// findIntegrationIDByInstallationID finds the integration ID for a GitHub installation
+// For now, we'll return uuid.Nil since we don't have a way to search by connector type
+// This means repository add/remove events won't work until the integration is associated with an organization
+func (g *githubConnector) findIntegrationIDByInstallationID(ctx context.Context, installationID int64) (uuid.UUID, error) {
+	// TODO: This needs to be fixed with a proper search method that can find integrations by installation ID
+	// across all organizations, or we need organization context in webhook events
+	slog.Debug("findIntegrationIDByInstallationID not implemented - repository events will be skipped",
+		"installation_id", installationID)
+	return uuid.Nil, nil // Not found
+}
+
+// convertUserToMap converts a User struct to map[string]any for JSON storage
+func convertUserToMap(user *User) map[string]any {
+	if user == nil {
+		return nil
+	}
+	return map[string]any{
+		"id":    user.ID,
+		"login": user.Login,
+		"type":  user.Type,
+	}
 }
 
 // Webhook server configuration and implementation

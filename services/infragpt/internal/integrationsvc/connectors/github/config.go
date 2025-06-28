@@ -15,6 +15,12 @@ type Config struct {
 	WebhookSecret string `mapstructure:"webhook_secret"`
 	RedirectURL   string `mapstructure:"redirect_url"`
 	WebhookPort   int    `mapstructure:"webhook_port"`
+	
+	// Repository dependencies
+	UnclaimedInstallationRepo UnclaimedInstallationRepository
+	GitHubRepositoryRepo      GitHubRepositoryRepository
+	IntegrationRepository     domain.IntegrationRepository
+	CredentialRepository      domain.CredentialRepository
 }
 
 func (c Config) NewConnector() domain.Connector {
@@ -25,9 +31,6 @@ func (c Config) NewConnector() domain.Connector {
 		client:     &http.Client{Timeout: 30 * time.Second},
 		privateKey: privateKey,
 	}
-	
-	// Initialize repository service with the connector
-	connector.repositoryService = NewRepositoryService(connector)
 	
 	if err != nil {
 		// Return a connector with nil private key that will fail during JWT generation

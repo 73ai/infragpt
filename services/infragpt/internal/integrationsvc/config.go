@@ -32,6 +32,12 @@ func (c Config) New() (infragpt.IntegrationService, error) {
 	}
 
 	if c.GitHub.AppID != "" {
+		// Inject repository dependencies into GitHub config
+		c.GitHub.UnclaimedInstallationRepo = postgres.NewUnclaimedInstallationRepository(c.Database)
+		c.GitHub.GitHubRepositoryRepo = postgres.NewGitHubRepositoryRepository(c.Database)
+		c.GitHub.IntegrationRepository = integrationRepository
+		c.GitHub.CredentialRepository = credentialRepository
+		
 		connectors[infragpt.ConnectorTypeGithub] = c.GitHub.NewConnector()
 	}
 
