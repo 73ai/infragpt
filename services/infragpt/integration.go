@@ -90,8 +90,6 @@ type IntegrationService interface {
 	RefreshIntegration(ctx context.Context, cmd RefreshIntegrationCommand) error
 	Integrations(ctx context.Context, query IntegrationsQuery) ([]Integration, error)
 	Integration(ctx context.Context, query IntegrationQuery) (Integration, error)
-	ClaimInstallation(ctx context.Context, cmd ClaimInstallationCommand) (Integration, error)
-	UnclaimedInstallations(ctx context.Context, query UnclaimedInstallationsQuery) ([]map[string]any, error)
 	Subscribe(ctx context.Context) error
 }
 
@@ -132,15 +130,4 @@ type SyncIntegrationCommand struct {
 	IntegrationID  string
 	OrganizationID string
 	Parameters     map[string]string
-}
-
-type ClaimInstallationCommand struct {
-	ConnectorType  ConnectorType
-	InstallationID string
-	OrganizationID string
-	UserID         string
-}
-
-type UnclaimedInstallationsQuery struct {
-	ConnectorType ConnectorType
 }
