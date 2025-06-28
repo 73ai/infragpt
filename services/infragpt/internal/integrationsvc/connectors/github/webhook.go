@@ -128,8 +128,6 @@ func (g *githubConnector) handleInstallationCreated(ctx context.Context, event I
 		"repository_selection", event.Installation.RepositorySelection,
 		"repository_count", len(event.Repositories))
 
-	// Simply log the installation creation - no storage needed
-	// The installation will be claimed directly when user completes authorization flow
 	slog.Info("GitHub installation created - will be claimed during authorization flow",
 		"installation_id", event.Installation.ID,
 		"account_login", event.Installation.Account.Login,
@@ -143,19 +141,16 @@ func (g *githubConnector) handleInstallationDeleted(ctx context.Context, event I
 		"installation_id", event.Installation.ID,
 		"account", event.Installation.Account.Login)
 
-	// Find integration by GitHub installation ID and mark as deleted
 	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
 	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			slog.Debug("integration not found for deleted installation",
 				"installation_id", event.Installation.ID)
-			return nil // Not an error if integration doesn't exist
+			return nil
 		}
 		return fmt.Errorf("failed to find integration for deleted installation %d: %w", event.Installation.ID, err)
 	}
-
-	// Update integration status to deleted/inactive
 	if err := g.config.IntegrationRepository.UpdateStatus(ctx, integration.ID, infragpt.IntegrationStatusInactive); err != nil {
 		return fmt.Errorf("failed to update integration status for deleted installation %d: %w", event.Installation.ID, err)
 	}
@@ -174,19 +169,16 @@ func (g *githubConnector) handleInstallationSuspended(ctx context.Context, event
 		"account", event.Installation.Account.Login,
 		"suspended_by", event.Installation.SuspendedBy)
 
-	// Find integration by GitHub installation ID and update status to suspended
 	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
 	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			slog.Debug("integration not found for suspended installation",
 				"installation_id", event.Installation.ID)
-			return nil // Not an error if integration doesn't exist
+			return nil
 		}
 		return fmt.Errorf("failed to find integration for suspended installation %d: %w", event.Installation.ID, err)
 	}
-
-	// Update integration status to suspended
 	if err := g.config.IntegrationRepository.UpdateStatus(ctx, integration.ID, infragpt.IntegrationStatusSuspended); err != nil {
 		return fmt.Errorf("failed to update integration status to suspended for installation %d: %w", event.Installation.ID, err)
 	}
@@ -211,12 +203,11 @@ func (g *githubConnector) handleInstallationUnsuspended(ctx context.Context, eve
 		if err == sql.ErrNoRows {
 			slog.Debug("integration not found for unsuspended installation",
 				"installation_id", event.Installation.ID)
-			return nil // Not an error if integration doesn't exist
+			return nil
 		}
 		return fmt.Errorf("failed to find integration for unsuspended installation %d: %w", event.Installation.ID, err)
 	}
 
-	// Update integration status to active
 	if err := g.config.IntegrationRepository.UpdateStatus(ctx, integration.ID, infragpt.IntegrationStatusActive); err != nil {
 		return fmt.Errorf("failed to update integration status to active for installation %d: %w", event.Installation.ID, err)
 	}
@@ -235,7 +226,6 @@ func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event In
 		"account", event.Installation.Account.Login,
 		"permissions", event.Installation.Permissions)
 
-	// Check if installation is suspended before processing
 	isSuspended, err := g.isInstallationSuspended(ctx, event.Installation.ID)
 	if err != nil {
 		return fmt.Errorf("failed to check installation suspension status: %w", err)
@@ -255,7 +245,7 @@ func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event In
 		if err == sql.ErrNoRows {
 			slog.Debug("integration not found for permissions update",
 				"installation_id", event.Installation.ID)
-			return nil // Not an error if integration doesn't exist
+			return nil
 		}
 		return fmt.Errorf("failed to find integration for permissions update %d: %w", event.Installation.ID, err)
 	}
@@ -296,7 +286,6 @@ func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event In
 				"installation_id", event.Installation.ID,
 				"integration_id", integration.ID,
 				"error", err)
-			// Continue execution - repository sync failure shouldn't fail the permissions update
 		} else {
 			slog.Info("repository sync completed successfully after permissions update",
 				"installation_id", event.Installation.ID,
@@ -358,13 +347,12 @@ func (g *githubConnector) handleRepositoriesAdded(ctx context.Context, event Ins
 		return nil
 	}
 
-	// Find integration by GitHub installation ID
 	integrationID, err := g.findIntegrationIDByInstallationID(ctx, installationIDStr)
 	if err != nil {
 		slog.Error("failed to find integration for repository addition",
 			"installation_id", event.Installation.ID,
 			"error", err)
-		return nil // Don't fail the webhook for this
+		return nil
 	}
 
 	if integrationID != uuid.Nil {
@@ -382,7 +370,6 @@ func (g *githubConnector) handleRepositoriesRemoved(ctx context.Context, event I
 		"account", event.Installation.Account.Login,
 		"repositories_count", len(event.RepositoriesRemoved))
 
-	// Check if installation is suspended before processing
 	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
 	isSuspended, err := g.isInstallationSuspended(ctx, event.Installation.ID)
 	if err != nil {
@@ -397,13 +384,12 @@ func (g *githubConnector) handleRepositoriesRemoved(ctx context.Context, event I
 		return nil
 	}
 
-	// Find integration by GitHub installation ID
 	integrationID, err := g.findIntegrationIDByInstallationID(ctx, installationIDStr)
 	if err != nil {
 		slog.Error("failed to find integration for repository removal",
 			"installation_id", event.Installation.ID,
 			"error", err)
-		return nil // Don't fail the webhook for this
+		return nil
 	}
 
 	if integrationID != uuid.Nil {
@@ -424,13 +410,11 @@ func (g *githubConnector) isInstallationSuspended(ctx context.Context, installat
 	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// Integration not found, return false (not suspended, just not found)
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to find integration by installation ID %d: %w", installationID, err)
 	}
 
-	// Return true if status is suspended
 	return integration.Status == infragpt.IntegrationStatusSuspended, nil
 }
 
@@ -439,7 +423,7 @@ func (g *githubConnector) findIntegrationIDByInstallationID(ctx context.Context,
 	if err != nil {
 		if err == sql.ErrNoRows {
 			slog.Debug("integration not found for installation ID", "installation_id", installationID)
-			return uuid.Nil, nil // Not found, but not an error
+			return uuid.Nil, nil
 		}
 		return uuid.Nil, fmt.Errorf("failed to find integration by installation ID: %w", err)
 	}
@@ -508,7 +492,6 @@ func (wh *webhookHandler) handler() func(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		// Only process installation events
 		if eventType != "installation" && eventType != "installation_repositories" {
 			slog.Debug("ignoring non-installation event", "event_type", eventType)
 			w.WriteHeader(http.StatusOK)
@@ -553,7 +536,6 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 		CreatedAt:  time.Now(),
 	}
 
-	// Extract common fields
 	if installation, ok := rawPayload["installation"].(map[string]any); ok {
 		if id, ok := installation["id"].(float64); ok {
 			event.InstallationID = strconv.FormatFloat(id, 'f', 0, 64)
@@ -574,7 +556,6 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 		event.InstallationAction = action
 	}
 
-	// Handle repository changes for installation events
 	if eventType == "installation" || eventType == "installation_repositories" {
 		if repositories, ok := rawPayload["repositories"].([]any); ok {
 			for _, repo := range repositories {

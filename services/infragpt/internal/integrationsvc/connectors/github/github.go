@@ -99,22 +99,20 @@ func (g *githubConnector) CompleteAuthorization(authData infragpt.AuthorizationD
 		return infragpt.Credentials{}, fmt.Errorf("installation ID is required for GitHub App")
 	}
 
-	// Parse state to get organization ID and user ID for claiming
 	organizationID, userID, err := g.ParseState(authData.State)
 	if err != nil {
 		return infragpt.Credentials{}, fmt.Errorf("failed to parse state: %w", err)
 	}
 
-	// Try to claim installation if it exists as unclaimed
 	ctx := context.Background()
 	integration, err := g.ClaimInstallation(ctx, authData.InstallationID, organizationID, userID)
 	if err != nil {
-		slog.Error("failed to claim unclaimed GitHub installation",
+		slog.Error("failed to claim GitHub installation",
 			"installation_id", authData.InstallationID,
 			"organization_id", organizationID,
 			"integration_id", integration.ID,
 			"error", err)
-		return infragpt.Credentials{}, fmt.Errorf("failed to claim unclaimed GitHub installation: %w", err)
+		return infragpt.Credentials{}, fmt.Errorf("failed to claim GitHub installation: %w", err)
 	}
 
 	return infragpt.Credentials{
@@ -176,7 +174,6 @@ func (g *githubConnector) RefreshCredentials(creds infragpt.Credentials) (infrag
 }
 
 func (g *githubConnector) RevokeCredentials(creds infragpt.Credentials) error {
-	// Simple stub implementation - just log the revocation
 	installationID, exists := creds.Data["installation_id"]
 	if !exists {
 		return fmt.Errorf("installation ID not found in credentials")
@@ -187,7 +184,6 @@ func (g *githubConnector) RevokeCredentials(creds infragpt.Credentials) error {
 }
 
 func (g *githubConnector) ConfigureWebhooks(integrationID string, creds infragpt.Credentials) error {
-	// Simple stub implementation for installation webhook only
 	installationID, exists := creds.Data["installation_id"]
 	if !exists {
 		return fmt.Errorf("installation ID not found in credentials")
@@ -303,19 +299,15 @@ func (g *githubConnector) buildWebhookURL(integrationID string) string {
 }
 
 func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID string, organizationID, userID uuid.UUID) (*infragpt.Integration, error) {
-	// Generate JWT to access GitHub API
 	jwt, err := g.generateJWT()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate JWT: %w", err)
 	}
 
-	// Get installation details directly from GitHub API
 	installationDetails, err := g.getInstallationDetails(jwt, installationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get installation details from GitHub: %w", err)
 	}
-
-	// Create integration record with data from GitHub API
 	connectorOrgID := strconv.FormatInt(installationDetails.Account.ID, 10)
 	integration := &infragpt.Integration{
 		ID:                      uuid.New(),
@@ -338,12 +330,9 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 		UpdatedAt: time.Now(),
 	}
 
-	// Store integration
 	if err := g.config.IntegrationRepository.Store(ctx, *integration); err != nil {
 		return nil, fmt.Errorf("failed to store integration: %w", err)
 	}
-
-	// Generate and store credentials
 	accessToken, err := g.getInstallationAccessToken(jwt, installationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get access token: %w", err)
@@ -377,7 +366,6 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 		return nil, fmt.Errorf("failed to store credentials: %w", err)
 	}
 
-	// Sync repositories
 	if err := g.syncRepositories(ctx, integration.ID, installationID); err != nil {
 		slog.Error("failed to sync repositories during installation claim",
 			"integration_id", integration.ID,
@@ -393,7 +381,6 @@ func (g *githubConnector) syncRepositories(ctx context.Context, integrationID uu
 		"integration_id", integrationID,
 		"installation_id", installationID)
 
-	// Generate JWT and get installation access token
 	jwt, err := g.generateJWT()
 	if err != nil {
 		return fmt.Errorf("failed to generate JWT: %w", err)
@@ -403,8 +390,6 @@ func (g *githubConnector) syncRepositories(ctx context.Context, integrationID uu
 	if err != nil {
 		return fmt.Errorf("failed to get access token: %w", err)
 	}
-
-	// Fetch repositories from GitHub API
 	repositories, err := g.fetchInstallationRepositories(accessToken.Token)
 	if err != nil {
 		return fmt.Errorf("failed to fetch repositories: %w", err)
@@ -414,7 +399,6 @@ func (g *githubConnector) syncRepositories(ctx context.Context, integrationID uu
 		"integration_id", integrationID,
 		"repository_count", len(repositories))
 
-	// Store repositories in database
 	for _, repo := range repositories {
 		githubRepo := GitHubRepository{
 			ID:                    uuid.New(),
@@ -425,9 +409,9 @@ func (g *githubConnector) syncRepositories(ctx context.Context, integrationID uu
 			RepositoryURL:         repo.HTMLURL,
 			IsPrivate:             repo.Private,
 			DefaultBranch:         repo.DefaultBranch,
-			PermissionAdmin:       false, // TODO: Extract from API response
-			PermissionPush:        false, // TODO: Extract from API response
-			PermissionPull:        true,  // Default permission for installations
+			PermissionAdmin:       false,
+			PermissionPush:        false,
+			PermissionPull:        true,
 			RepositoryDescription: repo.Description,
 			RepositoryLanguage:    repo.Language,
 			CreatedAt:             time.Now(),
@@ -561,12 +545,10 @@ type accountResponse struct {
 }
 
 func (g *githubConnector) Sync(ctx context.Context, integration infragpt.Integration, params map[string]string) error {
-	// Sync repositories - check for new repositories and update existing ones
 	if err := g.syncRepositoriesForIntegration(ctx, integration); err != nil {
 		return fmt.Errorf("failed to sync repositories: %w", err)
 	}
 
-	// Check and update repository permissions and status
 	if err := g.syncRepositoryPermissions(ctx, integration); err != nil {
 		return fmt.Errorf("failed to sync repository permissions: %w", err)
 	}
@@ -582,7 +564,6 @@ func (g *githubConnector) syncRepositoryPermissions(ctx context.Context, integra
 		return fmt.Errorf("installation ID not found in integration")
 	}
 
-	// Generate JWT and get installation access token
 	jwt, err := g.generateJWT()
 	if err != nil {
 		return fmt.Errorf("failed to generate JWT: %w", err)
@@ -593,24 +574,19 @@ func (g *githubConnector) syncRepositoryPermissions(ctx context.Context, integra
 		return fmt.Errorf("failed to get access token: %w", err)
 	}
 
-	// Fetch current installation details to check permissions
 	installationDetails, err := g.getInstallationDetails(jwt, installationID)
 	if err != nil {
 		return fmt.Errorf("failed to get installation details: %w", err)
 	}
-
-	// Fetch repositories from GitHub API with updated permissions
 	repositories, err := g.fetchInstallationRepositories(accessToken.Token)
 	if err != nil {
 		return fmt.Errorf("failed to fetch repositories: %w", err)
 	}
 
-	// Update existing repositories with current permissions and status
-	// For GitHub App installations, all repositories have the same permissions as defined in the installation
 	defaultPermissions := RepositoryPermissions{
-		Admin: false, // Apps typically don't get admin access
-		Push:  true,  // Most installations need push access
-		Pull:  true,  // All installations need pull access
+		Admin: false,
+		Push:  true,
+		Pull:  true,
 	}
 
 	for _, repo := range repositories {
@@ -642,7 +618,6 @@ func (g *githubConnector) syncInstallation(ctx context.Context, integration infr
 		return fmt.Errorf("installation_id is required for GitHub installation sync")
 	}
 
-	// Simply sync repositories for the existing integration
 	return g.syncRepositoriesForIntegration(ctx, integration)
 }
 

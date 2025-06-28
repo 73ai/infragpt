@@ -18,7 +18,6 @@ type Config struct {
 	RedirectURL   string `mapstructure:"redirect_url"`
 	WebhookPort   int    `mapstructure:"webhook_port"`
 
-	// Repository dependencies
 	GitHubRepositoryRepo  GitHubRepositoryRepository
 	IntegrationRepository domain.IntegrationRepository
 	CredentialRepository  domain.CredentialRepository
@@ -31,7 +30,6 @@ func (c Config) NewConnector() domain.Connector {
 		var err error
 		privateKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(c.PrivateKey))
 		if err != nil {
-			// Log the specific error for debugging
 			slog.Error("Failed to parse GitHub private key", "error", err)
 			privateKey = nil
 		}
