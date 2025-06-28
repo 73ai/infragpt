@@ -3,6 +3,7 @@ package integrationapi
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -216,15 +217,17 @@ func (h *httpHandler) refresh() func(w http.ResponseWriter, r *http.Request) {
 	}
 
 	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
-		// TODO: Implement credential refresh logic
-		// This would involve:
-		// 1. Get integration by ID and validate organization
-		// 2. Get credentials for integration
-		// 3. Call connector.RefreshCredentials()
-		// 4. Update stored credentials
+		cmd := infragpt.RefreshIntegrationCommand{
+			IntegrationID:  req.IntegrationID,
+			OrganizationID: req.OrganizationID,
+		}
+
+		if err := h.svc.RefreshIntegration(ctx, cmd); err != nil {
+			return response{}, fmt.Errorf("failed to refresh integration credentials: %w", err)
+		}
 
 		return response{
-			Message: "Credential refresh not implemented yet",
+			Message: "Credentials refreshed successfully",
 		}, nil
 	})
 }
@@ -290,11 +293,11 @@ func (h *httpHandler) status() func(w http.ResponseWriter, r *http.Request) {
 
 func (h *httpHandler) configure() func(w http.ResponseWriter, r *http.Request) {
 	type request struct {
-		OrganizationID  string `json:"organization_id"`
-		UserID          string `json:"user_id"`
-		ConnectorType   string `json:"connector_type"`
-		InstallationID  string `json:"installation_id"`
-		SetupAction     string `json:"setup_action,omitempty"`
+		OrganizationID string `json:"organization_id"`
+		UserID         string `json:"user_id"`
+		ConnectorType  string `json:"connector_type"`
+		InstallationID string `json:"installation_id"`
+		SetupAction    string `json:"setup_action,omitempty"`
 	}
 	type response struct {
 		ID                      string            `json:"id"`

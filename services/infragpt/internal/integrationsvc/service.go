@@ -142,7 +142,7 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 func (s *service) ConfigureIntegration(ctx context.Context, cmd infragpt.ConfigureIntegrationCommand) (infragpt.Integration, error) {
 	// This method handles the case where a user is redirected back from GitHub
 	// after installing the app and needs to claim the installation
-	
+
 	slog.Info("configuring integration",
 		"organization_id", cmd.OrganizationID,
 		"user_id", cmd.UserID,
@@ -186,7 +186,7 @@ func (s *service) configureGitHubIntegration(ctx context.Context, cmd infragpt.C
 	if !ok {
 		return infragpt.Integration{}, fmt.Errorf("invalid GitHub connector type")
 	}
-	
+
 	// Delegate complete installation claiming to GitHub connector
 	integration, err := githubConnector.ClaimInstallation(ctx, cmd.InstallationID, cmd.OrganizationID, cmd.UserID)
 	if err != nil {
@@ -259,6 +259,56 @@ func (s *service) Integration(ctx context.Context, query infragpt.IntegrationQue
 	}
 
 	return integration, nil
+}
+
+func (s *service) RefreshIntegration(ctx context.Context, cmd infragpt.RefreshIntegrationCommand) error {
+	integration, err := s.integrationRepository.FindByID(ctx, cmd.IntegrationID)
+	if err != nil {
+		return fmt.Errorf("failed to find integration: %w", err)
+	}
+
+	if integration.OrganizationID != cmd.OrganizationID {
+		return fmt.Errorf("integration not found for organization")
+	}
+
+	credential, err := s.credentialRepository.FindByIntegration(ctx, cmd.IntegrationID)
+	if err != nil {
+		return fmt.Errorf("failed to find credentials: %w", err)
+	}
+
+	connector, exists := s.connectors[integration.ConnectorType]
+	if !exists {
+		return fmt.Errorf("unsupported connector type: %s", integration.ConnectorType)
+	}
+
+	currentCreds := infragpt.Credentials{
+		Type:      credential.CredentialType,
+		Data:      credential.Data,
+		ExpiresAt: credential.ExpiresAt,
+	}
+
+	refreshedCreds, err := connector.RefreshCredentials(currentCreds)
+	if err != nil {
+		return fmt.Errorf("failed to refresh credentials: %w", err)
+	}
+
+	now := time.Now()
+	updatedCredential := domain.IntegrationCredential{
+		ID:              credential.ID,
+		IntegrationID:   credential.IntegrationID,
+		CredentialType:  refreshedCreds.Type,
+		Data:            refreshedCreds.Data,
+		ExpiresAt:       refreshedCreds.ExpiresAt,
+		EncryptionKeyID: credential.EncryptionKeyID,
+		CreatedAt:       credential.CreatedAt,
+		UpdatedAt:       now,
+	}
+
+	if err := s.credentialRepository.Update(ctx, updatedCredential); err != nil {
+		return fmt.Errorf("failed to update credentials: %w", err)
+	}
+
+	return nil
 }
 
 // Subscribe starts webhook subscriptions for all connectors

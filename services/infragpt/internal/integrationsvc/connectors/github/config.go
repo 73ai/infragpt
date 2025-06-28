@@ -1,6 +1,8 @@
 package github
 
 import (
+	"crypto/rsa"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -15,7 +17,7 @@ type Config struct {
 	WebhookSecret string `mapstructure:"webhook_secret"`
 	RedirectURL   string `mapstructure:"redirect_url"`
 	WebhookPort   int    `mapstructure:"webhook_port"`
-	
+
 	// Repository dependencies
 	UnclaimedInstallationRepo UnclaimedInstallationRepository
 	GitHubRepositoryRepo      GitHubRepositoryRepository
@@ -24,18 +26,22 @@ type Config struct {
 }
 
 func (c Config) NewConnector() domain.Connector {
-	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(c.PrivateKey))
-	
+	var privateKey *rsa.PrivateKey
+
+	if c.PrivateKey != "" {
+		var err error
+		privateKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(c.PrivateKey))
+		if err != nil {
+			// Log the specific error for debugging
+			slog.Error("Failed to parse GitHub private key", "error", err)
+			privateKey = nil
+		}
+	}
+
 	connector := &githubConnector{
 		config:     c,
 		client:     &http.Client{Timeout: 30 * time.Second},
 		privateKey: privateKey,
-	}
-	
-	if err != nil {
-		// Return a connector with nil private key that will fail during JWT generation
-		// This allows the error to be handled at runtime rather than during initialization
-		connector.privateKey = nil
 	}
 
 	return connector

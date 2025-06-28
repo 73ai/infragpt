@@ -21,7 +21,7 @@ type Connector interface {
 
 	// Event subscription method - each connector handles its own communication
 	Subscribe(ctx context.Context, handler func(ctx context.Context, event any) error) error
-	
+
 	// Event processing method - each connector processes its own events
 	ProcessEvent(ctx context.Context, event any) error
 }

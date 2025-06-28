@@ -37,7 +37,7 @@ func (c Config) New() (infragpt.IntegrationService, error) {
 		c.GitHub.GitHubRepositoryRepo = postgres.NewGitHubRepositoryRepository(c.Database)
 		c.GitHub.IntegrationRepository = integrationRepository
 		c.GitHub.CredentialRepository = credentialRepository
-		
+
 		connectors[infragpt.ConnectorTypeGithub] = c.GitHub.NewConnector()
 	}
 

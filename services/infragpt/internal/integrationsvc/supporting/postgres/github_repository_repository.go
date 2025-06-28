@@ -57,25 +57,25 @@ func (r *githubRepositoryRepository) ListByIntegrationID(ctx context.Context, in
 	var repositories []github.GitHubRepository
 	for _, dbRepo := range dbRepos {
 		repo := github.GitHubRepository{
-			ID:                     dbRepo.ID,
-			IntegrationID:          dbRepo.IntegrationID,
-			GitHubRepositoryID:     dbRepo.GithubRepositoryID,
-			RepositoryName:         dbRepo.RepositoryName,
-			RepositoryFullName:     dbRepo.RepositoryFullName,
-			RepositoryURL:          dbRepo.RepositoryUrl,
-			IsPrivate:              dbRepo.IsPrivate,
-			DefaultBranch:          dbRepo.DefaultBranch.String,
-			PermissionAdmin:        dbRepo.PermissionAdmin,
-			PermissionPush:         dbRepo.PermissionPush,
-			PermissionPull:         dbRepo.PermissionPull,
-			RepositoryDescription:  dbRepo.RepositoryDescription.String,
-			RepositoryLanguage:     dbRepo.RepositoryLanguage.String,
-			CreatedAt:              dbRepo.CreatedAt,
-			UpdatedAt:              dbRepo.UpdatedAt,
-			LastSyncedAt:           dbRepo.LastSyncedAt,
-			GitHubCreatedAt:        timeFromNullTime(dbRepo.GithubCreatedAt),
-			GitHubUpdatedAt:        timeFromNullTime(dbRepo.GithubUpdatedAt),
-			GitHubPushedAt:         timeFromNullTime(dbRepo.GithubPushedAt),
+			ID:                    dbRepo.ID,
+			IntegrationID:         dbRepo.IntegrationID,
+			GitHubRepositoryID:    dbRepo.GithubRepositoryID,
+			RepositoryName:        dbRepo.RepositoryName,
+			RepositoryFullName:    dbRepo.RepositoryFullName,
+			RepositoryURL:         dbRepo.RepositoryUrl,
+			IsPrivate:             dbRepo.IsPrivate,
+			DefaultBranch:         dbRepo.DefaultBranch.String,
+			PermissionAdmin:       dbRepo.PermissionAdmin,
+			PermissionPush:        dbRepo.PermissionPush,
+			PermissionPull:        dbRepo.PermissionPull,
+			RepositoryDescription: dbRepo.RepositoryDescription.String,
+			RepositoryLanguage:    dbRepo.RepositoryLanguage.String,
+			CreatedAt:             dbRepo.CreatedAt,
+			UpdatedAt:             dbRepo.UpdatedAt,
+			LastSyncedAt:          dbRepo.LastSyncedAt,
+			GitHubCreatedAt:       timeFromNullTime(dbRepo.GithubCreatedAt),
+			GitHubUpdatedAt:       timeFromNullTime(dbRepo.GithubUpdatedAt),
+			GitHubPushedAt:        timeFromNullTime(dbRepo.GithubPushedAt),
 		}
 		repositories = append(repositories, repo)
 	}
@@ -97,25 +97,25 @@ func (r *githubRepositoryRepository) GetByGitHubID(ctx context.Context, integrat
 	}
 
 	repo := github.GitHubRepository{
-		ID:                     dbRepo.ID,
-		IntegrationID:          dbRepo.IntegrationID,
-		GitHubRepositoryID:     dbRepo.GithubRepositoryID,
-		RepositoryName:         dbRepo.RepositoryName,
-		RepositoryFullName:     dbRepo.RepositoryFullName,
-		RepositoryURL:          dbRepo.RepositoryUrl,
-		IsPrivate:              dbRepo.IsPrivate,
-		DefaultBranch:          dbRepo.DefaultBranch.String,
-		PermissionAdmin:        dbRepo.PermissionAdmin,
-		PermissionPush:         dbRepo.PermissionPush,
-		PermissionPull:         dbRepo.PermissionPull,
-		RepositoryDescription:  dbRepo.RepositoryDescription.String,
-		RepositoryLanguage:     dbRepo.RepositoryLanguage.String,
-		CreatedAt:              dbRepo.CreatedAt,
-		UpdatedAt:              dbRepo.UpdatedAt,
-		LastSyncedAt:           dbRepo.LastSyncedAt,
-		GitHubCreatedAt:        timeFromNullTime(dbRepo.GithubCreatedAt),
-		GitHubUpdatedAt:        timeFromNullTime(dbRepo.GithubUpdatedAt),
-		GitHubPushedAt:         timeFromNullTime(dbRepo.GithubPushedAt),
+		ID:                    dbRepo.ID,
+		IntegrationID:         dbRepo.IntegrationID,
+		GitHubRepositoryID:    dbRepo.GithubRepositoryID,
+		RepositoryName:        dbRepo.RepositoryName,
+		RepositoryFullName:    dbRepo.RepositoryFullName,
+		RepositoryURL:         dbRepo.RepositoryUrl,
+		IsPrivate:             dbRepo.IsPrivate,
+		DefaultBranch:         dbRepo.DefaultBranch.String,
+		PermissionAdmin:       dbRepo.PermissionAdmin,
+		PermissionPush:        dbRepo.PermissionPush,
+		PermissionPull:        dbRepo.PermissionPull,
+		RepositoryDescription: dbRepo.RepositoryDescription.String,
+		RepositoryLanguage:    dbRepo.RepositoryLanguage.String,
+		CreatedAt:             dbRepo.CreatedAt,
+		UpdatedAt:             dbRepo.UpdatedAt,
+		LastSyncedAt:          dbRepo.LastSyncedAt,
+		GitHubCreatedAt:       timeFromNullTime(dbRepo.GithubCreatedAt),
+		GitHubUpdatedAt:       timeFromNullTime(dbRepo.GithubUpdatedAt),
+		GitHubPushedAt:        timeFromNullTime(dbRepo.GithubPushedAt),
 	}
 
 	return repo, nil
@@ -193,4 +193,3 @@ func nullTime(t time.Time) sql.NullTime {
 	}
 	return sql.NullTime{Time: t, Valid: true}
 }
-

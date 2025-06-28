@@ -202,10 +202,9 @@ func (g *githubConnector) ConfigureWebhooks(integrationID string, creds infragpt
 	return nil
 }
 
-
 func (g *githubConnector) generateJWT() (string, error) {
 	if g.privateKey == nil {
-		return "", fmt.Errorf("private key not configured")
+		return "", fmt.Errorf("GitHub private key not configured or failed to parse - check private_key configuration")
 	}
 
 	now := time.Now()
@@ -296,7 +295,7 @@ func (g *githubConnector) buildWebhookURL(integrationID string) string {
 	if baseURL == "" {
 		return ""
 	}
-	
+
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	return fmt.Sprintf("%s/webhooks/github", baseURL)
 }
@@ -324,11 +323,11 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 		ConnectorOrganizationID: connectorOrgID,
 		Metadata: map[string]string{
 			"github_installation_id": unclaimed.GitHubInstallationID,
-			"github_app_id":         strconv.FormatInt(unclaimed.GitHubAppID, 10),
-			"github_account_id":     strconv.FormatInt(unclaimed.GitHubAccountID, 10),
-			"github_account_login":  unclaimed.GitHubAccountLogin,
-			"github_account_type":   unclaimed.GitHubAccountType,
-			"repository_selection":  unclaimed.RepositorySelection,
+			"github_app_id":          strconv.FormatInt(unclaimed.GitHubAppID, 10),
+			"github_account_id":      strconv.FormatInt(unclaimed.GitHubAccountID, 10),
+			"github_account_login":   unclaimed.GitHubAccountLogin,
+			"github_account_type":    unclaimed.GitHubAccountType,
+			"repository_selection":   unclaimed.RepositorySelection,
 		},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -383,7 +382,7 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse integration ID: %w", err)
 	}
-	
+
 	if err := g.syncRepositories(ctx, integrationUUID, installationID); err != nil {
 		slog.Error("failed to sync repositories during installation claim",
 			"integration_id", integration.ID,
@@ -578,4 +577,3 @@ type accountResponse struct {
 	Login string `json:"login"`
 	Type  string `json:"type"`
 }
-

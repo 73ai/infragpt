@@ -44,7 +44,7 @@ func (s *slackConnector) ParseState(state string) (organizationID string, userID
 	if len(parts) < 3 {
 		return "", "", fmt.Errorf("invalid state format, expected organizationID:userID:timestamp")
 	}
-	
+
 	return parts[0], parts[1], nil
 }
 

@@ -203,10 +203,10 @@ func (s *service) Profile(ctx context.Context, query infragpt.ProfileQuery) (inf
 	}
 
 	return infragpt.Profile{
-		ID:               org.ID,
-		Name:             org.Name,
-		Slug:             org.Slug,
-		CreatedAt:        org.CreatedAt,
+		ID:        org.ID,
+		Name:      org.Name,
+		Slug:      org.Slug,
+		CreatedAt: org.CreatedAt,
 		Metadata: infragpt.OrganizationMetadata{
 			OrganizationID:     org.Metadata.OrganizationID,
 			CompanySize:        org.Metadata.CompanySize,
@@ -216,7 +216,7 @@ func (s *service) Profile(ctx context.Context, query infragpt.ProfileQuery) (inf
 			CompletedAt:        org.Metadata.CompletedAt,
 			UpdatedAt:          org.Metadata.UpdatedAt,
 		},
-		OrganizationID:   org.ID,
-		UserID:           user.ID,
+		OrganizationID: org.ID,
+		UserID:         user.ID,
 	}, nil
 }

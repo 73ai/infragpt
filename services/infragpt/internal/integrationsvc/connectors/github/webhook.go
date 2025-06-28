@@ -287,8 +287,22 @@ func (g *githubConnector) handleRepositoriesAdded(ctx context.Context, event Ins
 		"account", event.Installation.Account.Login,
 		"repositories_count", len(event.RepositoriesAdded))
 
-	// Find integration by GitHub installation ID
+	// Check if installation is suspended before processing
 	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	isSuspended, err := g.isInstallationSuspended(ctx, event.Installation.ID)
+	if err != nil {
+		return fmt.Errorf("failed to check installation suspension status: %w", err)
+	}
+
+	if isSuspended {
+		slog.Info("skipping repository addition processing for suspended installation",
+			"installation_id", event.Installation.ID,
+			"account", event.Installation.Account.Login,
+			"repositories_count", len(event.RepositoriesAdded))
+		return nil
+	}
+
+	// Find integration by GitHub installation ID
 	integrationID, err := g.findIntegrationIDByInstallationID(ctx, installationIDStr)
 	if err != nil {
 		slog.Error("failed to find integration for repository addition",
@@ -312,8 +326,22 @@ func (g *githubConnector) handleRepositoriesRemoved(ctx context.Context, event I
 		"account", event.Installation.Account.Login,
 		"repositories_count", len(event.RepositoriesRemoved))
 
-	// Find integration by GitHub installation ID
+	// Check if installation is suspended before processing
 	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	isSuspended, err := g.isInstallationSuspended(ctx, event.Installation.ID)
+	if err != nil {
+		return fmt.Errorf("failed to check installation suspension status: %w", err)
+	}
+
+	if isSuspended {
+		slog.Info("skipping repository removal processing for suspended installation",
+			"installation_id", event.Installation.ID,
+			"account", event.Installation.Account.Login,
+			"repositories_count", len(event.RepositoriesRemoved))
+		return nil
+	}
+
+	// Find integration by GitHub installation ID
 	integrationID, err := g.findIntegrationIDByInstallationID(ctx, installationIDStr)
 	if err != nil {
 		slog.Error("failed to find integration for repository removal",
@@ -333,6 +361,21 @@ func (g *githubConnector) handleRepositoriesRemoved(ctx context.Context, event I
 	}
 
 	return nil
+}
+
+func (g *githubConnector) isInstallationSuspended(ctx context.Context, installationID int64) (bool, error) {
+	installationIDStr := strconv.FormatInt(installationID, 10)
+	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Integration not found, return false (not suspended, just not found)
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to find integration by installation ID %d: %w", installationID, err)
+	}
+
+	// Return true if status is suspended
+	return integration.Status == infragpt.IntegrationStatusSuspended, nil
 }
 
 func (g *githubConnector) findIntegrationIDByInstallationID(ctx context.Context, installationID string) (uuid.UUID, error) {
