@@ -90,7 +90,6 @@ export interface CallbackRequest {
   code?: string;
   state?: string;
   installation_id?: string;
-  setup_action?: string;
   [key: string]: any; // Allow for connector-specific parameters
 }
 

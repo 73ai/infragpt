@@ -39,6 +39,7 @@ const IntegrationSetupPage = observer(() => {
       try {
         // Extract GitHub setup parameters
         const setupData = extractGitHubSetupData(searchParams);
+        const setupAction = searchParams.get('setup_action');
         
         if (!setupData) {
           setState('error');
@@ -47,7 +48,7 @@ const IntegrationSetupPage = observer(() => {
         }
 
         // Handle different setup actions
-        if (setupData.setup_action === 'install') {
+        if (setupAction === 'install') {
           // For new installations, use the existing callback flow
           await integrationStore.handleCallback(
             connectorType as any,
@@ -55,15 +56,15 @@ const IntegrationSetupPage = observer(() => {
           );
           setState('success');
           setMessage(`${connector.name} has been successfully installed and connected to your organization.`);
-        } else if (setupData.setup_action === 'update') {
-          // For updates, we need a configure API call
-          // TODO: Implement configure API when backend is ready
+        } else if (setupAction === 'update') {
+          // For updates, we need a sync API call
+          // TODO: Implement sync API when backend is ready
           // For now, treat as successful
           setState('success');
           setMessage(`${connector.name} configuration has been updated successfully.`);
         } else {
           setState('error');
-          setMessage(`Unknown setup action: ${setupData.setup_action}`);
+          setMessage(`Unknown setup action: ${setupAction}`);
         }
 
       } catch (error) {
@@ -94,8 +95,7 @@ const IntegrationSetupPage = observer(() => {
     }
     
     return { 
-      installation_id: parseInt(installationId),
-      setup_action: setupAction,
+      installation_id: installationId,
       state: state
     };
   };
