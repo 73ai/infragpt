@@ -178,3 +178,8 @@ NOTES.md
 # Services to ignore
 services/mcp/
 services/wwwroot/
+
+.DS_Store/*
+.DS_Store
+
+./*/DS_Store
