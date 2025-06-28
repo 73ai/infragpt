@@ -263,7 +263,7 @@ func (s *slackConnector) syncWorkspace(ctx context.Context, integration infragpt
 }
 
 func (s *slackConnector) syncChannels(ctx context.Context, integration infragpt.Integration) error {
-	// TODO: Implement channel synchronization  
+	// TODO: Implement channel synchronization
 	// This could fetch and store channel information for the workspace
 	// For now, this is a no-op
 	return nil

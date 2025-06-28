@@ -748,7 +748,7 @@ func (g *githubConnector) claimInstallationForExistingIntegration(ctx context.Co
 		existingCredential.Data = credentialData
 		existingCredential.ExpiresAt = expiresAt
 		existingCredential.UpdatedAt = time.Now()
-		
+
 		if err := g.config.CredentialRepository.Update(ctx, existingCredential); err != nil {
 			return fmt.Errorf("failed to update credentials: %w", err)
 		}

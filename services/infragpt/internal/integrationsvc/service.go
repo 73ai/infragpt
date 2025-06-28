@@ -81,6 +81,25 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 		return infragpt.Integration{}, fmt.Errorf("invalid user ID in state: %w", err)
 	}
 
+	// For GitHub installations, check if there's an unclaimed installation and claim it
+	if cmd.ConnectorType == infragpt.ConnectorTypeGithub && cmd.InstallationID != "" {
+		if githubConnector, ok := connector.(github.GitHubConnector); ok {
+			// Try to claim the installation if it exists as unclaimed
+			integration, err := githubConnector.ClaimInstallation(ctx, cmd.InstallationID, organizationID, userID)
+			if err == nil {
+				slog.Info("automatically claimed unclaimed GitHub installation during authorization",
+					"installation_id", cmd.InstallationID,
+					"organization_id", organizationID,
+					"integration_id", integration.ID)
+				return *integration, nil
+			}
+			// If claiming fails, continue with normal flow (the installation might not be unclaimed)
+			slog.Debug("could not claim unclaimed installation, proceeding with normal authorization flow",
+				"installation_id", cmd.InstallationID,
+				"error", err)
+		}
+	}
+
 	// Check if integration already exists for this org and connector type
 	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, organizationID, cmd.ConnectorType)
 	if err != nil {
@@ -138,7 +157,6 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 
 	return integration, nil
 }
-
 
 func (s *service) RevokeIntegration(ctx context.Context, cmd infragpt.RevokeIntegrationCommand) error {
 	integration, err := s.integrationRepository.FindByID(ctx, cmd.IntegrationID)
@@ -292,6 +310,69 @@ func (s *service) Subscribe(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *service) ClaimInstallation(ctx context.Context, cmd infragpt.ClaimInstallationCommand) (infragpt.Integration, error) {
+	connector, exists := s.connectors[cmd.ConnectorType]
+	if !exists {
+		return infragpt.Integration{}, fmt.Errorf("unsupported connector type: %s", cmd.ConnectorType)
+	}
+
+	// GitHub connector specific handling
+	if cmd.ConnectorType == infragpt.ConnectorTypeGithub {
+		if githubConnector, ok := connector.(github.GitHubConnector); ok {
+			integration, err := githubConnector.ClaimInstallation(ctx, cmd.InstallationID, cmd.OrganizationID, cmd.UserID)
+			if err != nil {
+				return infragpt.Integration{}, fmt.Errorf("failed to claim installation: %w", err)
+			}
+			return *integration, nil
+		}
+		return infragpt.Integration{}, fmt.Errorf("invalid GitHub connector type")
+	}
+
+	return infragpt.Integration{}, fmt.Errorf("claiming installations not supported for connector type: %s", cmd.ConnectorType)
+}
+
+func (s *service) UnclaimedInstallations(ctx context.Context, query infragpt.UnclaimedInstallationsQuery) ([]map[string]any, error) {
+	connector, exists := s.connectors[query.ConnectorType]
+	if !exists {
+		return nil, fmt.Errorf("unsupported connector type: %s", query.ConnectorType)
+	}
+
+	// GitHub connector specific handling
+	if query.ConnectorType == infragpt.ConnectorTypeGithub {
+		if githubConnector, ok := connector.(github.GitHubConnector); ok {
+			installations, err := githubConnector.GetUnclaimedInstallations(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get unclaimed installations: %w", err)
+			}
+
+			result := make([]map[string]any, len(installations))
+			for i, installation := range installations {
+				result[i] = map[string]any{
+					"id":                     installation.ID.String(),
+					"github_installation_id": installation.GitHubInstallationID,
+					"github_app_id":          installation.GitHubAppID,
+					"github_account_id":      installation.GitHubAccountID,
+					"github_account_login":   installation.GitHubAccountLogin,
+					"github_account_type":    installation.GitHubAccountType,
+					"repository_selection":   installation.RepositorySelection,
+					"permissions":            installation.Permissions,
+					"events":                 installation.Events,
+					"html_url":               installation.HTMLURL,
+					"app_slug":               installation.AppSlug,
+					"created_at":             installation.CreatedAt.Format(time.RFC3339),
+					"github_created_at":      installation.GitHubCreatedAt.Format(time.RFC3339),
+					"github_updated_at":      installation.GitHubUpdatedAt.Format(time.RFC3339),
+					"expires_at":             installation.ExpiresAt.Format(time.RFC3339),
+				}
+			}
+			return result, nil
+		}
+		return nil, fmt.Errorf("invalid GitHub connector type")
+	}
+
+	return nil, fmt.Errorf("unclaimed installations not supported for connector type: %s", query.ConnectorType)
 }
 
 // handleConnectorEvent processes events from connectors - delegate to connectors for processing

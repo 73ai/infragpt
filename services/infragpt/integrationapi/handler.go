@@ -25,6 +25,8 @@ func (h *httpHandler) init() {
 	h.HandleFunc("/integrations/revoke/", h.revoke())
 	h.HandleFunc("/integrations/refresh/", h.refresh())
 	h.HandleFunc("/integrations/status/", h.status())
+	h.HandleFunc("/integrations/claim/", h.claim())
+	h.HandleFunc("/integrations/unclaimed/", h.unclaimed())
 }
 
 func NewHandler(integrationService infragpt.IntegrationService,
@@ -291,7 +293,6 @@ func (h *httpHandler) status() func(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-
 func ApiHandlerFunc[T any, R any](handler func(context.Context, T) (R, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -345,6 +346,87 @@ func (h *httpHandler) sync() func(w http.ResponseWriter, r *http.Request) {
 
 		return response{
 			Message: "Integration synced successfully",
+		}, nil
+	})
+}
+
+func (h *httpHandler) claim() func(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		ConnectorType  string `json:"connector_type"`
+		InstallationID string `json:"installation_id"`
+		OrganizationID string `json:"organization_id"`
+		UserID         string `json:"user_id"`
+	}
+	type response struct {
+		ID                      string            `json:"id"`
+		OrganizationID          string            `json:"organization_id"`
+		UserID                  string            `json:"user_id"`
+		ConnectorType           string            `json:"connector_type"`
+		Status                  string            `json:"status"`
+		BotID                   string            `json:"bot_id,omitempty"`
+		ConnectorUserID         string            `json:"connector_user_id,omitempty"`
+		ConnectorOrganizationID string            `json:"connector_organization_id,omitempty"`
+		Metadata                map[string]string `json:"metadata"`
+		CreatedAt               string            `json:"created_at"`
+		UpdatedAt               string            `json:"updated_at"`
+		LastUsedAt              string            `json:"last_used_at,omitempty"`
+	}
+
+	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
+		cmd := infragpt.ClaimInstallationCommand{
+			ConnectorType:  infragpt.ConnectorType(req.ConnectorType),
+			InstallationID: req.InstallationID,
+			OrganizationID: req.OrganizationID,
+			UserID:         req.UserID,
+		}
+
+		integration, err := h.svc.ClaimInstallation(ctx, cmd)
+		if err != nil {
+			return response{}, err
+		}
+
+		resp := response{
+			ID:                      integration.ID,
+			OrganizationID:          integration.OrganizationID,
+			UserID:                  integration.UserID,
+			ConnectorType:           string(integration.ConnectorType),
+			Status:                  string(integration.Status),
+			BotID:                   integration.BotID,
+			ConnectorUserID:         integration.ConnectorUserID,
+			ConnectorOrganizationID: integration.ConnectorOrganizationID,
+			Metadata:                integration.Metadata,
+			CreatedAt:               integration.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:               integration.UpdatedAt.Format(time.RFC3339),
+		}
+
+		if integration.LastUsedAt != nil {
+			resp.LastUsedAt = integration.LastUsedAt.Format(time.RFC3339)
+		}
+
+		return resp, nil
+	})
+}
+
+func (h *httpHandler) unclaimed() func(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		ConnectorType string `json:"connector_type"`
+	}
+	type response struct {
+		Installations []map[string]any `json:"installations"`
+	}
+
+	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
+		query := infragpt.UnclaimedInstallationsQuery{
+			ConnectorType: infragpt.ConnectorType(req.ConnectorType),
+		}
+
+		installations, err := h.svc.UnclaimedInstallations(ctx, query)
+		if err != nil {
+			return response{}, err
+		}
+
+		return response{
+			Installations: installations,
 		}, nil
 	})
 }

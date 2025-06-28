@@ -140,16 +140,3 @@ CREATE INDEX IF NOT EXISTS idx_github_repos_permissions ON github_repositories (
 CREATE INDEX IF NOT EXISTS idx_github_repos_sync ON github_repositories (last_synced_at);
 CREATE INDEX IF NOT EXISTS idx_github_repos_private ON github_repositories (is_private);
 CREATE INDEX IF NOT EXISTS idx_github_repos_language ON github_repositories (repository_language) WHERE repository_language IS NOT NULL;
-
--- Comments for documentation
-COMMENT ON TABLE integrations IS 'Main integrations table storing connector configurations and metadata';
-COMMENT ON TABLE integration_credentials IS 'Encrypted storage for integration credentials (OAuth tokens, API keys, etc.)';
-COMMENT ON TABLE unclaimed_installations IS 'Temporary storage for GitHub App installations waiting to be claimed by organizations';
-COMMENT ON TABLE github_repositories IS 'Repository-level permissions and metadata for GitHub App integrations';
-
-COMMENT ON COLUMN integrations.connector_type IS 'Type of connector: github, slack, gcp, aws, pagerduty, datadog';
-COMMENT ON COLUMN integrations.status IS 'Integration status: active, inactive, pending, not_started, suspended, deleted';
-COMMENT ON COLUMN integrations.bot_id IS 'External bot/app ID (e.g., GitHub installation ID, Slack app ID)';
-COMMENT ON COLUMN integration_credentials.credential_data_encrypted IS 'AES-256-GCM encrypted credential data';
-COMMENT ON COLUMN unclaimed_installations.expires_at IS 'Auto-cleanup timestamp - unclaimed installations expire after 7 days';
-COMMENT ON COLUMN github_repositories.last_synced_at IS 'Timestamp of last repository sync operation';
