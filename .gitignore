@@ -174,3 +174,7 @@ CLAUDE.md
 NOTES.md
 # Local Netlify folder
 .netlify
+
+# Services to ignore
+services/mcp/
+services/wwwroot/
