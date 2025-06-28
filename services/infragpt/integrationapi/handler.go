@@ -23,7 +23,6 @@ func (h *httpHandler) init() {
 	h.HandleFunc("/integrations/sync/", h.sync())
 	h.HandleFunc("/integrations/list/", h.list())
 	h.HandleFunc("/integrations/revoke/", h.revoke())
-	h.HandleFunc("/integrations/refresh/", h.refresh())
 	h.HandleFunc("/integrations/status/", h.status())
 }
 
@@ -204,31 +203,6 @@ func (h *httpHandler) revoke() func(w http.ResponseWriter, r *http.Request) {
 
 		err := h.svc.RevokeIntegration(ctx, cmd)
 		return response{}, err
-	})
-}
-
-func (h *httpHandler) refresh() func(w http.ResponseWriter, r *http.Request) {
-	type request struct {
-		IntegrationID  string `json:"integration_id"`
-		OrganizationID string `json:"organization_id"`
-	}
-	type response struct {
-		Message string `json:"message"`
-	}
-
-	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
-		cmd := infragpt.RefreshIntegrationCommand{
-			IntegrationID:  req.IntegrationID,
-			OrganizationID: req.OrganizationID,
-		}
-
-		if err := h.svc.RefreshIntegration(ctx, cmd); err != nil {
-			return response{}, fmt.Errorf("failed to refresh integration credentials: %w", err)
-		}
-
-		return response{
-			Message: "Credentials refreshed successfully",
-		}, nil
 	})
 }
 

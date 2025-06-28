@@ -101,69 +101,25 @@ func (g *githubConnector) CompleteAuthorization(authData infragpt.AuthorizationD
 	// Try to claim installation if it exists as unclaimed
 	ctx := context.Background()
 	integration, err := g.ClaimInstallation(ctx, authData.InstallationID, organizationID, userID)
-	if err == nil {
-		slog.Info("automatically claimed unclaimed GitHub installation during authorization",
+	if err != nil {
+		slog.Error("failed to claim unclaimed GitHub installation",
 			"installation_id", authData.InstallationID,
 			"organization_id", organizationID,
-			"integration_id", integration.ID)
-
-		// Return credentials with organization info to indicate successful claiming
-		return infragpt.Credentials{
-			Type: infragpt.CredentialTypeToken,
-			Data: map[string]string{
-				"installation_id": authData.InstallationID,
-				"claimed":         "true",
-			},
-			OrganizationInfo: &infragpt.OrganizationInfo{
-				ExternalID: integration.ConnectorOrganizationID,
-				Name:       integration.ConnectorUserID,
-				Metadata:   integration.Metadata,
-			},
-		}, nil
-	}
-
-	// If claiming fails, continue with normal authorization flow
-	slog.Debug("could not claim unclaimed installation, proceeding with normal authorization flow",
-		"installation_id", authData.InstallationID,
-		"error", err)
-
-	jwt, err := g.generateJWT()
-	if err != nil {
-		return infragpt.Credentials{}, fmt.Errorf("failed to generate JWT: %w", err)
-	}
-
-	accessToken, err := g.getInstallationAccessToken(jwt, authData.InstallationID)
-	if err != nil {
-		return infragpt.Credentials{}, fmt.Errorf("failed to get installation access token: %w", err)
-	}
-
-	installationDetails, err := g.getInstallationDetails(jwt, authData.InstallationID)
-	if err != nil {
-		return infragpt.Credentials{}, fmt.Errorf("failed to get installation details: %w", err)
-	}
-
-	credentialData := map[string]string{
-		"installation_id": authData.InstallationID,
-		"access_token":    accessToken.Token,
-		"account_login":   installationDetails.Account.Login,
-		"account_id":      strconv.FormatInt(installationDetails.Account.ID, 10),
-		"account_type":    installationDetails.Account.Type,
-		"target_type":     installationDetails.TargetType,
-		"permissions":     g.formatPermissions(installationDetails.Permissions),
-	}
-
-	var expiresAt *time.Time
-	if !accessToken.ExpiresAt.IsZero() {
-		expiresAt = &accessToken.ExpiresAt
+			"integration_id", integration.ID,
+			"error", err)
+		return infragpt.Credentials{}, fmt.Errorf("failed to claim unclaimed GitHub installation: %w", err)
 	}
 
 	return infragpt.Credentials{
-		Type:      infragpt.CredentialTypeToken,
-		Data:      credentialData,
-		ExpiresAt: expiresAt,
+		Type: infragpt.CredentialTypeToken,
+		Data: map[string]string{
+			"installation_id": authData.InstallationID,
+			"claimed":         "true",
+		},
 		OrganizationInfo: &infragpt.OrganizationInfo{
-			ExternalID: strconv.FormatInt(installationDetails.Account.ID, 10),
-			Name:       installationDetails.Account.Login,
+			ExternalID: integration.ConnectorOrganizationID,
+			Name:       integration.ConnectorUserID,
+			Metadata:   integration.Metadata,
 		},
 	}, nil
 }

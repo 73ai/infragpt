@@ -87,7 +87,6 @@ type IntegrationService interface {
 	AuthorizeIntegration(ctx context.Context, cmd AuthorizeIntegrationCommand) (Integration, error)
 	SyncIntegration(ctx context.Context, cmd SyncIntegrationCommand) error
 	RevokeIntegration(ctx context.Context, cmd RevokeIntegrationCommand) error
-	RefreshIntegration(ctx context.Context, cmd RefreshIntegrationCommand) error
 	Integrations(ctx context.Context, query IntegrationsQuery) ([]Integration, error)
 	Integration(ctx context.Context, query IntegrationQuery) (Integration, error)
 	Subscribe(ctx context.Context) error
@@ -117,11 +116,6 @@ type IntegrationsQuery struct {
 }
 
 type IntegrationQuery struct {
-	IntegrationID  string
-	OrganizationID string
-}
-
-type RefreshIntegrationCommand struct {
 	IntegrationID  string
 	OrganizationID string
 }
