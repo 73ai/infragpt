@@ -23,7 +23,6 @@ type githubConnector struct {
 }
 
 func (g *githubConnector) InitiateAuthorization(organizationID string, userID string) (infragpt.IntegrationAuthorizationIntent, error) {
-	// Create state as base64 encoded JSON
 	stateData := map[string]interface{}{
 		"organization_id": organizationID,
 		"user_id":         userID,
@@ -52,19 +51,16 @@ func (g *githubConnector) InitiateAuthorization(organizationID string, userID st
 }
 
 func (g *githubConnector) ParseState(state string) (organizationID string, userID string, err error) {
-	// Decode base64 state
 	stateJSON, err := base64.URLEncoding.DecodeString(state)
 	if err != nil {
 		return "", "", fmt.Errorf("invalid state format, failed to decode base64: %w", err)
 	}
 
-	// Parse JSON state data
 	var stateData map[string]interface{}
 	if err := json.Unmarshal(stateJSON, &stateData); err != nil {
 		return "", "", fmt.Errorf("invalid state format, failed to parse JSON: %w", err)
 	}
 
-	// Extract organization_id
 	orgID, exists := stateData["organization_id"]
 	if !exists {
 		return "", "", fmt.Errorf("organization_id not found in state")
@@ -74,7 +70,6 @@ func (g *githubConnector) ParseState(state string) (organizationID string, userI
 		return "", "", fmt.Errorf("organization_id must be a string")
 	}
 
-	// Extract user_id
 	uID, exists := stateData["user_id"]
 	if !exists {
 		return "", "", fmt.Errorf("user_id not found in state")

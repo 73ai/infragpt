@@ -17,7 +17,6 @@ type Config struct {
 }
 
 func (c Config) NewConnector() domain.Connector {
-	// Parse the private key
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(c.PrivateKey))
 	if err != nil {
 		// Return a connector with nil private key that will fail during JWT generation

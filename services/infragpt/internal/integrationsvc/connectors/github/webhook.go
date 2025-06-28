@@ -15,7 +15,6 @@ import (
 	"time"
 )
 
-// ValidateWebhookSignature validates the GitHub webhook signature
 func (g *githubConnector) ValidateWebhookSignature(payload []byte, signature string, secret string) error {
 	if secret == "" {
 		secret = g.config.WebhookSecret
@@ -30,7 +29,6 @@ func (g *githubConnector) ValidateWebhookSignature(payload []byte, signature str
 	return nil
 }
 
-// ProcessEvent processes a GitHub webhook event
 func (g *githubConnector) ProcessEvent(ctx context.Context, event any) error {
 	webhookEvent, ok := event.(WebhookEvent)
 	if !ok {
@@ -49,7 +47,6 @@ func (g *githubConnector) ProcessEvent(ctx context.Context, event any) error {
 	}
 }
 
-// Subscribe starts the webhook server and processes incoming webhook events
 func (g *githubConnector) Subscribe(ctx context.Context, handler func(ctx context.Context, event any) error) error {
 	if g.config.WebhookPort == 0 {
 		return fmt.Errorf("github: webhook port is required for webhook server")
@@ -65,14 +62,12 @@ func (g *githubConnector) Subscribe(ctx context.Context, handler func(ctx contex
 }
 
 
-// computeSignature computes the HMAC signature for webhook validation
 func (g *githubConnector) computeSignature(payload []byte, secret string) string {
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write(payload)
 	return fmt.Sprintf("sha256=%s", hex.EncodeToString(h.Sum(nil)))
 }
 
-// handleInstallationEvent processes GitHub installation webhook events
 func (g *githubConnector) handleInstallationEvent(ctx context.Context, event WebhookEvent) error {
 	slog.Info("handling GitHub installation event",
 		"action", event.InstallationAction,
@@ -111,7 +106,6 @@ type webhookServerConfig struct {
 	callbackHandlerFunc func(ctx context.Context, event any) error
 }
 
-// startWebhookServer starts the HTTP server for handling GitHub webhooks
 func (c webhookServerConfig) startWebhookServer(ctx context.Context) error {
 	h := &webhookHandler{
 		callbackHandlerFunc: c.callbackHandlerFunc,
@@ -127,18 +121,15 @@ func (c webhookServerConfig) startWebhookServer(ctx context.Context) error {
 	return httpServer.ListenAndServe()
 }
 
-// webhookHandler handles incoming GitHub webhook requests
 type webhookHandler struct {
 	http.ServeMux
 	callbackHandlerFunc func(ctx context.Context, event any) error
 }
 
-// init initializes the webhook handler with HTTP routes
 func (wh *webhookHandler) init() {
 	wh.HandleFunc("/webhooks/github", wh.handler())
 }
 
-// handler returns the HTTP handler function for GitHub webhooks
 func (wh *webhookHandler) handler() func(w http.ResponseWriter, r *http.Request) {
 	type response struct{}
 
@@ -189,7 +180,6 @@ func (wh *webhookHandler) handler() func(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// convertToWebhookEvent converts raw GitHub webhook payload to WebhookEvent
 func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map[string]any) (WebhookEvent, error) {
 	event := WebhookEvent{
 		EventType:  EventType(eventType),
@@ -244,7 +234,6 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 	return event, nil
 }
 
-// panicMiddleware recovers from panics and returns a 500 error
 func panicMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -257,7 +246,6 @@ func panicMiddleware(h http.Handler) http.Handler {
 	})
 }
 
-// webhookValidationMiddleware validates GitHub webhook signatures
 func webhookValidationMiddleware(webhookSecret string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if webhookSecret == "" {
@@ -289,7 +277,6 @@ func webhookValidationMiddleware(webhookSecret string, next http.Handler) http.H
 	})
 }
 
-// validateGitHubSignature validates the GitHub webhook signature
 func validateGitHubSignature(payload []byte, signature string, secret string) bool {
 	if !strings.HasPrefix(signature, "sha256=") {
 		return false
