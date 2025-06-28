@@ -6,11 +6,34 @@ package postgres
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/sqlc-dev/pqtype"
 )
+
+type GithubRepository struct {
+	ID                    uuid.UUID      `json:"id"`
+	IntegrationID         uuid.UUID      `json:"integration_id"`
+	GithubRepositoryID    int64          `json:"github_repository_id"`
+	RepositoryName        string         `json:"repository_name"`
+	RepositoryFullName    string         `json:"repository_full_name"`
+	RepositoryUrl         string         `json:"repository_url"`
+	IsPrivate             bool           `json:"is_private"`
+	DefaultBranch         sql.NullString `json:"default_branch"`
+	PermissionAdmin       bool           `json:"permission_admin"`
+	PermissionPush        bool           `json:"permission_push"`
+	PermissionPull        bool           `json:"permission_pull"`
+	RepositoryDescription sql.NullString `json:"repository_description"`
+	RepositoryLanguage    sql.NullString `json:"repository_language"`
+	CreatedAt             time.Time      `json:"created_at"`
+	UpdatedAt             time.Time      `json:"updated_at"`
+	LastSyncedAt          time.Time      `json:"last_synced_at"`
+	GithubCreatedAt       sql.NullTime   `json:"github_created_at"`
+	GithubUpdatedAt       sql.NullTime   `json:"github_updated_at"`
+	GithubPushedAt        sql.NullTime   `json:"github_pushed_at"`
+}
 
 type Integration struct {
 	ID                      uuid.UUID             `json:"id"`
@@ -36,4 +59,31 @@ type IntegrationCredential struct {
 	EncryptionKeyID         string       `json:"encryption_key_id"`
 	CreatedAt               time.Time    `json:"created_at"`
 	UpdatedAt               time.Time    `json:"updated_at"`
+}
+
+type UnclaimedInstallation struct {
+	ID                      uuid.UUID             `json:"id"`
+	GithubInstallationID    int64                 `json:"github_installation_id"`
+	GithubAppID             int64                 `json:"github_app_id"`
+	GithubAccountID         int64                 `json:"github_account_id"`
+	GithubAccountLogin      string                `json:"github_account_login"`
+	GithubAccountType       string                `json:"github_account_type"`
+	RepositorySelection     string                `json:"repository_selection"`
+	Permissions             json.RawMessage       `json:"permissions"`
+	Events                  []string              `json:"events"`
+	AccessTokensUrl         sql.NullString        `json:"access_tokens_url"`
+	RepositoriesUrl         sql.NullString        `json:"repositories_url"`
+	HtmlUrl                 sql.NullString        `json:"html_url"`
+	AppSlug                 sql.NullString        `json:"app_slug"`
+	SuspendedAt             sql.NullTime          `json:"suspended_at"`
+	SuspendedBy             pqtype.NullRawMessage `json:"suspended_by"`
+	WebhookSender           pqtype.NullRawMessage `json:"webhook_sender"`
+	RawWebhookPayload       pqtype.NullRawMessage `json:"raw_webhook_payload"`
+	CreatedAt               time.Time             `json:"created_at"`
+	GithubCreatedAt         time.Time             `json:"github_created_at"`
+	GithubUpdatedAt         time.Time             `json:"github_updated_at"`
+	ExpiresAt               time.Time             `json:"expires_at"`
+	ClaimedAt               sql.NullTime          `json:"claimed_at"`
+	ClaimedByOrganizationID uuid.NullUUID         `json:"claimed_by_organization_id"`
+	ClaimedByUserID         uuid.NullUUID         `json:"claimed_by_user_id"`
 }

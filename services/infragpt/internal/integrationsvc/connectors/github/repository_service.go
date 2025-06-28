@@ -350,28 +350,27 @@ func (rs *repositoryServiceImpl) fetchInstallationRepositories(accessToken strin
 }
 
 func (rs *repositoryServiceImpl) storeRepository(ctx context.Context, integrationID string, repo Repository, permissions RepositoryPermissions) error {
-	githubRepo := GitHubRepository{
-		IntegrationID:         integrationID,
-		GitHubRepositoryID:    repo.ID,
-		RepositoryName:        repo.Name,
-		RepositoryFullName:    repo.FullName,
-		RepositoryURL:         repo.HTMLURL,
-		IsPrivate:             repo.Private,
-		DefaultBranch:         repo.DefaultBranch,
-		PermissionAdmin:       permissions.Admin,
-		PermissionPush:        permissions.Push,
-		PermissionPull:        permissions.Pull,
-		RepositoryDescription: repo.Description,
-		RepositoryLanguage:    repo.Language,
-		CreatedAt:             time.Now(),
-		UpdatedAt:             time.Now(),
-		LastSyncedAt:          time.Now(),
-		GitHubCreatedAt:       repo.CreatedAt,
-		GitHubUpdatedAt:       repo.UpdatedAt,
-		GitHubPushedAt:        repo.PushedAt,
-	}
-
-	// TODO: Store in database
+	// TODO: Store repository in database
+	// githubRepo := GitHubRepository{
+	// 	IntegrationID:         integrationID,
+	// 	GitHubRepositoryID:    repo.ID,
+	// 	RepositoryName:        repo.Name,
+	// 	RepositoryFullName:    repo.FullName,
+	// 	RepositoryURL:         repo.HTMLURL,
+	// 	IsPrivate:             repo.Private,
+	// 	DefaultBranch:         repo.DefaultBranch,
+	// 	PermissionAdmin:       permissions.Admin,
+	// 	PermissionPush:        permissions.Push,
+	// 	PermissionPull:        permissions.Pull,
+	// 	RepositoryDescription: repo.Description,
+	// 	RepositoryLanguage:    repo.Language,
+	// 	CreatedAt:             time.Now(),
+	// 	UpdatedAt:             time.Now(),
+	// 	LastSyncedAt:          time.Now(),
+	// 	GitHubCreatedAt:       repo.CreatedAt,
+	// 	GitHubUpdatedAt:       repo.UpdatedAt,
+	// 	GitHubPushedAt:        repo.PushedAt,
+	// }
 	// return rs.githubRepositoryRepo.Upsert(ctx, githubRepo)
 
 	slog.Debug("repository stored",
