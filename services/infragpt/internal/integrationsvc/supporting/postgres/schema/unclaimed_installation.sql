@@ -4,7 +4,7 @@
 
 CREATE TABLE unclaimed_installations (
     id UUID PRIMARY KEY,
-    github_installation_id BIGINT NOT NULL UNIQUE, -- GitHub's installation ID
+    github_installation_id VARCHAR(50) NOT NULL UNIQUE, -- GitHub's installation ID
     github_app_id BIGINT NOT NULL,
     
     -- Account/Organization information from GitHub

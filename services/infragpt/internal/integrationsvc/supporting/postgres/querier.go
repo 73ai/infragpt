@@ -17,7 +17,7 @@ type Querier interface {
 	DeleteExpiredUnclaimedInstallations(ctx context.Context) error
 	DeleteGitHubRepositoryByGitHubID(ctx context.Context, arg DeleteGitHubRepositoryByGitHubIDParams) error
 	DeleteIntegration(ctx context.Context, id uuid.UUID) error
-	DeleteUnclaimedInstallation(ctx context.Context, githubInstallationID int64) error
+	DeleteUnclaimedInstallation(ctx context.Context, githubInstallationID string) error
 	FindCredentialByIntegration(ctx context.Context, integrationID uuid.UUID) (IntegrationCredential, error)
 	FindExpiringCredentials(ctx context.Context, expiresAt sql.NullTime) ([]IntegrationCredential, error)
 	FindGitHubRepositoriesByIntegrationID(ctx context.Context, integrationID uuid.UUID) ([]GithubRepository, error)
@@ -26,7 +26,7 @@ type Querier interface {
 	FindIntegrationByID(ctx context.Context, id uuid.UUID) (Integration, error)
 	FindIntegrationsByOrganization(ctx context.Context, organizationID uuid.UUID) ([]Integration, error)
 	FindIntegrationsByOrganizationAndType(ctx context.Context, arg FindIntegrationsByOrganizationAndTypeParams) ([]Integration, error)
-	FindUnclaimedInstallationByInstallationID(ctx context.Context, githubInstallationID int64) (UnclaimedInstallation, error)
+	FindUnclaimedInstallationByInstallationID(ctx context.Context, githubInstallationID string) (UnclaimedInstallation, error)
 	FindUnclaimedInstallations(ctx context.Context, limit int32) ([]UnclaimedInstallation, error)
 	MarkUnclaimedInstallationAsClaimed(ctx context.Context, arg MarkUnclaimedInstallationAsClaimedParams) error
 	StoreCredential(ctx context.Context, arg StoreCredentialParams) error

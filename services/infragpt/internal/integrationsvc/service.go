@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -188,13 +187,8 @@ func (s *service) configureGitHubIntegration(ctx context.Context, cmd infragpt.C
 		return infragpt.Integration{}, fmt.Errorf("invalid GitHub connector type")
 	}
 	
-	installationID, err := strconv.ParseInt(cmd.InstallationID, 10, 64)
-	if err != nil {
-		return infragpt.Integration{}, fmt.Errorf("invalid installation ID: %w", err)
-	}
-	
 	// Delegate complete installation claiming to GitHub connector
-	integration, err := githubConnector.ClaimInstallation(ctx, installationID, cmd.OrganizationID, cmd.UserID)
+	integration, err := githubConnector.ClaimInstallation(ctx, cmd.InstallationID, cmd.OrganizationID, cmd.UserID)
 	if err != nil {
 		return infragpt.Integration{}, fmt.Errorf("failed to claim GitHub installation: %w", err)
 	}

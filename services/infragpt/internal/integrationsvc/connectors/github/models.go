@@ -9,11 +9,11 @@ import (
 
 type UnclaimedInstallationRepository interface {
 	Create(ctx context.Context, installation UnclaimedInstallation) error
-	GetByInstallationID(ctx context.Context, installationID int64) (UnclaimedInstallation, error)
-	MarkAsClaimed(ctx context.Context, installationID int64, organizationID, userID uuid.UUID) error
+	GetByInstallationID(ctx context.Context, installationID string) (UnclaimedInstallation, error)
+	MarkAsClaimed(ctx context.Context, installationID string, organizationID, userID uuid.UUID) error
 	DeleteExpired(ctx context.Context) error
 	List(ctx context.Context, limit int) ([]UnclaimedInstallation, error)
-	Delete(ctx context.Context, installationID int64) error
+	Delete(ctx context.Context, installationID string) error
 }
 
 type GitHubRepositoryRepository interface {
@@ -28,7 +28,7 @@ type GitHubRepositoryRepository interface {
 
 type UnclaimedInstallation struct {
 	ID                      uuid.UUID
-	GitHubInstallationID    int64
+	GitHubInstallationID    string
 	GitHubAppID             int64
 	GitHubAccountID         int64
 	GitHubAccountLogin      string

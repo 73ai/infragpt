@@ -72,7 +72,7 @@ func (r *unclaimedInstallationRepository) Create(ctx context.Context, installati
 	return nil
 }
 
-func (r *unclaimedInstallationRepository) GetByInstallationID(ctx context.Context, installationID int64) (github.UnclaimedInstallation, error) {
+func (r *unclaimedInstallationRepository) GetByInstallationID(ctx context.Context, installationID string) (github.UnclaimedInstallation, error) {
 	dbInstallation, err := r.queries.FindUnclaimedInstallationByInstallationID(ctx, installationID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -130,7 +130,7 @@ func (r *unclaimedInstallationRepository) GetByInstallationID(ctx context.Contex
 	return installation, nil
 }
 
-func (r *unclaimedInstallationRepository) MarkAsClaimed(ctx context.Context, installationID int64, organizationID, userID uuid.UUID) error {
+func (r *unclaimedInstallationRepository) MarkAsClaimed(ctx context.Context, installationID string, organizationID, userID uuid.UUID) error {
 	err := r.queries.MarkUnclaimedInstallationAsClaimed(ctx, MarkUnclaimedInstallationAsClaimedParams{
 		ClaimedByOrganizationID: nullUUIDFromUUID(organizationID),
 		ClaimedByUserID:         nullUUIDFromUUID(userID),
@@ -214,7 +214,7 @@ func (r *unclaimedInstallationRepository) List(ctx context.Context, limit int) (
 	return installations, nil
 }
 
-func (r *unclaimedInstallationRepository) Delete(ctx context.Context, installationID int64) error {
+func (r *unclaimedInstallationRepository) Delete(ctx context.Context, installationID string) error {
 	err := r.queries.DeleteUnclaimedInstallation(ctx, installationID)
 	if err != nil {
 		return fmt.Errorf("failed to delete unclaimed installation: %w", err)

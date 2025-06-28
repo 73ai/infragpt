@@ -132,7 +132,7 @@ func (g *githubConnector) handleInstallationCreated(ctx context.Context, event I
 	// Store in unclaimed_installations table for later processing
 	unclaimedInstallation := UnclaimedInstallation{
 		ID:                   uuid.New(),
-		GitHubInstallationID: event.Installation.ID,
+		GitHubInstallationID: strconv.FormatInt(event.Installation.ID, 10),
 		GitHubAppID:          event.Installation.AppID,
 		GitHubAccountID:      event.Installation.Account.ID,
 		GitHubAccountLogin:   event.Installation.Account.Login,
@@ -174,7 +174,8 @@ func (g *githubConnector) handleInstallationDeleted(ctx context.Context, event I
 		"installation_id", event.Installation.ID)
 
 	// Clean up unclaimed installations
-	if err := g.config.UnclaimedInstallationRepo.Delete(ctx, event.Installation.ID); err != nil {
+	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	if err := g.config.UnclaimedInstallationRepo.Delete(ctx, installationIDStr); err != nil {
 		slog.Error("failed to clean up unclaimed installation",
 			"installation_id", event.Installation.ID,
 			"error", err)
@@ -250,7 +251,8 @@ func (g *githubConnector) handleRepositoriesAdded(ctx context.Context, event Ins
 		"repositories_count", len(event.RepositoriesAdded))
 
 	// Find integration by GitHub installation ID
-	integrationID, err := g.findIntegrationIDByInstallationID(ctx, event.Installation.ID)
+	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	integrationID, err := g.findIntegrationIDByInstallationID(ctx, installationIDStr)
 	if err != nil {
 		slog.Error("failed to find integration for repository addition",
 			"installation_id", event.Installation.ID,
@@ -274,7 +276,8 @@ func (g *githubConnector) handleRepositoriesRemoved(ctx context.Context, event I
 		"repositories_count", len(event.RepositoriesRemoved))
 
 	// Find integration by GitHub installation ID
-	integrationID, err := g.findIntegrationIDByInstallationID(ctx, event.Installation.ID)
+	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	integrationID, err := g.findIntegrationIDByInstallationID(ctx, installationIDStr)
 	if err != nil {
 		slog.Error("failed to find integration for repository removal",
 			"installation_id", event.Installation.ID,
@@ -295,10 +298,8 @@ func (g *githubConnector) handleRepositoriesRemoved(ctx context.Context, event I
 	return nil
 }
 
-func (g *githubConnector) findIntegrationIDByInstallationID(ctx context.Context, installationID int64) (uuid.UUID, error) {
-	botID := strconv.FormatInt(installationID, 10)
-	
-	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, botID, infragpt.ConnectorTypeGithub)
+func (g *githubConnector) findIntegrationIDByInstallationID(ctx context.Context, installationID string) (uuid.UUID, error) {
+	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationID, infragpt.ConnectorTypeGithub)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			slog.Debug("integration not found for installation ID", "installation_id", installationID)
@@ -422,7 +423,7 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 	// Extract common fields
 	if installation, ok := rawPayload["installation"].(map[string]any); ok {
 		if id, ok := installation["id"].(float64); ok {
-			event.InstallationID = int64(id)
+			event.InstallationID = strconv.FormatFloat(id, 'f', 0, 64)
 		}
 	}
 

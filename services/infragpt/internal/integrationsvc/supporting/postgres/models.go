@@ -63,7 +63,7 @@ type IntegrationCredential struct {
 
 type UnclaimedInstallation struct {
 	ID                      uuid.UUID             `json:"id"`
-	GithubInstallationID    int64                 `json:"github_installation_id"`
+	GithubInstallationID    string                `json:"github_installation_id"`
 	GithubAppID             int64                 `json:"github_app_id"`
 	GithubAccountID         int64                 `json:"github_account_id"`
 	GithubAccountLogin      string                `json:"github_account_login"`

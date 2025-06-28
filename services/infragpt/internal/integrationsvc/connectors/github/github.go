@@ -20,7 +20,7 @@ import (
 )
 
 type GitHubConnector interface {
-	ClaimInstallation(ctx context.Context, installationID int64, organizationID, userID string) (*infragpt.Integration, error)
+	ClaimInstallation(ctx context.Context, installationID string, organizationID, userID string) (*infragpt.Integration, error)
 	GetUnclaimedInstallations(ctx context.Context) ([]UnclaimedInstallation, error)
 }
 
@@ -92,22 +92,17 @@ func (g *githubConnector) CompleteAuthorization(authData infragpt.AuthorizationD
 		return infragpt.Credentials{}, fmt.Errorf("installation ID is required for GitHub App")
 	}
 
-	installationID, err := strconv.ParseInt(authData.InstallationID, 10, 64)
-	if err != nil {
-		return infragpt.Credentials{}, fmt.Errorf("invalid installation ID: %w", err)
-	}
-
 	jwt, err := g.generateJWT()
 	if err != nil {
 		return infragpt.Credentials{}, fmt.Errorf("failed to generate JWT: %w", err)
 	}
 
-	accessToken, err := g.getInstallationAccessToken(jwt, installationID)
+	accessToken, err := g.getInstallationAccessToken(jwt, authData.InstallationID)
 	if err != nil {
 		return infragpt.Credentials{}, fmt.Errorf("failed to get installation access token: %w", err)
 	}
 
-	installationDetails, err := g.getInstallationDetails(jwt, installationID)
+	installationDetails, err := g.getInstallationDetails(jwt, authData.InstallationID)
 	if err != nil {
 		return infragpt.Credentials{}, fmt.Errorf("failed to get installation details: %w", err)
 	}
@@ -145,12 +140,7 @@ func (g *githubConnector) ValidateCredentials(creds infragpt.Credentials) error 
 		return fmt.Errorf("failed to generate JWT: %w", err)
 	}
 
-	installationIDInt, err := strconv.ParseInt(installationID, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid installation ID: %w", err)
-	}
-
-	_, err = g.getInstallationDetails(jwt, installationIDInt)
+	_, err = g.getInstallationDetails(jwt, installationID)
 	if err != nil {
 		return fmt.Errorf("installation validation failed: %w", err)
 	}
@@ -164,17 +154,12 @@ func (g *githubConnector) RefreshCredentials(creds infragpt.Credentials) (infrag
 		return infragpt.Credentials{}, fmt.Errorf("installation ID not found in credentials")
 	}
 
-	installationIDInt, err := strconv.ParseInt(installationID, 10, 64)
-	if err != nil {
-		return infragpt.Credentials{}, fmt.Errorf("invalid installation ID: %w", err)
-	}
-
 	jwt, err := g.generateJWT()
 	if err != nil {
 		return infragpt.Credentials{}, fmt.Errorf("failed to generate JWT: %w", err)
 	}
 
-	accessToken, err := g.getInstallationAccessToken(jwt, installationIDInt)
+	accessToken, err := g.getInstallationAccessToken(jwt, installationID)
 	if err != nil {
 		return infragpt.Credentials{}, fmt.Errorf("failed to refresh access token: %w", err)
 	}
@@ -238,8 +223,8 @@ func (g *githubConnector) generateJWT() (string, error) {
 	return tokenString, nil
 }
 
-func (g *githubConnector) getInstallationAccessToken(jwt string, installationID int64) (*accessTokenResponse, error) {
-	url := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens", installationID)
+func (g *githubConnector) getInstallationAccessToken(jwt string, installationID string) (*accessTokenResponse, error) {
+	url := fmt.Sprintf("https://api.github.com/app/installations/%s/access_tokens", installationID)
 
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
@@ -268,8 +253,8 @@ func (g *githubConnector) getInstallationAccessToken(jwt string, installationID 
 	return &response, nil
 }
 
-func (g *githubConnector) getInstallationDetails(jwt string, installationID int64) (*installationResponse, error) {
-	url := fmt.Sprintf("https://api.github.com/app/installations/%d", installationID)
+func (g *githubConnector) getInstallationDetails(jwt string, installationID string) (*installationResponse, error) {
+	url := fmt.Sprintf("https://api.github.com/app/installations/%s", installationID)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -316,14 +301,14 @@ func (g *githubConnector) buildWebhookURL(integrationID string) string {
 	return fmt.Sprintf("%s/webhooks/github", baseURL)
 }
 
-func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID int64, organizationID, userID string) (*infragpt.Integration, error) {
+func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID string, organizationID, userID string) (*infragpt.Integration, error) {
 	// Get unclaimed installation from database
 	unclaimed, err := g.config.UnclaimedInstallationRepo.GetByInstallationID(ctx, installationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get unclaimed installation: %w", err)
 	}
 	if unclaimed.ID == uuid.Nil {
-		return nil, fmt.Errorf("unclaimed installation not found for ID %d", installationID)
+		return nil, fmt.Errorf("unclaimed installation not found for ID %s", installationID)
 	}
 
 	// Create integration record
@@ -334,11 +319,11 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 		UserID:                  userID,
 		ConnectorType:           infragpt.ConnectorTypeGithub,
 		Status:                  infragpt.IntegrationStatusActive,
-		BotID:                   strconv.FormatInt(installationID, 10),
+		BotID:                   installationID,
 		ConnectorUserID:         unclaimed.GitHubAccountLogin,
 		ConnectorOrganizationID: connectorOrgID,
 		Metadata: map[string]string{
-			"github_installation_id": strconv.FormatInt(unclaimed.GitHubInstallationID, 10),
+			"github_installation_id": unclaimed.GitHubInstallationID,
 			"github_app_id":         strconv.FormatInt(unclaimed.GitHubAppID, 10),
 			"github_account_id":     strconv.FormatInt(unclaimed.GitHubAccountID, 10),
 			"github_account_login":  unclaimed.GitHubAccountLogin,
@@ -366,7 +351,7 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 	}
 
 	credentialData := map[string]string{
-		"installation_id": strconv.FormatInt(installationID, 10),
+		"installation_id": installationID,
 		"access_token":    accessToken.Token,
 		"account_login":   unclaimed.GitHubAccountLogin,
 		"account_id":      strconv.FormatInt(unclaimed.GitHubAccountID, 10),
@@ -422,7 +407,7 @@ func (g *githubConnector) GetUnclaimedInstallations(ctx context.Context) ([]Uncl
 	return g.config.UnclaimedInstallationRepo.List(ctx, 100)
 }
 
-func (g *githubConnector) syncRepositories(ctx context.Context, integrationID uuid.UUID, installationID int64) error {
+func (g *githubConnector) syncRepositories(ctx context.Context, integrationID uuid.UUID, installationID string) error {
 	slog.Info("syncing repositories",
 		"integration_id", integrationID,
 		"installation_id", installationID)

@@ -31,7 +31,7 @@ DELETE FROM unclaimed_installations
 WHERE github_installation_id = $1
 `
 
-func (q *Queries) DeleteUnclaimedInstallation(ctx context.Context, githubInstallationID int64) error {
+func (q *Queries) DeleteUnclaimedInstallation(ctx context.Context, githubInstallationID string) error {
 	_, err := q.exec(ctx, q.deleteUnclaimedInstallationStmt, deleteUnclaimedInstallation, githubInstallationID)
 	return err
 }
@@ -47,7 +47,7 @@ FROM unclaimed_installations
 WHERE github_installation_id = $1
 `
 
-func (q *Queries) FindUnclaimedInstallationByInstallationID(ctx context.Context, githubInstallationID int64) (UnclaimedInstallation, error) {
+func (q *Queries) FindUnclaimedInstallationByInstallationID(ctx context.Context, githubInstallationID string) (UnclaimedInstallation, error) {
 	row := q.queryRow(ctx, q.findUnclaimedInstallationByInstallationIDStmt, findUnclaimedInstallationByInstallationID, githubInstallationID)
 	var i UnclaimedInstallation
 	err := row.Scan(
@@ -151,7 +151,7 @@ WHERE github_installation_id = $3
 type MarkUnclaimedInstallationAsClaimedParams struct {
 	ClaimedByOrganizationID uuid.NullUUID `json:"claimed_by_organization_id"`
 	ClaimedByUserID         uuid.NullUUID `json:"claimed_by_user_id"`
-	GithubInstallationID    int64         `json:"github_installation_id"`
+	GithubInstallationID    string        `json:"github_installation_id"`
 }
 
 func (q *Queries) MarkUnclaimedInstallationAsClaimed(ctx context.Context, arg MarkUnclaimedInstallationAsClaimedParams) error {
@@ -172,7 +172,7 @@ INSERT INTO unclaimed_installations (
 
 type StoreUnclaimedInstallationParams struct {
 	ID                   uuid.UUID             `json:"id"`
-	GithubInstallationID int64                 `json:"github_installation_id"`
+	GithubInstallationID string                `json:"github_installation_id"`
 	GithubAppID          int64                 `json:"github_app_id"`
 	GithubAccountID      int64                 `json:"github_account_id"`
 	GithubAccountLogin   string                `json:"github_account_login"`

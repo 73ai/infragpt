@@ -79,7 +79,7 @@ type User struct {
 type WebhookEvent struct {
 	EventType           EventType
 	EventSubtype        EventSubType
-	InstallationID      int64
+	InstallationID      string
 	RepositoryID        int64
 	RepositoryName      string
 	SenderID            int64
