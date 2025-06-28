@@ -17,7 +17,7 @@ type UnclaimedInstallationRepository interface {
 }
 
 type GitHubRepositoryRepository interface {
-	Upsert(ctx context.Context, repo *GitHubRepository) error
+	Store(ctx context.Context, repo GitHubRepository) error
 	ListByIntegrationID(ctx context.Context, integrationID uuid.UUID) ([]GitHubRepository, error)
 	GetByGitHubID(ctx context.Context, integrationID uuid.UUID, repositoryID int64) (GitHubRepository, error)
 	DeleteByGitHubID(ctx context.Context, integrationID uuid.UUID, repositoryID int64) error

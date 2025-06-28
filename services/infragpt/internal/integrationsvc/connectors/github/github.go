@@ -450,7 +450,7 @@ func (g *githubConnector) syncRepositories(ctx context.Context, integrationID uu
 
 	// Store repositories in database
 	for _, repo := range repositories {
-		githubRepo := &GitHubRepository{
+		githubRepo := GitHubRepository{
 			ID:                    uuid.New(),
 			IntegrationID:         integrationID,
 			GitHubRepositoryID:    repo.ID,
@@ -472,7 +472,7 @@ func (g *githubConnector) syncRepositories(ctx context.Context, integrationID uu
 			GitHubPushedAt:        repo.PushedAt,
 		}
 
-		if err := g.config.GitHubRepositoryRepo.Upsert(ctx, githubRepo); err != nil {
+		if err := g.config.GitHubRepositoryRepo.Store(ctx, githubRepo); err != nil {
 			slog.Error("failed to store repository",
 				"integration_id", integrationID,
 				"repository_id", repo.ID,
@@ -496,7 +496,7 @@ func (g *githubConnector) addRepositories(ctx context.Context, integrationID uui
 		"repository_count", len(repositories))
 
 	for _, repo := range repositories {
-		githubRepo := &GitHubRepository{
+		githubRepo := GitHubRepository{
 			ID:                    uuid.New(),
 			IntegrationID:         integrationID,
 			GitHubRepositoryID:    repo.ID,
@@ -518,7 +518,7 @@ func (g *githubConnector) addRepositories(ctx context.Context, integrationID uui
 			GitHubPushedAt:        repo.PushedAt,
 		}
 
-		if err := g.config.GitHubRepositoryRepo.Upsert(ctx, githubRepo); err != nil {
+		if err := g.config.GitHubRepositoryRepo.Store(ctx, githubRepo); err != nil {
 			slog.Error("failed to add repository",
 				"integration_id", integrationID,
 				"repository_id", repo.ID,

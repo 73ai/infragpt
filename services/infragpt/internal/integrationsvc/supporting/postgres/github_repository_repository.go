@@ -18,7 +18,7 @@ func NewGitHubRepositoryRepository(db *sql.DB) github.GitHubRepositoryRepository
 	return &githubRepositoryRepository{queries: New(db)}
 }
 
-func (r *githubRepositoryRepository) Upsert(ctx context.Context, repo *github.GitHubRepository) error {
+func (r *githubRepositoryRepository) Store(ctx context.Context, repo github.GitHubRepository) error {
 	err := r.queries.UpsertGitHubRepository(ctx, UpsertGitHubRepositoryParams{
 		ID:                    repo.ID,
 		IntegrationID:         repo.IntegrationID,
