@@ -30,7 +30,7 @@ type githubConnector struct {
 }
 
 func (g *githubConnector) InitiateAuthorization(organizationID string, userID string) (infragpt.IntegrationAuthorizationIntent, error) {
-	stateData := map[string]interface{}{
+	stateData := map[string]any{
 		"organization_id": organizationID,
 		"user_id":         userID,
 		"timestamp":       time.Now().Unix(),
@@ -60,7 +60,7 @@ func (g *githubConnector) ParseState(state string) (organizationID uuid.UUID, us
 		return uuid.Nil, uuid.Nil, fmt.Errorf("invalid state format, failed to decode base64: %w", err)
 	}
 
-	var stateData map[string]interface{}
+	var stateData map[string]any
 	if err := json.Unmarshal(stateJSON, &stateData); err != nil {
 		return uuid.Nil, uuid.Nil, fmt.Errorf("invalid state format, failed to parse JSON: %w", err)
 	}

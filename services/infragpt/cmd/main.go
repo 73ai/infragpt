@@ -41,7 +41,7 @@ func main() {
 		panic(fmt.Errorf("error reading config file: %w", err))
 	}
 
-	var yamlMap map[string]interface{}
+	var yamlMap map[string]any
 	if err := yaml.Unmarshal(config, &yamlMap); err != nil {
 		log.Fatalf("Error unmarshalling YAML: %v", err)
 	}
