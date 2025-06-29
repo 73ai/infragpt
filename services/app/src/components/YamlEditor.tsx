@@ -234,10 +234,11 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
         '&': {
           fontSize: '14px',
           fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+          height: '100%',
         },
         '.cm-content': {
           padding: '12px',
-          minHeight: '400px',
+          height: '100%',
           caretColor: isDark ? '#fff' : '#000',
         },
         '.cm-focused': {
@@ -245,9 +246,11 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
         },
         '.cm-editor': {
           borderRadius: '6px',
+          height: '100%',
         },
         '.cm-scroller': {
           scrollbarWidth: 'thin',
+          height: '100%',
         },
         '.cm-gutters': {
           backgroundColor: 'transparent',
@@ -379,10 +382,11 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
         '&': {
           fontSize: '14px',
           fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+          height: '100%',
         },
         '.cm-content': {
           padding: '12px',
-          minHeight: '400px',
+          height: '100%',
           caretColor: isDark ? '#fff' : '#000',
         },
         '.cm-focused': {
@@ -390,9 +394,11 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
         },
         '.cm-editor': {
           borderRadius: '6px',
+          height: '100%',
         },
         '.cm-scroller': {
           scrollbarWidth: 'thin',
+          height: '100%',
         },
         '.cm-gutters': {
           backgroundColor: 'transparent',
@@ -481,10 +487,10 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
   }, [errors]);
 
   return (
-    <div className={`yaml-editor ${className}`}>
+    <div className={`yaml-editor ${className} h-full flex flex-col`}>
       <div
         ref={editorRef}
-        className="min-h-[400px] w-full"
+        className="flex-1 w-full"
         style={{
           fontSize: '14px',
         }}

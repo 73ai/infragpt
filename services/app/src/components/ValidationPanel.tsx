@@ -106,20 +106,20 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({
   );
 
   const renderErrorList = () => (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between mb-3">
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <span className="text-sm font-medium text-muted-foreground">
           {errors.length} error{errors.length !== 1 ? 's' : ''} found
         </span>
       </div>
-      <div className="max-h-96 overflow-y-auto space-y-2">
+      <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
         {errors.map((error, index) => renderError(error, index))}
       </div>
     </div>
   );
 
   return (
-      <div className="flex-1">
+      <div className="h-full flex flex-col">
         {isLoading ? (
           renderLoadingState()
         ) : errors.length === 0 ? (
