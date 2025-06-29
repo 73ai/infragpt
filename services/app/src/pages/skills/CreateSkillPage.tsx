@@ -2,9 +2,9 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import ValidationPanel, { ValidationError } from '@/components/ValidationPanel';
-import YamlEditor from '@/components/YamlEditor';
+import YamlEditor, { YamlEditorRef } from '@/components/YamlEditor';
 import AddCommandModal from '@/components/AddCommandModal';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useActionlint, ActionlintError } from '@/hooks/useActionlint';
 
 const CreateSkillPage = () => {
@@ -14,6 +14,7 @@ const CreateSkillPage = () => {
     wasmPath: '/main.wasm',
     wasmExecPath: '/wasm_exec.js'
   });
+  const yamlEditorRef = useRef<YamlEditorRef>(null);
   const [yamlContent, setYamlContent] = useState(`# Test with invalid GitHub Actions YAML
 name: Test
 on: push
@@ -95,8 +96,13 @@ jobs:
   };
 
   const handleErrorClick = (error: ValidationError) => {
-    // TODO: Implement navigation to error location in YAML editor
     console.log('Error clicked:', error);
+    if (yamlEditorRef.current) {
+      // Navigate to the error location in the editor
+      // Convert to 0-based column index for CodeMirror (error.column is 1-based)
+      yamlEditorRef.current.setCursor(error.line, Math.max(0, error.column - 1));
+      yamlEditorRef.current.focus();
+    }
   };
 
   // Convert ActionlintError to ValidationError for the ValidationPanel
@@ -144,6 +150,7 @@ jobs:
         <div className="flex-1 w-[60%] border-r">
           <div className="h-full p-6">
                 <YamlEditor
+                  ref={yamlEditorRef}
                   value={yamlContent}
                   onChange={handleYamlChange}
                   errors={convertedErrors.map(error => ({

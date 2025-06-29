@@ -80,8 +80,9 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({
   const renderError = (error: ValidationError, index: number) => (
     <div
       key={index}
-      className="border rounded-lg p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+      className="border rounded-lg p-3 cursor-pointer hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 hover:shadow-sm"
       onClick={() => onErrorClick?.(error)}
+      title="Click to navigate to error location in editor"
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center space-x-2">
@@ -91,6 +92,11 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({
           <Badge variant={getErrorBadgeVariant(error.kind)} className="text-xs">
             {error.kind}
           </Badge>
+        </div>
+        <div className="text-muted-foreground hover:text-foreground transition-colors">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
         </div>
       </div>
       <p className="text-sm text-foreground leading-relaxed">

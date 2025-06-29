@@ -16,7 +16,7 @@
  * - className: Additional CSS classes
  * - placeholder: Placeholder text when empty
  */
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, highlightSpecialChars, drawSelection, dropCursor, rectangularSelection, crosshairCursor } from '@codemirror/view';
 import { EditorState, Extension } from '@codemirror/state';
 import { yaml } from '@codemirror/lang-yaml';
@@ -39,13 +39,18 @@ interface YamlEditorProps {
   placeholder?: string;
 }
 
-const YamlEditor: React.FC<YamlEditorProps> = ({
+export interface YamlEditorRef {
+  setCursor: (line: number, column?: number) => void;
+  focus: () => void;
+}
+
+const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
   value,
   onChange,
   errors = [],
   className = '',
   placeholder = 'Enter YAML configuration...'
-}) => {
+}, ref) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [isDark, setIsDark] = useState(false);
@@ -60,6 +65,33 @@ const YamlEditor: React.FC<YamlEditorProps> = ({
   useEffect(() => {
     errorsRef.current = errors;
   }, [errors]);
+
+  // Expose imperative methods via ref
+  useImperativeHandle(ref, () => ({
+    setCursor: (line: number, column: number = 0) => {
+      if (!viewRef.current) return;
+      
+      const doc = viewRef.current.state.doc;
+      if (line < 1 || line > doc.lines) return;
+      
+      try {
+        const lineInfo = doc.line(line);
+        const pos = lineInfo.from + Math.min(Math.max(0, column), lineInfo.length);
+        
+        viewRef.current.dispatch({
+          selection: { anchor: pos, head: pos },
+          scrollIntoView: true
+        });
+      } catch (error) {
+        console.warn('Failed to set cursor position:', error);
+      }
+    },
+    focus: () => {
+      if (viewRef.current) {
+        viewRef.current.focus();
+      }
+    }
+  }), []);
 
   // Detect dark mode
   useEffect(() => {
@@ -464,6 +496,8 @@ const YamlEditor: React.FC<YamlEditorProps> = ({
       )}
     </div>
   );
-};
+});
+
+YamlEditor.displayName = 'YamlEditor';
 
 export default YamlEditor;
