@@ -8,6 +8,7 @@ import OnboardingPage from './pages/onboarding';
 import IntegrationsPage from './pages/integrations/IntegrationsPage';
 import IntegrationDetailsPage from './pages/integrations/IntegrationDetailsPage';
 import IntegrationCallbackPage from './pages/integrations/IntegrationCallbackPage';
+import CreateSkillPage from './pages/skills/CreateSkillPage';
 import { RedirectToSignIn, useAuth } from '@clerk/clerk-react';
 import { useOnboardingGuard } from './hooks/useOnboardingGuard';
 
@@ -99,6 +100,15 @@ const App = () => {
         <Route
           path="/integrations/:connectorType/authorize"
           element={<IntegrationCallbackPage />}
+        />
+        {/* TEMPORARY: Made skills page public for debugging WASM issues */}
+        <Route
+          path="/skills/create"
+          element={
+            <Layout>
+              <CreateSkillPage />
+            </Layout>
+          }
         />
         {/* Redirect root to dashboard */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

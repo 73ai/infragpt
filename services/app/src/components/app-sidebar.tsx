@@ -6,6 +6,7 @@ import {
   BookOpen,
   Frame,
   Map,
+  Zap,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -26,6 +27,11 @@ const data = {
       url: "/dashboard",
       icon: Map,
       isActive: true,
+    },
+    {
+      title: "Skills",
+      url: "/skills/create",
+      icon: Zap,
     },
     {
       title: "Documentation",
