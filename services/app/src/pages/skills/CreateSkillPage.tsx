@@ -10,7 +10,9 @@ import { useActionlint, ActionlintError } from '@/hooks/useActionlint';
 const CreateSkillPage = () => {
   const { validateYaml, state, isReady } = useActionlint({
     debounceMs: 500,
-    autoValidate: true
+    autoValidate: true,
+    wasmPath: '/main.wasm',
+    wasmExecPath: '/wasm_exec.js'
   });
   const [yamlContent, setYamlContent] = useState(`# GitHub Actions Workflow Configuration
 name: "Deploy Infrastructure"
@@ -129,7 +131,7 @@ jobs:
         <div className="flex h-16 items-center px-4 gap-4 justify-between">
           <div className="flex items-center gap-4">
             <SidebarTrigger />
-            <h1 className="text-xl font-semibold">GitHub Actions Workflow Editor</h1>
+            <h1 className="text-xl font-semibold">Create a New skill</h1>
           </div>
           <div className="flex gap-2">
             <Button onClick={handleAddCommand}>
@@ -150,11 +152,6 @@ jobs:
         {/* Left Panel - YAML Editor (70%) */}
         <div className="flex-1 w-[70%] border-r">
           <div className="h-full p-6">
-            <Card className="h-full">
-              <CardHeader>
-                <CardTitle>Workflow YAML Editor</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 p-0">
                 <YamlEditor
                   value={yamlContent}
                   onChange={handleYamlChange}
@@ -165,8 +162,6 @@ jobs:
                   placeholder="Enter your GitHub Actions workflow YAML here..."
                   className="h-full"
                 />
-              </CardContent>
-            </Card>
           </div>
         </div>
 

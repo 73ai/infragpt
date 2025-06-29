@@ -36,12 +36,12 @@ export interface UseActionlintOptions {
   autoValidate?: boolean;
   /**
    * Path to the WASM file
-   * @default '/wasm/actionlint.wasm'
+   * @default '/main.wasm'
    */
   wasmPath?: string;
   /**
    * Path to the wasm_exec.js file
-   * @default '/wasm/wasm_exec.js'
+   * @default '/wasm_exec.js'
    */
   wasmExecPath?: string;
   /**
@@ -106,8 +106,8 @@ export function useActionlint(options: UseActionlintOptions = {}) {
   const {
     debounceMs = 300,
     autoValidate = true,
-    wasmPath = '/wasm/actionlint.wasm',
-    wasmExecPath = '/wasm/wasm_exec.js',
+    wasmPath = '/main.wasm',
+    wasmExecPath = '/wasm_exec.js',
     enableCache = true,
     cacheTtl = 60000,
     maxCacheSize = 10
@@ -172,6 +172,7 @@ export function useActionlint(options: UseActionlintOptions = {}) {
   // Initialize WASM module
   const initializeWasm = useCallback(async () => {
     try {
+      console.log('[DEBUG] Starting WASM initialization with paths:', { wasmPath, wasmExecPath });
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
       // Load wasm_exec.js if not already loaded
@@ -277,6 +278,8 @@ jobs:
         isInitialized: true,
         error: null
       }));
+      
+      console.log('[DEBUG] WASM initialization complete, module ready for validation');
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize WASM module';
@@ -343,6 +346,7 @@ jobs:
 
     // Store the content for potential later validation
     lastValidationContentRef.current = content;
+    console.log('[DEBUG] Stored content for validation:', content.substring(0, 100) + '...');
 
     // Clear existing debounce timer
     if (debounceTimerRef.current) {
