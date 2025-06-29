@@ -53,7 +53,7 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
 }, ref) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const [isDark, setIsDark] = useState(false);
+  const isDark = true; // Always use dark theme
   const onChangeRef = useRef(onChange);
   const errorsRef = useRef(errors);
 
@@ -93,31 +93,7 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
     }
   }), []);
 
-  // Detect dark mode
-  useEffect(() => {
-    const checkDarkMode = () => {
-      const isDarkMode = document.documentElement.classList.contains('dark') ||
-        window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setIsDark(isDarkMode);
-    };
-
-    checkDarkMode();
-    
-    // Watch for theme changes
-    const observer = new MutationObserver(checkDarkMode);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class']
-    });
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    mediaQuery.addEventListener('change', checkDarkMode);
-
-    return () => {
-      observer.disconnect();
-      mediaQuery.removeEventListener('change', checkDarkMode);
-    };
-  }, []);
+  // Always use dark theme - no detection needed
 
   // Create stable linter function
   const yamlLinter = useMemo(() => {
@@ -237,9 +213,9 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
           height: '100%',
         },
         '.cm-content': {
-          padding: '12px',
+          padding: '8px',
           height: '100%',
-          caretColor: isDark ? '#fff' : '#000',
+          caretColor: '#fff',
         },
         '.cm-focused': {
           outline: 'none',
@@ -258,7 +234,7 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
           paddingLeft: '4px',
         },
         '.cm-lineNumbers': {
-          color: isDark ? 'hsl(215 20.2% 65.1%)' : 'hsl(215.4 16.3% 46.9%)',
+          color: 'hsl(215 20.2% 65.1%)',
           fontSize: '12px',
           minWidth: '32px',
         },
@@ -271,21 +247,7 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
         '.cm-foldGutter .cm-gutterElement': {
           padding: '0 4px',
         },
-        // Custom styles for light theme
-        ...(!isDark && {
-          '.cm-content': {
-            backgroundColor: 'hsl(0 0% 100%)',
-            color: 'hsl(222.2 84% 4.9%)',
-          },
-          '.cm-editor': {
-            backgroundColor: 'hsl(0 0% 100%)',
-            border: '1px solid hsl(214.3 31.8% 91.4%)',
-          },
-          '.cm-gutters': {
-            backgroundColor: 'hsl(210 40% 96.1%)',
-            borderRight: '1px solid hsl(214.3 31.8% 91.4%)',
-          },
-        }),
+        // Always use dark theme - no light theme overrides needed
       }),
       
       // Line wrapping and tab configuration
@@ -293,10 +255,8 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
       EditorState.tabSize.of(2),
     ];
 
-    // Add dark theme if needed
-    if (isDark) {
-      extensions.push(oneDark);
-    }
+    // Always add dark theme
+    extensions.push(oneDark);
 
     const startState = EditorState.create({
       doc: value,
@@ -317,146 +277,7 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
     };
   }, []); // Only create editor once
 
-  // Handle theme changes separately
-  useEffect(() => {
-    if (!viewRef.current) return;
-    
-    // Force a theme update by recreating the editor when theme changes
-    const currentContent = viewRef.current.state.doc.toString();
-    const currentSelection = viewRef.current.state.selection.main;
-    
-    // Destroy current editor
-    viewRef.current.destroy();
-    
-    // Recreate with new theme
-    const extensions: Extension[] = [
-      // Basic editor features
-      lineNumbers(),
-      foldGutter(),
-      drawSelection(),
-      dropCursor(),
-      EditorState.allowMultipleSelections.of(true),
-      indentOnInput(),
-      bracketMatching(),
-      closeBrackets(),
-      autocompletion(),
-      rectangularSelection(),
-      crosshairCursor(),
-      highlightActiveLineGutter(),
-      highlightSelectionMatches(),
-      highlightSpecialChars(),
-      
-      // History and undo/redo support
-      history(),
-      
-      // Language support
-      yaml(),
-      syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-      indentUnit.of('  '),
-      
-      // Linting
-      lintGutter(),
-      yamlLinter,
-      
-      // Key bindings
-      keymap.of([
-        ...closeBracketsKeymap,
-        ...completionKeymap,
-        ...foldKeymap,
-        ...searchKeymap,
-        ...historyKeymap,
-        indentWithTab,
-        ...defaultKeymap,
-      ]),
-      
-      // Content change handler
-      EditorView.updateListener.of((update) => {
-        if (update.docChanged) {
-          const newValue = update.state.doc.toString();
-          onChangeRef.current(newValue);
-        }
-      }),
-      
-      // Theme and styling
-      EditorView.theme({
-        '&': {
-          fontSize: '14px',
-          fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-          height: '100%',
-        },
-        '.cm-content': {
-          padding: '12px',
-          height: '100%',
-          caretColor: isDark ? '#fff' : '#000',
-        },
-        '.cm-focused': {
-          outline: 'none',
-        },
-        '.cm-editor': {
-          borderRadius: '6px',
-          height: '100%',
-        },
-        '.cm-scroller': {
-          scrollbarWidth: 'thin',
-          height: '100%',
-        },
-        '.cm-gutters': {
-          backgroundColor: 'transparent',
-          border: 'none',
-          paddingLeft: '4px',
-        },
-        '.cm-lineNumbers': {
-          color: isDark ? 'hsl(215 20.2% 65.1%)' : 'hsl(215.4 16.3% 46.9%)',
-          fontSize: '12px',
-          minWidth: '32px',
-        },
-        '.cm-lineNumbers .cm-gutterElement': {
-          padding: '0 8px 0 4px',
-        },
-        '.cm-lint-marker-error': {
-          backgroundColor: 'rgb(239 68 68)',
-        },
-        '.cm-foldGutter .cm-gutterElement': {
-          padding: '0 4px',
-        },
-        // Custom styles for light theme
-        ...(!isDark && {
-          '.cm-content': {
-            backgroundColor: 'hsl(0 0% 100%)',
-            color: 'hsl(222.2 84% 4.9%)',
-          },
-          '.cm-editor': {
-            backgroundColor: 'hsl(0 0% 100%)',
-            border: '1px solid hsl(214.3 31.8% 91.4%)',
-          },
-          '.cm-gutters': {
-            backgroundColor: 'hsl(210 40% 96.1%)',
-            borderRight: '1px solid hsl(214.3 31.8% 91.4%)',
-          },
-        }),
-      }),
-      
-      // Line wrapping and tab configuration
-      EditorView.lineWrapping,
-      EditorState.tabSize.of(2),
-    ];
-
-    // Add dark theme if needed
-    if (isDark) {
-      extensions.push(oneDark);
-    }
-
-    const newState = EditorState.create({
-      doc: currentContent,
-      extensions,
-      selection: currentSelection,
-    });
-
-    viewRef.current = new EditorView({
-      state: newState,
-      parent: editorRef.current!,
-    });
-  }, [isDark, yamlLinter]);
+  // No theme change handler needed - always dark theme
 
   // Update editor content when value prop changes externally
   useEffect(() => {
@@ -496,7 +317,7 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(({
         }}
       />
       {!value && (
-        <div className="absolute top-[12px] left-[52px] pointer-events-none text-muted-foreground text-sm">
+        <div className="absolute top-[8px] left-[52px] pointer-events-none text-muted-foreground text-sm">
           {placeholder}
         </div>
       )}

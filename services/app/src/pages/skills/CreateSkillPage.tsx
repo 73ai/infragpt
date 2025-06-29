@@ -144,11 +144,11 @@ jobs:
         </div>
       </div>
 
-      {/* Main Content - True 70/30 Split Layout */}
+      {/* Main Content - True 60/40 Split Layout */}
       <div className="flex-1 flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 64px)' }}>
-        {/* Left Panel - YAML Editor (70%) */}
-        <div className="w-full lg:w-[70%] border-r-0 lg:border-r border-b lg:border-b-0 flex flex-col">
-          <div className="flex-1 p-6 overflow-hidden">
+        {/* Left Panel - YAML Editor (60%) */}
+        <div className="w-full lg:w-[60%] border-r-0 lg:border-r border-b lg:border-b-0 flex flex-col">
+          <div className="flex-1 p-3 overflow-hidden">
                 <YamlEditor
                   ref={yamlEditorRef}
                   value={yamlContent}
@@ -163,9 +163,9 @@ jobs:
           </div>
         </div>
 
-        {/* Right Panel - Validation Results (30%) */}
-        <div className="w-full lg:w-[30%] flex flex-col">
-          <div className="flex-1 p-6 overflow-hidden">
+        {/* Right Panel - Validation Results (40%) */}
+        <div className="w-full lg:w-[40%] flex flex-col">
+          <div className="flex-1 p-3 overflow-hidden">
             <ValidationPanel
               errors={convertedErrors}
               isLoading={state.isLoading}
