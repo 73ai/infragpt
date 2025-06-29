@@ -14,49 +14,40 @@ const CreateSkillPage = () => {
     wasmPath: '/main.wasm',
     wasmExecPath: '/wasm_exec.js'
   });
-  const [yamlContent, setYamlContent] = useState(`# GitHub Actions Workflow Configuration
-name: "Deploy Infrastructure"
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
+  const [yamlContent, setYamlContent] = useState(`# Test with invalid GitHub Actions YAML
+name: Test
+on: push
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+  test:
+    runs-on: invalid-runner
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          
-      - name: Install dependencies
-        run: npm ci
-        
-      - name: Run tests
-        run: npm test
-        
-      - name: Deploy to staging
-        if: github.event_name == 'pull_request'
-        run: npm run deploy:staging
-        
-      - name: Deploy to production
-        if: github.ref == 'refs/heads/main'
-        run: npm run deploy:prod`);
+    - uses: nonexistent/action@v999
+    - name: Invalid step
+      run: echo "test"
+      uses: actions/checkout@v4`);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Auto-validate YAML content when it changes
   useEffect(() => {
-    if (isReady && yamlContent.trim()) {
-      validateYaml(yamlContent);
+    console.log('[DEBUG] CreateSkillPage useEffect - isReady:', isReady, 'content length:', yamlContent.length);
+    if (yamlContent.trim()) {
+      if (isReady) {
+        console.log('[DEBUG] Calling validateYaml from CreateSkillPage');
+        validateYaml(yamlContent);
+      } else {
+        console.log('[DEBUG] WASM not ready yet, validation will be deferred');
+      }
     }
   }, [yamlContent, validateYaml, isReady]);
+
+  // Trigger validation when WASM becomes ready
+  useEffect(() => {
+    if (isReady && yamlContent.trim()) {
+      console.log('[DEBUG] WASM became ready, triggering initial validation');
+      validateYaml(yamlContent);
+    }
+  }, [isReady]);
 
   const handleYamlChange = useCallback((newContent: string) => {
     setYamlContent(newContent);
@@ -150,7 +141,7 @@ jobs:
       {/* Main Content - 70/30 Split Layout */}
       <div className="flex-1 flex">
         {/* Left Panel - YAML Editor (70%) */}
-        <div className="flex-1 w-[70%] border-r">
+        <div className="flex-1 w-[60%] border-r">
           <div className="h-full p-6">
                 <YamlEditor
                   value={yamlContent}
@@ -166,7 +157,7 @@ jobs:
         </div>
 
         {/* Right Panel - Validation Results (30%) */}
-        <div className="w-[30%]">
+        <div className="w-[40%]">
           <div className="h-full p-6">
             <ValidationPanel
               errors={convertedErrors}

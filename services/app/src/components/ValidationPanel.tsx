@@ -1,6 +1,5 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export interface ValidationError {
@@ -114,16 +113,7 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({
   );
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <span>Validation Results</span>
-          {isLoading && (
-            <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1">
+      <div className="flex-1">
         {isLoading ? (
           renderLoadingState()
         ) : errors.length === 0 ? (
@@ -131,8 +121,7 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({
         ) : (
           renderErrorList()
         )}
-      </CardContent>
-    </Card>
+      </div>
   );
 };
 

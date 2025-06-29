@@ -195,32 +195,31 @@ export function useActionlint(options: UseActionlintOptions = {}) {
       goRef.current = go;
 
       // CRITICAL FIX: Set up getYamlSource function BEFORE running WASM
-      // This function is called by the WASM module during initialization
+      // This function is called by the WASM module during initialization and validation
       window.getYamlSource = () => {
-        console.log('[DEBUG] getYamlSource called during WASM initialization');
-        // Return default YAML content for initial validation
-        // The WASM module calls this during its main() function
-        const content = lastValidationContentRef.current || `name: Default
-on: [push]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4`;
-        console.log('[DEBUG] getYamlSource returning:', content.substring(0, 100) + '...');
+        console.log('[DEBUG] getYamlSource called, returning current validation content');
+        // Return the actual content being validated, not hardcoded default
+        const content = lastValidationContentRef.current || '';
+        console.log('[DEBUG] getYamlSource returning content length:', content.length);
+        console.log('[DEBUG] getYamlSource content preview:', content.substring(0, 200));
         return content;
       };
 
       // Set up callback for validation results
       window.onCheckCompleted = (errors: ActionlintError[]) => {
-        console.log('[DEBUG] onCheckCompleted called with errors:', errors);
+        console.log('[DEBUG] onCheckCompleted called with', errors.length, 'errors');
         const content = lastValidationContentRef.current;
-        console.log('[DEBUG] Current content for validation:', content ? content.substring(0, 100) + '...' : 'null');
+        console.log('[DEBUG] Validating content length:', content.length);
+        
+        // Log first few errors for debugging
+        if (errors.length > 0) {
+          console.log('[DEBUG] First error:', errors[0]);
+        }
         
         // Cache the result
         setCachedResult(content, errors);
         
-        console.log('[DEBUG] Setting state with errors count:', errors.length);
+        console.log('[DEBUG] Updating React state with errors');
         setState(prev => ({
           ...prev,
           isLoading: false,
@@ -266,20 +265,45 @@ jobs:
 
       wasmInstanceRef.current = result.instance;
 
-      // Run the Go WASM module
+      // Run the Go WASM module in background
       // This will call getYamlSource, onCheckCompleted, and dismissLoading
       console.log('[DEBUG] Starting WASM go.run()');
-      await go.run(result.instance);
-      console.log('[DEBUG] WASM go.run() completed');
+      go.run(result.instance).then(() => {
+        console.log('[DEBUG] WASM go.run() completed');
+      }).catch((err) => {
+        console.log('[DEBUG] WASM go.run() error:', err);
+      });
 
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        isInitialized: true,
-        error: null
-      }));
+      // Wait a bit for the WASM to be ready, then check for runActionlint availability
+      const checkReady = () => {
+        if (window.runActionlint) {
+          console.log('[DEBUG] WASM module is ready with runActionlint function');
+          setState(prev => ({
+            ...prev,
+            isLoading: false,
+            isInitialized: true,
+            error: null
+          }));
+          
+          console.log('[DEBUG] WASM initialization complete, module ready for validation');
+          
+          // Trigger validation if content was stored during initialization
+          if (lastValidationContentRef.current && lastValidationContentRef.current.trim()) {
+            console.log('[DEBUG] Triggering deferred validation after WASM initialization');
+            setTimeout(() => {
+              if (window.runActionlint && lastValidationContentRef.current) {
+                window.runActionlint(lastValidationContentRef.current);
+              }
+            }, 100);
+          }
+        } else {
+          console.log('[DEBUG] WASM not ready yet, checking again in 100ms');
+          setTimeout(checkReady, 100);
+        }
+      };
       
-      console.log('[DEBUG] WASM initialization complete, module ready for validation');
+      // Start checking after a short delay
+      setTimeout(checkReady, 100);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize WASM module';
@@ -318,21 +342,23 @@ jobs:
   // Validate YAML content
   const validateYaml = useCallback((content: string, immediate = false) => {
     console.log('[DEBUG] validateYaml called with content length:', content.length);
-    console.log('[DEBUG] state.isInitialized:', state.isInitialized);
     console.log('[DEBUG] window.runActionlint available:', !!window.runActionlint);
     
-    if (!state.isInitialized || !window.runActionlint) {
-      console.log('[DEBUG] WASM not ready, showing error');
-      setState(prev => ({
-        ...prev,
-        error: 'WASM module not initialized yet. Please wait and try again.'
-      }));
+    if (!window.runActionlint) {
+      console.log('[DEBUG] WASM runActionlint not available yet, storing content for later validation');
+      // Store the content so it can be validated once WASM is ready
+      lastValidationContentRef.current = content;
       return;
     }
 
+    // Store the content for validation BEFORE any async operations
+    lastValidationContentRef.current = content;
+    console.log('[DEBUG] Stored content for validation, first 100 chars:', content.substring(0, 100));
+    
     // Check cache first
     const cachedErrors = getCachedResult(content);
     if (cachedErrors !== null) {
+      console.log('[DEBUG] Using cached validation result with', cachedErrors.length, 'errors');
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -344,10 +370,6 @@ jobs:
       return;
     }
 
-    // Store the content for potential later validation
-    lastValidationContentRef.current = content;
-    console.log('[DEBUG] Stored content for validation:', content.substring(0, 100) + '...');
-
     // Clear existing debounce timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -355,25 +377,26 @@ jobs:
     }
 
     const performValidation = () => {
-      // Check if content has changed since scheduling validation
-      if (lastValidationContentRef.current !== content) {
-        return;
-      }
+      // Ensure we have the latest content reference
+      const currentContent = lastValidationContentRef.current;
+      console.log('[DEBUG] Performing validation for content length:', currentContent.length);
 
       // Check cache again in case it was populated during debounce
-      const cachedErrors = getCachedResult(content);
+      const cachedErrors = getCachedResult(currentContent);
       if (cachedErrors !== null) {
+        console.log('[DEBUG] Using cached validation result during debounce');
         setState(prev => ({
           ...prev,
           isLoading: false,
           errors: cachedErrors,
           error: null,
-          lastValidated: content,
+          lastValidated: currentContent,
           validatedAt: new Date()
         }));
         return;
       }
 
+      console.log('[DEBUG] Starting validation, setting loading state');
       setState(prev => ({
         ...prev,
         isLoading: true,
@@ -382,9 +405,9 @@ jobs:
 
       try {
         // Call the WASM validation function
-        console.log('[DEBUG] Calling window.runActionlint with content:', content.substring(0, 100) + '...');
-        window.runActionlint!(content);
-        console.log('[DEBUG] window.runActionlint call completed');
+        // The result will be handled by the onCheckCompleted callback
+        console.log('[DEBUG] Calling window.runActionlint with current content');
+        window.runActionlint!(currentContent);
       } catch (err) {
         console.log('[DEBUG] Error in window.runActionlint:', err);
         const errorMessage = err instanceof Error ? err.message : 'Validation failed';
@@ -404,7 +427,7 @@ jobs:
     } else {
       debounceTimerRef.current = setTimeout(performValidation, debounceMs);
     }
-  }, [state.isInitialized, debounceMs, getCachedResult]);
+  }, [debounceMs, getCachedResult]);
 
   // Validate immediately (skip debounce)
   const validateImmediate = useCallback((content: string) => {
