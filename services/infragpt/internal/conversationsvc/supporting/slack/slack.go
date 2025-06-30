@@ -22,7 +22,6 @@ type Slack struct {
 
 // TODO: Advanced token security via token rotation
 func (s *Slack) CompleteAuthentication(ctx context.Context, code string) (string, error) {
-	// exchange the code for an access token
 	oauthV2Response, err := slack.GetOAuthV2Response(
 		http.DefaultClient,
 		s.clientID,
@@ -34,7 +33,6 @@ func (s *Slack) CompleteAuthentication(ctx context.Context, code string) (string
 		return "", fmt.Errorf("failed to get oauth v2 response: %w", err)
 	}
 
-	// save the access token
 	// TODO: store refresh token and handle token refresh
 	if err := s.tokenRepository.SaveToken(ctx, oauthV2Response.Team.ID, oauthV2Response.AccessToken); err != nil {
 		return "", fmt.Errorf("failed to save token: %w", err)
@@ -70,7 +68,7 @@ func (s *Slack) ReplyMessage(ctx context.Context, t domain.SlackThread, message 
 	_, _, err = teamClient.PostMessage(
 		t.Channel,
 		slack.MsgOptionText(message, false),
-		slack.MsgOptionTS(t.ThreadTS), // This keeps replies in the thread
+		slack.MsgOptionTS(t.ThreadTS),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to post message: %w", err)

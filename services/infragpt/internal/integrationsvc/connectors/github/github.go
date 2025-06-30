@@ -432,7 +432,6 @@ func (g *githubConnector) syncRepositories(ctx context.Context, integrationID uu
 		}
 	}
 
-	// Update last sync time
 	if err := g.config.GitHubRepositoryRepo.UpdateLastSyncTime(ctx, integrationID, time.Now()); err != nil {
 		slog.Error("failed to update last sync time", "integration_id", integrationID, "error", err)
 	}

@@ -64,7 +64,6 @@ func main() {
 	}
 
 	var level slog.Level
-	// parse level from string
 	if err := level.UnmarshalText([]byte(c.LogLevel)); err != nil {
 		panic(err)
 	}
@@ -80,10 +79,7 @@ func main() {
 	slackConfig.WorkSpaceTokenRepository = db
 	slackConfig.ChannelRepository = db
 
-	// Create identity service with underlying database connection
 	identityService := c.Identity.New(db.DB())
-
-	// Create integration service with database connection
 	c.Integrations.Database = db.DB()
 	integrationService, err := c.Integrations.New()
 	if err != nil {
@@ -97,7 +93,6 @@ func main() {
 		panic(fmt.Errorf("error connecting to slack: %w", err))
 	}
 
-	// Create agent service with config from YAML
 	var agentService domain.AgentService
 	c.Agent.Timeout = 5 * 60 * time.Second
 	c.Agent.ConnectTimeout = 10 * time.Second
@@ -187,7 +182,6 @@ func main() {
 	})
 
 	g.Go(func() error {
-		// run identity service webhook server
 		slog.Info("infragpt: identity service webhook server starting", "port", c.Identity.Clerk.Port)
 		err = identityService.Subscribe(ctx)
 		if err == nil || errors.Is(err, context.Canceled) {
@@ -198,7 +192,6 @@ func main() {
 	})
 
 	g.Go(func() error {
-		// run integration service connectors
 		slog.Info("infragpt: integration service connectors starting")
 		err = integrationService.Subscribe(ctx)
 		if err == nil || errors.Is(err, context.Canceled) {
@@ -216,13 +209,11 @@ func main() {
 
 func corsHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Set CORS headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
-		// Handle preflight requests
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return

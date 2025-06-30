@@ -46,7 +46,6 @@ func (g *githubConnector) ProcessEvent(ctx context.Context, event any) error {
 		return fmt.Errorf("invalid event type: expected WebhookEvent")
 	}
 
-	// Handle installation and repository events
 	switch webhookEvent.EventType {
 	case EventTypeInstallation:
 		return g.handleInstallationEvent(ctx, webhookEvent)
@@ -84,13 +83,10 @@ func (g *githubConnector) handleInstallationEvent(ctx context.Context, event Web
 		"repositories_added", len(event.RepositoriesAdded),
 		"repositories_removed", len(event.RepositoriesRemoved))
 
-	// Parse the raw payload into proper Installation Event structure
 	installationEvent, err := g.parseInstallationEvent(event.RawPayload)
 	if err != nil {
 		return fmt.Errorf("failed to parse installation event: %w", err)
 	}
-
-	// Handle different installation actions
 	switch installationEvent.Action {
 	case "created":
 		return g.handleInstallationCreated(ctx, installationEvent)
@@ -198,7 +194,6 @@ func (g *githubConnector) handleInstallationUnsuspended(ctx context.Context, eve
 		"installation_id", event.Installation.ID,
 		"account", event.Installation.Account.Login)
 
-	// Find integration by GitHub installation ID and update status to active
 	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
 	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
 	if err != nil {
@@ -240,7 +235,6 @@ func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event In
 		return nil
 	}
 
-	// Find integration by GitHub installation ID
 	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
 	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
 	if err != nil {
@@ -252,19 +246,14 @@ func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event In
 		return fmt.Errorf("failed to find integration for permissions update %d: %w", event.Installation.ID, err)
 	}
 
-	// Prepare updated metadata with new permissions
 	updatedMetadata := make(map[string]string)
-	// Copy existing metadata
 	for k, v := range integration.Metadata {
 		updatedMetadata[k] = v
 	}
 
-	// Convert permissions map to string values and update metadata
 	for permission, access := range event.Installation.Permissions {
 		updatedMetadata["permission_"+permission] = access
 	}
-
-	// Update integration metadata with new permissions
 	if err := g.config.IntegrationRepository.UpdateMetadata(ctx, integration.ID, updatedMetadata); err != nil {
 		return fmt.Errorf("failed to update integration metadata for installation %d: %w", event.Installation.ID, err)
 	}
@@ -275,7 +264,6 @@ func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event In
 		"organization_id", integration.OrganizationID,
 		"permissions_count", len(event.Installation.Permissions))
 
-	// Sync repositories after permissions update if integration is active
 	if integration.Status == infragpt.IntegrationStatusActive {
 		integrationUUID := integration.ID
 
@@ -310,13 +298,10 @@ func (g *githubConnector) handleInstallationRepositoriesEvent(ctx context.Contex
 		"repositories_added", len(event.RepositoriesAdded),
 		"repositories_removed", len(event.RepositoriesRemoved))
 
-	// Parse the raw payload into proper Installation Event structure
 	installationEvent, err := g.parseInstallationEvent(event.RawPayload)
 	if err != nil {
 		return fmt.Errorf("failed to parse installation repositories event: %w", err)
 	}
-
-	// Handle repository additions and removals
 	switch installationEvent.Action {
 	case "added":
 		return g.handleRepositoriesAdded(ctx, installationEvent)
@@ -334,7 +319,6 @@ func (g *githubConnector) handleRepositoriesAdded(ctx context.Context, event Ins
 		"account", event.Installation.Account.Login,
 		"repositories_count", len(event.RepositoriesAdded))
 
-	// Check if installation is suspended before processing
 	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
 	isSuspended, err := g.isInstallationSuspended(ctx, event.Installation.ID)
 	if err != nil {

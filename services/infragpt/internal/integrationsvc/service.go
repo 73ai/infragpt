@@ -67,9 +67,7 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 		return infragpt.Integration{}, fmt.Errorf("failed to complete authorization: %w", err)
 	}
 
-	// Check if installation was already claimed by the connector
 	if claimed, exists := credentials.Data["claimed"]; exists && claimed == "true" {
-		// Installation was already claimed, find and return the existing integration
 		organizationID, _, err := connector.ParseState(cmd.State)
 		if err != nil {
 			return infragpt.Integration{}, fmt.Errorf("failed to parse state: %w", err)
@@ -89,13 +87,11 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 		return infragpt.Integration{}, fmt.Errorf("claimed integration not found")
 	}
 
-	// Parse organization ID and user ID from OAuth state using connector
 	organizationID, userID, err := connector.ParseState(cmd.State)
 	if err != nil {
 		return infragpt.Integration{}, fmt.Errorf("failed to parse state: %w", err)
 	}
 
-	// Check if integration already exists for this org and connector type
 	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, organizationID, cmd.ConnectorType)
 	if err != nil {
 		return infragpt.Integration{}, fmt.Errorf("failed to check existing integrations: %w", err)
@@ -122,7 +118,6 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd infragpt.Authori
 		integration.BotID = cmd.InstallationID
 	}
 
-	// Store connector organization info in integration metadata
 	if credentials.OrganizationInfo != nil {
 		integration.ConnectorOrganizationID = credentials.OrganizationInfo.ExternalID
 		integration.Metadata["connector_org_name"] = credentials.OrganizationInfo.Name
@@ -240,7 +235,6 @@ func (s *service) SyncIntegration(ctx context.Context, cmd infragpt.SyncIntegrat
 		return fmt.Errorf("failed to sync integration: %w", err)
 	}
 
-	// Update last used timestamp
 	now := time.Now()
 	integration.LastUsedAt = &now
 	integration.UpdatedAt = now
@@ -265,12 +259,9 @@ func (s *service) Subscribe(ctx context.Context) error {
 	return nil
 }
 
-// handleConnectorEvent processes events from connectors - delegate to connectors for processing
 func (s *service) handleConnectorEvent(ctx context.Context, event any) error {
-	// Simple delegation - let each connector handle its own events
 	switch e := event.(type) {
 	case github.WebhookEvent:
-		// Get GitHub connector and delegate event processing
 		if connector, exists := s.connectors[infragpt.ConnectorTypeGithub]; exists {
 			return connector.ProcessEvent(ctx, e)
 		}

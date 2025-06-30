@@ -223,7 +223,6 @@ func (r *integrationRepository) UpdateLastUsed(ctx context.Context, id uuid.UUID
 }
 
 func (r *integrationRepository) UpdateMetadata(ctx context.Context, id uuid.UUID, metadata map[string]string) error {
-	// Convert metadata to map[string]any for JSON marshaling
 	metadataMap := make(map[string]any)
 	for k, v := range metadata {
 		metadataMap[k] = v
