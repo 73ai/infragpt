@@ -12,18 +12,31 @@ import (
 )
 
 type Querier interface {
+	BulkDeleteGitHubRepositories(ctx context.Context, arg BulkDeleteGitHubRepositoriesParams) error
 	DeleteCredential(ctx context.Context, integrationID uuid.UUID) error
+	DeleteGitHubRepositoryByGitHubID(ctx context.Context, arg DeleteGitHubRepositoryByGitHubIDParams) error
 	DeleteIntegration(ctx context.Context, id uuid.UUID) error
 	FindCredentialByIntegration(ctx context.Context, integrationID uuid.UUID) (IntegrationCredential, error)
 	FindExpiringCredentials(ctx context.Context, expiresAt sql.NullTime) ([]IntegrationCredential, error)
+	FindGitHubRepositoriesByIntegrationID(ctx context.Context, integrationID uuid.UUID) ([]GithubRepository, error)
+	FindGitHubRepositoryByGitHubID(ctx context.Context, arg FindGitHubRepositoryByGitHubIDParams) (GithubRepository, error)
+	FindIntegrationByBotIDAndType(ctx context.Context, arg FindIntegrationByBotIDAndTypeParams) (Integration, error)
 	FindIntegrationByID(ctx context.Context, id uuid.UUID) (Integration, error)
 	FindIntegrationsByOrganization(ctx context.Context, organizationID uuid.UUID) ([]Integration, error)
+	FindIntegrationsByOrganizationAndStatus(ctx context.Context, arg FindIntegrationsByOrganizationAndStatusParams) ([]Integration, error)
 	FindIntegrationsByOrganizationAndType(ctx context.Context, arg FindIntegrationsByOrganizationAndTypeParams) ([]Integration, error)
+	FindIntegrationsByOrganizationTypeAndStatus(ctx context.Context, arg FindIntegrationsByOrganizationTypeAndStatusParams) ([]Integration, error)
 	StoreCredential(ctx context.Context, arg StoreCredentialParams) error
 	StoreIntegration(ctx context.Context, arg StoreIntegrationParams) error
 	UpdateCredential(ctx context.Context, arg UpdateCredentialParams) error
+	UpdateGitHubRepositoryLastSyncTime(ctx context.Context, arg UpdateGitHubRepositoryLastSyncTimeParams) error
+	UpdateGitHubRepositoryPermissions(ctx context.Context, arg UpdateGitHubRepositoryPermissionsParams) error
+	UpdateIntegration(ctx context.Context, arg UpdateIntegrationParams) error
 	UpdateIntegrationLastUsed(ctx context.Context, id uuid.UUID) error
+	UpdateIntegrationMetadata(ctx context.Context, arg UpdateIntegrationMetadataParams) error
 	UpdateIntegrationStatus(ctx context.Context, arg UpdateIntegrationStatusParams) error
+	// GitHub Repository Queries
+	UpsertGitHubRepository(ctx context.Context, arg UpsertGitHubRepositoryParams) error
 }
 
 var _ Querier = (*Queries)(nil)

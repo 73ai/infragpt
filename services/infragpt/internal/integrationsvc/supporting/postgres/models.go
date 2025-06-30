@@ -12,6 +12,28 @@ import (
 	"github.com/sqlc-dev/pqtype"
 )
 
+type GithubRepository struct {
+	ID                    uuid.UUID      `json:"id"`
+	IntegrationID         uuid.UUID      `json:"integration_id"`
+	GithubRepositoryID    int64          `json:"github_repository_id"`
+	RepositoryName        string         `json:"repository_name"`
+	RepositoryFullName    string         `json:"repository_full_name"`
+	RepositoryUrl         string         `json:"repository_url"`
+	IsPrivate             bool           `json:"is_private"`
+	DefaultBranch         sql.NullString `json:"default_branch"`
+	PermissionAdmin       bool           `json:"permission_admin"`
+	PermissionPush        bool           `json:"permission_push"`
+	PermissionPull        bool           `json:"permission_pull"`
+	RepositoryDescription sql.NullString `json:"repository_description"`
+	RepositoryLanguage    sql.NullString `json:"repository_language"`
+	CreatedAt             time.Time      `json:"created_at"`
+	UpdatedAt             time.Time      `json:"updated_at"`
+	LastSyncedAt          time.Time      `json:"last_synced_at"`
+	GithubCreatedAt       sql.NullTime   `json:"github_created_at"`
+	GithubUpdatedAt       sql.NullTime   `json:"github_updated_at"`
+	GithubPushedAt        sql.NullTime   `json:"github_pushed_at"`
+}
+
 type Integration struct {
 	ID                      uuid.UUID             `json:"id"`
 	OrganizationID          uuid.UUID             `json:"organization_id"`

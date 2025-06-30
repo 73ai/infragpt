@@ -44,9 +44,8 @@ func (i InfraGPTDB) GetToken(ctx context.Context, teamID string) (string, error)
 	return token, nil
 }
 
-func (i InfraGPTDB) Integrations(ctx context.Context, businessID string) ([]domain.Integration, error) {
-	bid := uuid.MustParse(businessID)
-	is, err := i.integrations(ctx, bid)
+func (i InfraGPTDB) Integrations(ctx context.Context, businessID uuid.UUID) ([]domain.Integration, error) {
+	is, err := i.integrations(ctx, businessID)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +57,7 @@ func (i InfraGPTDB) Integrations(ctx context.Context, businessID string) ([]doma
 				ConnectorType: infragpt.ConnectorType(i.Provider),
 				Status:        infragpt.IntegrationStatus(i.Status),
 			},
-			BusinessID:        businessID,
+			BusinessID:        businessID.String(),
 			ProviderProjectID: i.ProviderProjectID,
 		})
 	}

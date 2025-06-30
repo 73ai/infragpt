@@ -27,3 +27,15 @@ identity:
     port: 8085
     webhook_secret: "x"
     secret_key: "x"
+
+integrations:
+  slack:
+    client_id: "x"
+    client_secret: "x"
+    app_token: "x"
+    redirect_url: "x"
+  github:
+    app_id: "x"
+    private_key: "x"
+    webhook_secret: "x"
+    redirect_url: "x"

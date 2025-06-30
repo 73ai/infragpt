@@ -148,7 +148,6 @@ func (s *Service) handleUserCommand(ctx context.Context, command domain.UserComm
 		IsBotMessage:   false,
 	}
 
-	// check if the message is already stored
 	_, err = s.conversationRepository.MessageBySlackTS(ctx, conversation.ID, command.Thread.Sender.ID, command.MessageTS)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

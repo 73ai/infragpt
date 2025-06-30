@@ -6,24 +6,442 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/priyanshujain/infragpt/services/infragpt"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/domain"
 )
 
-type webhookHandler struct {
-	http.ServeMux
-	callbackHandlerFunc func(ctx context.Context, event any) error
+func (g *githubConnector) ValidateWebhookSignature(payload []byte, signature string, secret string) error {
+	if secret == "" {
+		secret = g.config.WebhookSecret
+	}
+
+	expectedSignature := g.computeSignature(payload, secret)
+
+	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
+		return fmt.Errorf("webhook signature validation failed")
+	}
+
+	return nil
 }
 
+func (g *githubConnector) computeSignature(payload []byte, secret string) string {
+	h := hmac.New(sha256.New, []byte(secret))
+	h.Write(payload)
+	return fmt.Sprintf("sha256=%s", hex.EncodeToString(h.Sum(nil)))
+}
+
+func (g *githubConnector) ProcessEvent(ctx context.Context, event any) error {
+	webhookEvent, ok := event.(WebhookEvent)
+	if !ok {
+		return fmt.Errorf("invalid event type: expected WebhookEvent")
+	}
+
+	switch webhookEvent.EventType {
+	case EventTypeInstallation:
+		return g.handleInstallationEvent(ctx, webhookEvent)
+	case "installation_repositories":
+		return g.handleInstallationRepositoriesEvent(ctx, webhookEvent)
+	default:
+		slog.Debug("ignoring non-installation event",
+			"event_type", webhookEvent.EventType,
+			"installation_id", webhookEvent.InstallationID)
+		return nil
+	}
+}
+
+func (g *githubConnector) Subscribe(ctx context.Context, handler func(ctx context.Context, event any) error) error {
+	if g.config.WebhookPort == 0 {
+		return fmt.Errorf("github: webhook port is required for webhook server")
+	}
+
+	webhookConfig := webhookServerConfig{
+		port:                g.config.WebhookPort,
+		webhookSecret:       g.config.WebhookSecret,
+		callbackHandlerFunc: handler,
+		validateSignature:   g.ValidateWebhookSignature,
+	}
+
+	return webhookConfig.startWebhookServer(ctx)
+}
+
+
+func (g *githubConnector) handleInstallationEvent(ctx context.Context, event WebhookEvent) error {
+	slog.Info("handling GitHub installation event",
+		"action", event.InstallationAction,
+		"installation_id", event.InstallationID,
+		"account_login", event.SenderLogin,
+		"repositories_added", len(event.RepositoriesAdded),
+		"repositories_removed", len(event.RepositoriesRemoved))
+
+	installationEvent, err := g.parseInstallationEvent(event.RawPayload)
+	if err != nil {
+		return fmt.Errorf("failed to parse installation event: %w", err)
+	}
+	switch installationEvent.Action {
+	case "created":
+		return g.handleInstallationCreated(ctx, installationEvent)
+	case "deleted":
+		return g.handleInstallationDeleted(ctx, installationEvent)
+	case "suspend":
+		return g.handleInstallationSuspended(ctx, installationEvent)
+	case "unsuspend":
+		return g.handleInstallationUnsuspended(ctx, installationEvent)
+	case "new_permissions_accepted":
+		return g.handlePermissionsUpdated(ctx, installationEvent)
+	default:
+		slog.Debug("unhandled installation action", "action", installationEvent.Action)
+		return nil
+	}
+}
+
+func (g *githubConnector) parseInstallationEvent(rawPayload map[string]any) (InstallationEvent, error) {
+	payloadBytes, err := json.Marshal(rawPayload)
+	if err != nil {
+		return InstallationEvent{}, fmt.Errorf("failed to marshal raw payload: %w", err)
+	}
+
+	var installationEvent InstallationEvent
+	if err := json.Unmarshal(payloadBytes, &installationEvent); err != nil {
+		return InstallationEvent{}, fmt.Errorf("failed to unmarshal installation event: %w", err)
+	}
+
+	installationEvent.RawPayload = rawPayload
+	return installationEvent, nil
+}
+
+func (g *githubConnector) handleInstallationCreated(ctx context.Context, event InstallationEvent) error {
+	slog.Info("GitHub App installation created",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login,
+		"repository_selection", event.Installation.RepositorySelection,
+		"repository_count", len(event.Repositories))
+
+	slog.Info("GitHub installation created - will be claimed during authorization flow",
+		"installation_id", event.Installation.ID,
+		"account_login", event.Installation.Account.Login,
+		"account_type", event.Installation.Account.Type)
+
+	return nil
+}
+
+func (g *githubConnector) handleInstallationDeleted(ctx context.Context, event InstallationEvent) error {
+	slog.Info("GitHub App installation deleted",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login)
+
+	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
+	if err != nil {
+		if errors.Is(err, domain.ErrIntegrationNotFound) {
+			slog.Debug("integration not found for deleted installation",
+				"installation_id", event.Installation.ID)
+			return nil
+		}
+		return fmt.Errorf("failed to find integration for deleted installation %d: %w", event.Installation.ID, err)
+	}
+	if err := g.config.IntegrationRepository.UpdateStatus(ctx, integration.ID, infragpt.IntegrationStatusInactive); err != nil {
+		return fmt.Errorf("failed to update integration status for deleted installation %d: %w", event.Installation.ID, err)
+	}
+
+	slog.Info("GitHub integration marked as inactive due to installation deletion",
+		"installation_id", event.Installation.ID,
+		"integration_id", integration.ID,
+		"organization_id", integration.OrganizationID)
+
+	return nil
+}
+
+func (g *githubConnector) handleInstallationSuspended(ctx context.Context, event InstallationEvent) error {
+	slog.Info("GitHub App installation suspended",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login,
+		"suspended_by", event.Installation.SuspendedBy)
+
+	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
+	if err != nil {
+		if errors.Is(err, domain.ErrIntegrationNotFound) {
+			slog.Debug("integration not found for suspended installation",
+				"installation_id", event.Installation.ID)
+			return nil
+		}
+		return fmt.Errorf("failed to find integration for suspended installation %d: %w", event.Installation.ID, err)
+	}
+	if err := g.config.IntegrationRepository.UpdateStatus(ctx, integration.ID, infragpt.IntegrationStatusSuspended); err != nil {
+		return fmt.Errorf("failed to update integration status to suspended for installation %d: %w", event.Installation.ID, err)
+	}
+
+	slog.Info("GitHub integration status updated to suspended",
+		"installation_id", event.Installation.ID,
+		"integration_id", integration.ID,
+		"organization_id", integration.OrganizationID)
+
+	return nil
+}
+
+func (g *githubConnector) handleInstallationUnsuspended(ctx context.Context, event InstallationEvent) error {
+	slog.Info("GitHub App installation unsuspended",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login)
+
+	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
+	if err != nil {
+		if errors.Is(err, domain.ErrIntegrationNotFound) {
+			slog.Debug("integration not found for unsuspended installation",
+				"installation_id", event.Installation.ID)
+			return nil
+		}
+		return fmt.Errorf("failed to find integration for unsuspended installation %d: %w", event.Installation.ID, err)
+	}
+
+	if err := g.config.IntegrationRepository.UpdateStatus(ctx, integration.ID, infragpt.IntegrationStatusActive); err != nil {
+		return fmt.Errorf("failed to update integration status to active for installation %d: %w", event.Installation.ID, err)
+	}
+
+	slog.Info("GitHub integration status updated to active",
+		"installation_id", event.Installation.ID,
+		"integration_id", integration.ID,
+		"organization_id", integration.OrganizationID)
+
+	return nil
+}
+
+func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event InstallationEvent) error {
+	slog.Info("GitHub App permissions updated",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login,
+		"permissions", event.Installation.Permissions)
+
+	isSuspended, err := g.isInstallationSuspended(ctx, event.Installation.ID)
+	if err != nil {
+		return fmt.Errorf("failed to check installation suspension status: %w", err)
+	}
+
+	if isSuspended {
+		slog.Info("skipping permissions update processing for suspended installation",
+			"installation_id", event.Installation.ID,
+			"account", event.Installation.Account.Login)
+		return nil
+	}
+
+	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
+	if err != nil {
+		if errors.Is(err, domain.ErrIntegrationNotFound) {
+			slog.Debug("integration not found for permissions update",
+				"installation_id", event.Installation.ID)
+			return nil
+		}
+		return fmt.Errorf("failed to find integration for permissions update %d: %w", event.Installation.ID, err)
+	}
+
+	updatedMetadata := make(map[string]string)
+	for k, v := range integration.Metadata {
+		updatedMetadata[k] = v
+	}
+
+	for permission, access := range event.Installation.Permissions {
+		updatedMetadata["permission_"+permission] = access
+	}
+	if err := g.config.IntegrationRepository.UpdateMetadata(ctx, integration.ID, updatedMetadata); err != nil {
+		return fmt.Errorf("failed to update integration metadata for installation %d: %w", event.Installation.ID, err)
+	}
+
+	slog.Info("GitHub integration permissions updated successfully",
+		"installation_id", event.Installation.ID,
+		"integration_id", integration.ID,
+		"organization_id", integration.OrganizationID,
+		"permissions_count", len(event.Installation.Permissions))
+
+	if integration.Status == infragpt.IntegrationStatusActive {
+		integrationUUID := integration.ID
+
+		slog.Info("syncing repositories after permissions update",
+			"installation_id", event.Installation.ID,
+			"integration_id", integration.ID)
+
+		if err := g.syncRepositories(ctx, integrationUUID, installationIDStr); err != nil {
+			slog.Error("failed to sync repositories after permissions update",
+				"installation_id", event.Installation.ID,
+				"integration_id", integration.ID,
+				"error", err)
+		} else {
+			slog.Info("repository sync completed successfully after permissions update",
+				"installation_id", event.Installation.ID,
+				"integration_id", integration.ID)
+		}
+	} else {
+		slog.Info("skipping repository sync for inactive integration",
+			"installation_id", event.Installation.ID,
+			"integration_id", integration.ID,
+			"status", integration.Status)
+	}
+
+	return nil
+}
+
+func (g *githubConnector) handleInstallationRepositoriesEvent(ctx context.Context, event WebhookEvent) error {
+	slog.Info("handling GitHub installation repositories event",
+		"action", event.Action,
+		"installation_id", event.InstallationID,
+		"repositories_added", len(event.RepositoriesAdded),
+		"repositories_removed", len(event.RepositoriesRemoved))
+
+	installationEvent, err := g.parseInstallationEvent(event.RawPayload)
+	if err != nil {
+		return fmt.Errorf("failed to parse installation repositories event: %w", err)
+	}
+	switch installationEvent.Action {
+	case "added":
+		return g.handleRepositoriesAdded(ctx, installationEvent)
+	case "removed":
+		return g.handleRepositoriesRemoved(ctx, installationEvent)
+	default:
+		slog.Debug("unhandled installation repositories action", "action", installationEvent.Action)
+		return nil
+	}
+}
+
+func (g *githubConnector) handleRepositoriesAdded(ctx context.Context, event InstallationEvent) error {
+	slog.Info("GitHub App repositories added",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login,
+		"repositories_count", len(event.RepositoriesAdded))
+
+	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	isSuspended, err := g.isInstallationSuspended(ctx, event.Installation.ID)
+	if err != nil {
+		return fmt.Errorf("failed to check installation suspension status: %w", err)
+	}
+
+	if isSuspended {
+		slog.Info("skipping repository addition processing for suspended installation",
+			"installation_id", event.Installation.ID,
+			"account", event.Installation.Account.Login,
+			"repositories_count", len(event.RepositoriesAdded))
+		return nil
+	}
+
+	integrationID, err := g.findIntegrationIDByInstallationID(ctx, installationIDStr)
+	if err != nil {
+		slog.Error("failed to find integration for repository addition",
+			"installation_id", event.Installation.ID,
+			"error", err)
+		return nil
+	}
+
+	if integrationID != uuid.Nil {
+		if err := g.addRepositories(ctx, integrationID, event.RepositoriesAdded); err != nil {
+			return fmt.Errorf("failed to add repositories: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (g *githubConnector) handleRepositoriesRemoved(ctx context.Context, event InstallationEvent) error {
+	slog.Info("GitHub App repositories removed",
+		"installation_id", event.Installation.ID,
+		"account", event.Installation.Account.Login,
+		"repositories_count", len(event.RepositoriesRemoved))
+
+	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
+	isSuspended, err := g.isInstallationSuspended(ctx, event.Installation.ID)
+	if err != nil {
+		return fmt.Errorf("failed to check installation suspension status: %w", err)
+	}
+
+	if isSuspended {
+		slog.Info("skipping repository removal processing for suspended installation",
+			"installation_id", event.Installation.ID,
+			"account", event.Installation.Account.Login,
+			"repositories_count", len(event.RepositoriesRemoved))
+		return nil
+	}
+
+	integrationID, err := g.findIntegrationIDByInstallationID(ctx, installationIDStr)
+	if err != nil {
+		slog.Error("failed to find integration for repository removal",
+			"installation_id", event.Installation.ID,
+			"error", err)
+		return nil
+	}
+
+	if integrationID != uuid.Nil {
+		var repoIDs []int64
+		for _, repo := range event.RepositoriesRemoved {
+			repoIDs = append(repoIDs, repo.ID)
+		}
+		if err := g.removeRepositories(ctx, integrationID, repoIDs); err != nil {
+			return fmt.Errorf("failed to remove repositories: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (g *githubConnector) isInstallationSuspended(ctx context.Context, installationID int64) (bool, error) {
+	installationIDStr := strconv.FormatInt(installationID, 10)
+	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
+	if err != nil {
+		if errors.Is(err, domain.ErrIntegrationNotFound) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to find integration by installation ID %d: %w", installationID, err)
+	}
+
+	return integration.Status == infragpt.IntegrationStatusSuspended, nil
+}
+
+func (g *githubConnector) findIntegrationIDByInstallationID(ctx context.Context, installationID string) (uuid.UUID, error) {
+	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationID, infragpt.ConnectorTypeGithub)
+	if err != nil {
+		if errors.Is(err, domain.ErrIntegrationNotFound) {
+			slog.Debug("integration not found for installation ID", "installation_id", installationID)
+			return uuid.Nil, nil
+		}
+		return uuid.Nil, fmt.Errorf("failed to find integration by installation ID: %w", err)
+	}
+
+	integrationUUID := integration.ID
+
+	slog.Debug("found integration for installation ID",
+		"installation_id", installationID,
+		"integration_id", integration.ID,
+		"organization_id", integration.OrganizationID)
+
+	return integrationUUID, nil
+}
+
+func convertUserToMap(user *User) map[string]any {
+	if user == nil {
+		return nil
+	}
+	return map[string]any{
+		"id":    user.ID,
+		"login": user.Login,
+		"type":  user.Type,
+	}
+}
+
+// Webhook server configuration and implementation
 type webhookServerConfig struct {
 	port                int
 	webhookSecret       string
 	callbackHandlerFunc func(ctx context.Context, event any) error
+	validateSignature   func(payload []byte, signature string, secret string) error
 }
 
 func (c webhookServerConfig) startWebhookServer(ctx context.Context) error {
@@ -35,10 +453,15 @@ func (c webhookServerConfig) startWebhookServer(ctx context.Context) error {
 	httpServer := &http.Server{
 		Addr:        fmt.Sprintf(":%d", c.port),
 		BaseContext: func(net.Listener) context.Context { return ctx },
-		Handler:     panicMiddleware(webhookValidationMiddleware(c.webhookSecret, h)),
+		Handler:     panicMiddleware(webhookValidationMiddleware(c.webhookSecret, c.validateSignature, h)),
 	}
 
 	return httpServer.ListenAndServe()
+}
+
+type webhookHandler struct {
+	http.ServeMux
+	callbackHandlerFunc func(ctx context.Context, event any) error
 }
 
 func (wh *webhookHandler) init() {
@@ -51,28 +474,31 @@ func (wh *webhookHandler) handler() func(w http.ResponseWriter, r *http.Request)
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		// Get event type from GitHub headers
 		eventType := r.Header.Get("X-GitHub-Event")
 		if eventType == "" {
 			http.Error(w, "Missing X-GitHub-Event header", http.StatusBadRequest)
 			return
 		}
 
-		// Read payload
+		if eventType != "installation" && eventType != "installation_repositories" {
+			slog.Debug("ignoring non-installation event", "event_type", eventType)
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(response{})
+			return
+		}
+
 		payload, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Failed to read payload", http.StatusBadRequest)
 			return
 		}
 
-		// Parse payload as generic JSON
 		var rawPayload map[string]any
 		if err := json.Unmarshal(payload, &rawPayload); err != nil {
 			http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
 			return
 		}
 
-		// Convert to our WebhookEvent format
 		webhookEvent, err := wh.convertToWebhookEvent(eventType, rawPayload)
 		if err != nil {
 			slog.Error("failed to convert GitHub webhook event", "event_type", eventType, "error", err)
@@ -80,7 +506,6 @@ func (wh *webhookHandler) handler() func(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		// Call the handler
 		if err := wh.callbackHandlerFunc(ctx, webhookEvent); err != nil {
 			slog.Error("error handling GitHub webhook event", "event_type", eventType, "error", err)
 			http.Error(w, "Failed to handle event", http.StatusInternalServerError)
@@ -99,10 +524,9 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 		CreatedAt:  time.Now(),
 	}
 
-	// Extract common fields
 	if installation, ok := rawPayload["installation"].(map[string]any); ok {
 		if id, ok := installation["id"].(float64); ok {
-			event.InstallationID = int64(id)
+			event.InstallationID = strconv.FormatFloat(id, 'f', 0, 64)
 		}
 	}
 
@@ -115,76 +539,17 @@ func (wh *webhookHandler) convertToWebhookEvent(eventType string, rawPayload map
 		}
 	}
 
-	if repository, ok := rawPayload["repository"].(map[string]any); ok {
-		if id, ok := repository["id"].(float64); ok {
-			event.RepositoryID = int64(id)
-		}
-		if name, ok := repository["full_name"].(string); ok {
-			event.RepositoryName = name
-		}
-	}
-
 	if action, ok := rawPayload["action"].(string); ok {
 		event.Action = action
+		event.InstallationAction = action
 	}
 
-	// Event-specific field extraction
-	switch EventType(eventType) {
-	case EventTypePush:
-		if ref, ok := rawPayload["ref"].(string); ok {
-			event.Ref = ref
-			if strings.HasPrefix(ref, "refs/heads/") {
-				event.Branch = strings.TrimPrefix(ref, "refs/heads/")
-			}
-		}
-		if after, ok := rawPayload["after"].(string); ok {
-			event.CommitSHA = after
-		}
-
-	case EventTypePullRequest:
-		if pr, ok := rawPayload["pull_request"].(map[string]any); ok {
-			if number, ok := pr["number"].(float64); ok {
-				event.PullRequestNumber = int(number)
-			}
-			if title, ok := pr["title"].(string); ok {
-				event.PullRequestTitle = title
-			}
-			if state, ok := pr["state"].(string); ok {
-				event.PullRequestState = state
-			}
-			if head, ok := pr["head"].(map[string]any); ok {
-				if sha, ok := head["sha"].(string); ok {
-					event.CommitSHA = sha
-				}
-			}
-		}
-
-	case EventTypeIssues:
-		if issue, ok := rawPayload["issue"].(map[string]any); ok {
-			if number, ok := issue["number"].(float64); ok {
-				event.IssueNumber = int(number)
-			}
-			if title, ok := issue["title"].(string); ok {
-				event.IssueTitle = title
-			}
-			if state, ok := issue["state"].(string); ok {
-				event.IssueState = state
-			}
-		}
-
-	case EventTypeInstallation:
-		if action, ok := rawPayload["action"].(string); ok {
-			event.InstallationAction = action
-		}
-
-		// Handle repository changes
+	if eventType == "installation" || eventType == "installation_repositories" {
 		if repositories, ok := rawPayload["repositories"].([]any); ok {
 			for _, repo := range repositories {
 				if repoMap, ok := repo.(map[string]any); ok {
 					if fullName, ok := repoMap["full_name"].(string); ok {
-						if event.InstallationAction == "created" {
-							event.RepositoriesAdded = append(event.RepositoriesAdded, fullName)
-						}
+						event.RepositoriesAdded = append(event.RepositoriesAdded, fullName)
 					}
 				}
 			}
@@ -216,10 +581,9 @@ func panicMiddleware(h http.Handler) http.Handler {
 	})
 }
 
-func webhookValidationMiddleware(webhookSecret string, next http.Handler) http.Handler {
+func webhookValidationMiddleware(webhookSecret string, validateSignature func(payload []byte, signature string, secret string) error, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if webhookSecret == "" {
-			// Skip validation if no secret configured
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -237,30 +601,21 @@ func webhookValidationMiddleware(webhookSecret string, next http.Handler) http.H
 			return
 		}
 
-		if !validateGitHubSignature(body, signature, webhookSecret) {
-			slog.Info("github: webhook validation failed", "signature", signature)
+		if err := validateSignature(body, signature, webhookSecret); err != nil {
+			slog.Info("github: webhook validation failed", "signature", signature, "error", err)
 			http.Error(w, "Invalid webhook signature", http.StatusUnauthorized)
 			return
 		}
 
-		// Restore body for downstream handlers
 		r.Body = io.NopCloser(strings.NewReader(string(body)))
-
 		next.ServeHTTP(w, r)
 	})
 }
 
-func validateGitHubSignature(payload []byte, signature string, secret string) bool {
-	// GitHub sends signature as sha256=<hash>
-	if !strings.HasPrefix(signature, "sha256=") {
-		return false
+func timeValueFromPointer(t *time.Time) time.Time {
+	if t == nil {
+		return time.Time{}
 	}
-
-	expectedHash := strings.TrimPrefix(signature, "sha256=")
-
-	h := hmac.New(sha256.New, []byte(secret))
-	h.Write(payload)
-	actualHash := hex.EncodeToString(h.Sum(nil))
-
-	return hmac.Equal([]byte(expectedHash), []byte(actualHash))
+	return *t
 }
+

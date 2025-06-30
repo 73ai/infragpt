@@ -3,6 +3,8 @@ package infragpt
 import (
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type ConnectorType string
@@ -39,12 +41,14 @@ const (
 	IntegrationStatusInactive   IntegrationStatus = "inactive"
 	IntegrationStatusPending    IntegrationStatus = "pending"
 	IntegrationStatusNotStarted IntegrationStatus = "not_started"
+	IntegrationStatusSuspended  IntegrationStatus = "suspended"
+	IntegrationStatusDeleted    IntegrationStatus = "deleted"
 )
 
 type Integration struct {
-	ID                      string
-	OrganizationID          string
-	UserID                  string
+	ID                      uuid.UUID
+	OrganizationID          uuid.UUID
+	UserID                  uuid.UUID
 	ConnectorType           ConnectorType
 	Status                  IntegrationStatus
 	BotID                   string
@@ -83,6 +87,7 @@ type OrganizationInfo struct {
 type IntegrationService interface {
 	NewIntegration(ctx context.Context, cmd NewIntegrationCommand) (IntegrationAuthorizationIntent, error)
 	AuthorizeIntegration(ctx context.Context, cmd AuthorizeIntegrationCommand) (Integration, error)
+	SyncIntegration(ctx context.Context, cmd SyncIntegrationCommand) error
 	RevokeIntegration(ctx context.Context, cmd RevokeIntegrationCommand) error
 	Integrations(ctx context.Context, query IntegrationsQuery) ([]Integration, error)
 	Integration(ctx context.Context, query IntegrationQuery) (Integration, error)
@@ -90,8 +95,8 @@ type IntegrationService interface {
 }
 
 type NewIntegrationCommand struct {
-	OrganizationID string
-	UserID         string
+	OrganizationID uuid.UUID
+	UserID         uuid.UUID
 	ConnectorType  ConnectorType
 }
 
@@ -103,16 +108,23 @@ type AuthorizeIntegrationCommand struct {
 }
 
 type RevokeIntegrationCommand struct {
-	IntegrationID  string
-	OrganizationID string
+	IntegrationID  uuid.UUID
+	OrganizationID uuid.UUID
 }
 
 type IntegrationsQuery struct {
-	OrganizationID string
+	OrganizationID uuid.UUID
 	ConnectorType  ConnectorType
+	Status         IntegrationStatus
 }
 
 type IntegrationQuery struct {
-	IntegrationID  string
-	OrganizationID string
+	IntegrationID  uuid.UUID
+	OrganizationID uuid.UUID
+}
+
+type SyncIntegrationCommand struct {
+	IntegrationID  uuid.UUID
+	OrganizationID uuid.UUID
+	Parameters     map[string]string
 }

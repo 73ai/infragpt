@@ -174,3 +174,15 @@ CLAUDE.md
 NOTES.md
 # Local Netlify folder
 .netlify
+
+# Services to ignore
+services/mcp/
+services/wwwroot/
+
+# Configuration files with sensitive data
+services/infragpt/config.yaml
+
+.DS_Store/*
+.DS_Store
+
+./*/DS_Store

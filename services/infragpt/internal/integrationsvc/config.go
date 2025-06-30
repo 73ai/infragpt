@@ -28,11 +28,16 @@ func (c Config) New() (infragpt.IntegrationService, error) {
 	connectors := make(map[infragpt.ConnectorType]domain.Connector)
 
 	if c.Slack.ClientID != "" {
-		connectors[infragpt.ConnectorTypeSlack] = c.Slack.NewConnector()
+		connectors[infragpt.ConnectorTypeSlack] = c.Slack.New()
 	}
 
 	if c.GitHub.AppID != "" {
-		connectors[infragpt.ConnectorTypeGithub] = c.GitHub.NewConnector()
+		// Inject repository dependencies into GitHub config
+		c.GitHub.GitHubRepositoryRepo = postgres.NewGitHubRepositoryRepository(c.Database)
+		c.GitHub.IntegrationRepository = integrationRepository
+		c.GitHub.CredentialRepository = credentialRepository
+
+		connectors[infragpt.ConnectorTypeGithub] = c.GitHub.New()
 	}
 
 	serviceConfig := ServiceConfig{

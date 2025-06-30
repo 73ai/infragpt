@@ -46,7 +46,7 @@ const IntegrationsPage = observer(() => {
         );
         
         // Redirect to authorization URL
-        if (response.type === 'redirect' || response.type === 'oauth2') {
+        if (response.type === 'redirect' || response.type === 'oauth2' || response.type === 'installation') {
           // open in a new tab 
           window.open(response.url, '_blank');
 

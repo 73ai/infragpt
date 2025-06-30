@@ -48,13 +48,13 @@ type OrganizationMember struct {
 }
 
 type Profile struct {
-	ID               uuid.UUID `json:"id"`
-	Name             string    `json:"name"`
-	Slug             string    `json:"slug"`
-	CreatedAt        time.Time `json:"created_at"`
-	Metadata         OrganizationMetadata `json:"metadata"`
-	OrganizationID   uuid.UUID `json:"organization_id"`
-	UserID           uuid.UUID `json:"user_id"`
+	ID             uuid.UUID            `json:"id"`
+	Name           string               `json:"name"`
+	Slug           string               `json:"slug"`
+	CreatedAt      time.Time            `json:"created_at"`
+	Metadata       OrganizationMetadata `json:"metadata"`
+	OrganizationID uuid.UUID            `json:"organization_id"`
+	UserID         uuid.UUID            `json:"user_id"`
 }
 
 type CompanySize string

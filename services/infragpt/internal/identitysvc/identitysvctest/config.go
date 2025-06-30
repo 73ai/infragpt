@@ -101,19 +101,27 @@ func (s *service) Profile(ctx context.Context, query infragpt.ProfileQuery) (inf
 	if err != nil {
 		return infragpt.Profile{}, err
 	}
-	
+
 	user, err := s.userRepo.UserByClerkID(ctx, query.ClerkUserID)
 	if err != nil {
 		return infragpt.Profile{}, err
 	}
-	
+
 	return infragpt.Profile{
-		ID:               org.ID,
-		Name:             org.Name,
-		Slug:             org.Slug,
-		CreatedAt:        org.CreatedAt,
-		Metadata:         org.Metadata,
-		OrganizationID:   org.ID,
-		UserID:           user.ID,
+		ID:        org.ID,
+		Name:      org.Name,
+		Slug:      org.Slug,
+		CreatedAt: org.CreatedAt,
+		Metadata: infragpt.OrganizationMetadata{
+			OrganizationID:     org.Metadata.OrganizationID,
+			CompanySize:        org.Metadata.CompanySize,
+			TeamSize:           org.Metadata.TeamSize,
+			UseCases:           org.Metadata.UseCases,
+			ObservabilityStack: org.Metadata.ObservabilityStack,
+			CompletedAt:        org.Metadata.CompletedAt,
+			UpdatedAt:          org.Metadata.UpdatedAt,
+		},
+		OrganizationID: org.ID,
+		UserID:         user.ID,
 	}, nil
 }

@@ -3,10 +3,12 @@ package integrationapi
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
 	"github.com/priyanshujain/infragpt/services/infragpt/internal/generic/httperrors"
 )
@@ -19,9 +21,9 @@ type httpHandler struct {
 func (h *httpHandler) init() {
 	h.HandleFunc("/integrations/initiate/", h.initiate())
 	h.HandleFunc("/integrations/authorize/", h.authorize())
+	h.HandleFunc("/integrations/sync/", h.sync())
 	h.HandleFunc("/integrations/list/", h.list())
 	h.HandleFunc("/integrations/revoke/", h.revoke())
-	h.HandleFunc("/integrations/refresh/", h.refresh())
 	h.HandleFunc("/integrations/status/", h.status())
 }
 
@@ -47,9 +49,19 @@ func (h *httpHandler) initiate() func(w http.ResponseWriter, r *http.Request) {
 	}
 
 	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
+		organizationID, err := uuid.Parse(req.OrganizationID)
+		if err != nil {
+			return response{}, fmt.Errorf("invalid organization_id: %w", err)
+		}
+
+		userID, err := uuid.Parse(req.UserID)
+		if err != nil {
+			return response{}, fmt.Errorf("invalid user_id: %w", err)
+		}
+
 		cmd := infragpt.NewIntegrationCommand{
-			OrganizationID: req.OrganizationID,
-			UserID:         req.UserID,
+			OrganizationID: organizationID,
+			UserID:         userID,
 			ConnectorType:  infragpt.ConnectorType(req.ConnectorType),
 		}
 
@@ -101,9 +113,9 @@ func (h *httpHandler) authorize() func(w http.ResponseWriter, r *http.Request) {
 		}
 
 		resp := response{
-			ID:                      integration.ID,
-			OrganizationID:          integration.OrganizationID,
-			UserID:                  integration.UserID,
+			ID:                      integration.ID.String(),
+			OrganizationID:          integration.OrganizationID.String(),
+			UserID:                  integration.UserID.String(),
 			ConnectorType:           string(integration.ConnectorType),
 			Status:                  string(integration.Status),
 			BotID:                   integration.BotID,
@@ -146,8 +158,14 @@ func (h *httpHandler) list() func(w http.ResponseWriter, r *http.Request) {
 	}
 
 	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
+		organizationID, err := uuid.Parse(req.OrganizationID)
+		if err != nil {
+			return response{}, fmt.Errorf("invalid organization_id: %w", err)
+		}
+
 		query := infragpt.IntegrationsQuery{
-			OrganizationID: req.OrganizationID,
+			OrganizationID: organizationID,
+			Status:         infragpt.IntegrationStatusActive,
 		}
 
 		if req.ConnectorType != "" {
@@ -165,9 +183,9 @@ func (h *httpHandler) list() func(w http.ResponseWriter, r *http.Request) {
 
 		for i, integ := range integrations {
 			resp.Integrations[i] = integration{
-				ID:                      integ.ID,
-				OrganizationID:          integ.OrganizationID,
-				UserID:                  integ.UserID,
+				ID:                      integ.ID.String(),
+				OrganizationID:          integ.OrganizationID.String(),
+				UserID:                  integ.UserID.String(),
 				ConnectorType:           string(integ.ConnectorType),
 				Status:                  string(integ.Status),
 				BotID:                   integ.BotID,
@@ -195,36 +213,23 @@ func (h *httpHandler) revoke() func(w http.ResponseWriter, r *http.Request) {
 	type response struct{}
 
 	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
-		cmd := infragpt.RevokeIntegrationCommand{
-			IntegrationID:  req.IntegrationID,
-			OrganizationID: req.OrganizationID,
+		integrationID, err := uuid.Parse(req.IntegrationID)
+		if err != nil {
+			return response{}, fmt.Errorf("invalid integration_id: %w", err)
 		}
 
-		err := h.svc.RevokeIntegration(ctx, cmd)
+		organizationID, err := uuid.Parse(req.OrganizationID)
+		if err != nil {
+			return response{}, fmt.Errorf("invalid organization_id: %w", err)
+		}
+
+		cmd := infragpt.RevokeIntegrationCommand{
+			IntegrationID:  integrationID,
+			OrganizationID: organizationID,
+		}
+
+		err = h.svc.RevokeIntegration(ctx, cmd)
 		return response{}, err
-	})
-}
-
-func (h *httpHandler) refresh() func(w http.ResponseWriter, r *http.Request) {
-	type request struct {
-		IntegrationID  string `json:"integration_id"`
-		OrganizationID string `json:"organization_id"`
-	}
-	type response struct {
-		Message string `json:"message"`
-	}
-
-	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
-		// TODO: Implement credential refresh logic
-		// This would involve:
-		// 1. Get integration by ID and validate organization
-		// 2. Get credentials for integration
-		// 3. Call connector.RefreshCredentials()
-		// 4. Update stored credentials
-
-		return response{
-			Message: "Credential refresh not implemented yet",
-		}, nil
 	})
 }
 
@@ -250,9 +255,19 @@ func (h *httpHandler) status() func(w http.ResponseWriter, r *http.Request) {
 	}
 
 	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
+		integrationID, err := uuid.Parse(req.IntegrationID)
+		if err != nil {
+			return response{}, fmt.Errorf("invalid integration_id: %w", err)
+		}
+
+		organizationID, err := uuid.Parse(req.OrganizationID)
+		if err != nil {
+			return response{}, fmt.Errorf("invalid organization_id: %w", err)
+		}
+
 		query := infragpt.IntegrationQuery{
-			IntegrationID:  req.IntegrationID,
-			OrganizationID: req.OrganizationID,
+			IntegrationID:  integrationID,
+			OrganizationID: organizationID,
 		}
 
 		integration, err := h.svc.Integration(ctx, query)
@@ -265,9 +280,9 @@ func (h *httpHandler) status() func(w http.ResponseWriter, r *http.Request) {
 		healthStatus := "unknown"
 
 		resp := response{
-			ID:                      integration.ID,
-			OrganizationID:          integration.OrganizationID,
-			UserID:                  integration.UserID,
+			ID:                      integration.ID.String(),
+			OrganizationID:          integration.OrganizationID.String(),
+			UserID:                  integration.UserID.String(),
 			ConnectorType:           string(integration.ConnectorType),
 			Status:                  string(integration.Status),
 			BotID:                   integration.BotID,
@@ -311,4 +326,45 @@ func ApiHandlerFunc[T any, R any](handler func(context.Context, T) (R, error)) f
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(response)
 	}
+}
+
+func (h *httpHandler) sync() func(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		IntegrationID  string            `json:"integration_id"`
+		OrganizationID string            `json:"organization_id"`
+		Parameters     map[string]string `json:"parameters,omitempty"`
+	}
+	type response struct {
+		Message string `json:"message"`
+	}
+
+	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
+		integrationID, err := uuid.Parse(req.IntegrationID)
+		if err != nil {
+			return response{}, fmt.Errorf("invalid integration_id: %w", err)
+		}
+
+		organizationID, err := uuid.Parse(req.OrganizationID)
+		if err != nil {
+			return response{}, fmt.Errorf("invalid organization_id: %w", err)
+		}
+
+		cmd := infragpt.SyncIntegrationCommand{
+			IntegrationID:  integrationID,
+			OrganizationID: organizationID,
+			Parameters:     req.Parameters,
+		}
+
+		if cmd.Parameters == nil {
+			cmd.Parameters = make(map[string]string)
+		}
+
+		if err := h.svc.SyncIntegration(ctx, cmd); err != nil {
+			return response{}, fmt.Errorf("failed to sync integration: %w", err)
+		}
+
+		return response{
+			Message: "Integration synced successfully",
+		}, nil
+	})
 }
