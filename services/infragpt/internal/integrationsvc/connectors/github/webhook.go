@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
-	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -18,6 +18,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
+	"github.com/priyanshujain/infragpt/services/infragpt/internal/integrationsvc/domain"
 )
 
 func (g *githubConnector) ValidateWebhookSignature(payload []byte, signature string, secret string) error {
@@ -142,7 +143,7 @@ func (g *githubConnector) handleInstallationDeleted(ctx context.Context, event I
 	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
 	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, domain.ErrIntegrationNotFound) {
 			slog.Debug("integration not found for deleted installation",
 				"installation_id", event.Installation.ID)
 			return nil
@@ -170,7 +171,7 @@ func (g *githubConnector) handleInstallationSuspended(ctx context.Context, event
 	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
 	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, domain.ErrIntegrationNotFound) {
 			slog.Debug("integration not found for suspended installation",
 				"installation_id", event.Installation.ID)
 			return nil
@@ -197,7 +198,7 @@ func (g *githubConnector) handleInstallationUnsuspended(ctx context.Context, eve
 	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
 	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, domain.ErrIntegrationNotFound) {
 			slog.Debug("integration not found for unsuspended installation",
 				"installation_id", event.Installation.ID)
 			return nil
@@ -238,7 +239,7 @@ func (g *githubConnector) handlePermissionsUpdated(ctx context.Context, event In
 	installationIDStr := strconv.FormatInt(event.Installation.ID, 10)
 	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, domain.ErrIntegrationNotFound) {
 			slog.Debug("integration not found for permissions update",
 				"installation_id", event.Installation.ID)
 			return nil
@@ -395,7 +396,7 @@ func (g *githubConnector) isInstallationSuspended(ctx context.Context, installat
 	installationIDStr := strconv.FormatInt(installationID, 10)
 	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationIDStr, infragpt.ConnectorTypeGithub)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, domain.ErrIntegrationNotFound) {
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to find integration by installation ID %d: %w", installationID, err)
@@ -407,7 +408,7 @@ func (g *githubConnector) isInstallationSuspended(ctx context.Context, installat
 func (g *githubConnector) findIntegrationIDByInstallationID(ctx context.Context, installationID string) (uuid.UUID, error) {
 	integration, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationID, infragpt.ConnectorTypeGithub)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, domain.ErrIntegrationNotFound) {
 			slog.Debug("integration not found for installation ID", "installation_id", installationID)
 			return uuid.Nil, nil
 		}

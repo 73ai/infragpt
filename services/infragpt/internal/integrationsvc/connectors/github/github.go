@@ -189,7 +189,7 @@ func (g *githubConnector) ConfigureWebhooks(integrationID string, creds infragpt
 		return fmt.Errorf("installation ID not found in credentials")
 	}
 
-	webhookURL := g.buildWebhookURL(integrationID)
+	webhookURL := g.buildWebhookURL()
 	if webhookURL == "" {
 		return fmt.Errorf("webhook URL configuration missing: redirect_url is required")
 	}
@@ -288,7 +288,7 @@ func (g *githubConnector) formatPermissions(perms map[string]string) string {
 	return strings.Join(parts, ",")
 }
 
-func (g *githubConnector) buildWebhookURL(integrationID string) string {
+func (g *githubConnector) buildWebhookURL() string {
 	baseURL := g.config.RedirectURL
 	if baseURL == "" {
 		return ""

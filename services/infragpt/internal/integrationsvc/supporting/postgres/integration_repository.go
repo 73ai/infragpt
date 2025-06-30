@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -250,6 +251,9 @@ func (r *integrationRepository) FindByBotIDAndType(ctx context.Context, botID st
 		ConnectorType: string(connectorType),
 	})
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return infragpt.Integration{}, domain.ErrIntegrationNotFound
+		}
 		return infragpt.Integration{}, fmt.Errorf("failed to find integration by bot ID: %w", err)
 	}
 
