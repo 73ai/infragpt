@@ -6,6 +6,8 @@ This directory contains SQL migration files for the InfraGPT database schema.
 
 - `001_identity_tables.sql` - Identity system tables (users, organizations, members)
 - `002_integration_tables.sql` - Integration system tables (integrations, credentials, GitHub repositories)
+- `003_remove_unclaimed_installations.sql` - Remove unclaimed installations table
+- `004_add_bot_id_connector_type_index.sql` - Add composite index for bot_id and connector_type
 
 ## Running Migrations
 
@@ -23,6 +25,8 @@ psql -h localhost -U your_user -d infragpt
 # Run migrations in order
 \i migrations/001_identity_tables.sql
 \i migrations/002_integration_tables.sql
+\i migrations/003_remove_unclaimed_installations.sql
+\i migrations/004_add_bot_id_connector_type_index.sql
 ```
 
 ### Automated Execution
@@ -34,6 +38,8 @@ You can also run migrations programmatically using Go's database/sql package or 
 
 1. First run `001_identity_tables.sql`
 2. Then run `002_integration_tables.sql`
+3. Then run `003_remove_unclaimed_installations.sql`
+4. Then run `004_add_bot_id_connector_type_index.sql`
 
 ## Schema Overview
 
