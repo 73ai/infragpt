@@ -11,10 +11,10 @@ import (
 )
 
 type DBTX interface {
-	ExecContext(context.Context, string, ...any) (sql.Result, error)
+	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
 	PrepareContext(context.Context, string) (*sql.Stmt, error)
-	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
-	QueryRowContext(context.Context, string, ...any) *sql.Row
+	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
+	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
 }
 
 func New(db DBTX) *Queries {
@@ -24,8 +24,14 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.bulkDeleteGitHubRepositoriesStmt, err = db.PrepareContext(ctx, bulkDeleteGitHubRepositories); err != nil {
+		return nil, fmt.Errorf("error preparing query BulkDeleteGitHubRepositories: %w", err)
+	}
 	if q.deleteCredentialStmt, err = db.PrepareContext(ctx, deleteCredential); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteCredential: %w", err)
+	}
+	if q.deleteGitHubRepositoryByGitHubIDStmt, err = db.PrepareContext(ctx, deleteGitHubRepositoryByGitHubID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteGitHubRepositoryByGitHubID: %w", err)
 	}
 	if q.deleteIntegrationStmt, err = db.PrepareContext(ctx, deleteIntegration); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteIntegration: %w", err)
@@ -36,14 +42,29 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.findExpiringCredentialsStmt, err = db.PrepareContext(ctx, findExpiringCredentials); err != nil {
 		return nil, fmt.Errorf("error preparing query FindExpiringCredentials: %w", err)
 	}
+	if q.findGitHubRepositoriesByIntegrationIDStmt, err = db.PrepareContext(ctx, findGitHubRepositoriesByIntegrationID); err != nil {
+		return nil, fmt.Errorf("error preparing query FindGitHubRepositoriesByIntegrationID: %w", err)
+	}
+	if q.findGitHubRepositoryByGitHubIDStmt, err = db.PrepareContext(ctx, findGitHubRepositoryByGitHubID); err != nil {
+		return nil, fmt.Errorf("error preparing query FindGitHubRepositoryByGitHubID: %w", err)
+	}
+	if q.findIntegrationByBotIDAndTypeStmt, err = db.PrepareContext(ctx, findIntegrationByBotIDAndType); err != nil {
+		return nil, fmt.Errorf("error preparing query FindIntegrationByBotIDAndType: %w", err)
+	}
 	if q.findIntegrationByIDStmt, err = db.PrepareContext(ctx, findIntegrationByID); err != nil {
 		return nil, fmt.Errorf("error preparing query FindIntegrationByID: %w", err)
 	}
 	if q.findIntegrationsByOrganizationStmt, err = db.PrepareContext(ctx, findIntegrationsByOrganization); err != nil {
 		return nil, fmt.Errorf("error preparing query FindIntegrationsByOrganization: %w", err)
 	}
+	if q.findIntegrationsByOrganizationAndStatusStmt, err = db.PrepareContext(ctx, findIntegrationsByOrganizationAndStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query FindIntegrationsByOrganizationAndStatus: %w", err)
+	}
 	if q.findIntegrationsByOrganizationAndTypeStmt, err = db.PrepareContext(ctx, findIntegrationsByOrganizationAndType); err != nil {
 		return nil, fmt.Errorf("error preparing query FindIntegrationsByOrganizationAndType: %w", err)
+	}
+	if q.findIntegrationsByOrganizationTypeAndStatusStmt, err = db.PrepareContext(ctx, findIntegrationsByOrganizationTypeAndStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query FindIntegrationsByOrganizationTypeAndStatus: %w", err)
 	}
 	if q.storeCredentialStmt, err = db.PrepareContext(ctx, storeCredential); err != nil {
 		return nil, fmt.Errorf("error preparing query StoreCredential: %w", err)
@@ -54,20 +75,45 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateCredentialStmt, err = db.PrepareContext(ctx, updateCredential); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateCredential: %w", err)
 	}
+	if q.updateGitHubRepositoryLastSyncTimeStmt, err = db.PrepareContext(ctx, updateGitHubRepositoryLastSyncTime); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateGitHubRepositoryLastSyncTime: %w", err)
+	}
+	if q.updateGitHubRepositoryPermissionsStmt, err = db.PrepareContext(ctx, updateGitHubRepositoryPermissions); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateGitHubRepositoryPermissions: %w", err)
+	}
+	if q.updateIntegrationStmt, err = db.PrepareContext(ctx, updateIntegration); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateIntegration: %w", err)
+	}
 	if q.updateIntegrationLastUsedStmt, err = db.PrepareContext(ctx, updateIntegrationLastUsed); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateIntegrationLastUsed: %w", err)
 	}
+	if q.updateIntegrationMetadataStmt, err = db.PrepareContext(ctx, updateIntegrationMetadata); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateIntegrationMetadata: %w", err)
+	}
 	if q.updateIntegrationStatusStmt, err = db.PrepareContext(ctx, updateIntegrationStatus); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateIntegrationStatus: %w", err)
+	}
+	if q.upsertGitHubRepositoryStmt, err = db.PrepareContext(ctx, upsertGitHubRepository); err != nil {
+		return nil, fmt.Errorf("error preparing query UpsertGitHubRepository: %w", err)
 	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
+	if q.bulkDeleteGitHubRepositoriesStmt != nil {
+		if cerr := q.bulkDeleteGitHubRepositoriesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing bulkDeleteGitHubRepositoriesStmt: %w", cerr)
+		}
+	}
 	if q.deleteCredentialStmt != nil {
 		if cerr := q.deleteCredentialStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteCredentialStmt: %w", cerr)
+		}
+	}
+	if q.deleteGitHubRepositoryByGitHubIDStmt != nil {
+		if cerr := q.deleteGitHubRepositoryByGitHubIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteGitHubRepositoryByGitHubIDStmt: %w", cerr)
 		}
 	}
 	if q.deleteIntegrationStmt != nil {
@@ -85,6 +131,21 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing findExpiringCredentialsStmt: %w", cerr)
 		}
 	}
+	if q.findGitHubRepositoriesByIntegrationIDStmt != nil {
+		if cerr := q.findGitHubRepositoriesByIntegrationIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findGitHubRepositoriesByIntegrationIDStmt: %w", cerr)
+		}
+	}
+	if q.findGitHubRepositoryByGitHubIDStmt != nil {
+		if cerr := q.findGitHubRepositoryByGitHubIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findGitHubRepositoryByGitHubIDStmt: %w", cerr)
+		}
+	}
+	if q.findIntegrationByBotIDAndTypeStmt != nil {
+		if cerr := q.findIntegrationByBotIDAndTypeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findIntegrationByBotIDAndTypeStmt: %w", cerr)
+		}
+	}
 	if q.findIntegrationByIDStmt != nil {
 		if cerr := q.findIntegrationByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing findIntegrationByIDStmt: %w", cerr)
@@ -95,9 +156,19 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing findIntegrationsByOrganizationStmt: %w", cerr)
 		}
 	}
+	if q.findIntegrationsByOrganizationAndStatusStmt != nil {
+		if cerr := q.findIntegrationsByOrganizationAndStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findIntegrationsByOrganizationAndStatusStmt: %w", cerr)
+		}
+	}
 	if q.findIntegrationsByOrganizationAndTypeStmt != nil {
 		if cerr := q.findIntegrationsByOrganizationAndTypeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing findIntegrationsByOrganizationAndTypeStmt: %w", cerr)
+		}
+	}
+	if q.findIntegrationsByOrganizationTypeAndStatusStmt != nil {
+		if cerr := q.findIntegrationsByOrganizationTypeAndStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findIntegrationsByOrganizationTypeAndStatusStmt: %w", cerr)
 		}
 	}
 	if q.storeCredentialStmt != nil {
@@ -115,9 +186,29 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateCredentialStmt: %w", cerr)
 		}
 	}
+	if q.updateGitHubRepositoryLastSyncTimeStmt != nil {
+		if cerr := q.updateGitHubRepositoryLastSyncTimeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateGitHubRepositoryLastSyncTimeStmt: %w", cerr)
+		}
+	}
+	if q.updateGitHubRepositoryPermissionsStmt != nil {
+		if cerr := q.updateGitHubRepositoryPermissionsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateGitHubRepositoryPermissionsStmt: %w", cerr)
+		}
+	}
+	if q.updateIntegrationStmt != nil {
+		if cerr := q.updateIntegrationStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateIntegrationStmt: %w", cerr)
+		}
+	}
 	if q.updateIntegrationLastUsedStmt != nil {
 		if cerr := q.updateIntegrationLastUsedStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateIntegrationLastUsedStmt: %w", cerr)
+		}
+	}
+	if q.updateIntegrationMetadataStmt != nil {
+		if cerr := q.updateIntegrationMetadataStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateIntegrationMetadataStmt: %w", cerr)
 		}
 	}
 	if q.updateIntegrationStatusStmt != nil {
@@ -125,10 +216,15 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateIntegrationStatusStmt: %w", cerr)
 		}
 	}
+	if q.upsertGitHubRepositoryStmt != nil {
+		if cerr := q.upsertGitHubRepositoryStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing upsertGitHubRepositoryStmt: %w", cerr)
+		}
+	}
 	return err
 }
 
-func (q *Queries) exec(ctx context.Context, stmt *sql.Stmt, query string, args ...any) (sql.Result, error) {
+func (q *Queries) exec(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (sql.Result, error) {
 	switch {
 	case stmt != nil && q.tx != nil:
 		return q.tx.StmtContext(ctx, stmt).ExecContext(ctx, args...)
@@ -139,7 +235,7 @@ func (q *Queries) exec(ctx context.Context, stmt *sql.Stmt, query string, args .
 	}
 }
 
-func (q *Queries) query(ctx context.Context, stmt *sql.Stmt, query string, args ...any) (*sql.Rows, error) {
+func (q *Queries) query(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (*sql.Rows, error) {
 	switch {
 	case stmt != nil && q.tx != nil:
 		return q.tx.StmtContext(ctx, stmt).QueryContext(ctx, args...)
@@ -150,7 +246,7 @@ func (q *Queries) query(ctx context.Context, stmt *sql.Stmt, query string, args 
 	}
 }
 
-func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, args ...any) *sql.Row {
+func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) *sql.Row {
 	switch {
 	case stmt != nil && q.tx != nil:
 		return q.tx.StmtContext(ctx, stmt).QueryRowContext(ctx, args...)
@@ -162,37 +258,61 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                                        DBTX
-	tx                                        *sql.Tx
-	deleteCredentialStmt                      *sql.Stmt
-	deleteIntegrationStmt                     *sql.Stmt
-	findCredentialByIntegrationStmt           *sql.Stmt
-	findExpiringCredentialsStmt               *sql.Stmt
-	findIntegrationByIDStmt                   *sql.Stmt
-	findIntegrationsByOrganizationStmt        *sql.Stmt
-	findIntegrationsByOrganizationAndTypeStmt *sql.Stmt
-	storeCredentialStmt                       *sql.Stmt
-	storeIntegrationStmt                      *sql.Stmt
-	updateCredentialStmt                      *sql.Stmt
-	updateIntegrationLastUsedStmt             *sql.Stmt
-	updateIntegrationStatusStmt               *sql.Stmt
+	db                                              DBTX
+	tx                                              *sql.Tx
+	bulkDeleteGitHubRepositoriesStmt                *sql.Stmt
+	deleteCredentialStmt                            *sql.Stmt
+	deleteGitHubRepositoryByGitHubIDStmt            *sql.Stmt
+	deleteIntegrationStmt                           *sql.Stmt
+	findCredentialByIntegrationStmt                 *sql.Stmt
+	findExpiringCredentialsStmt                     *sql.Stmt
+	findGitHubRepositoriesByIntegrationIDStmt       *sql.Stmt
+	findGitHubRepositoryByGitHubIDStmt              *sql.Stmt
+	findIntegrationByBotIDAndTypeStmt               *sql.Stmt
+	findIntegrationByIDStmt                         *sql.Stmt
+	findIntegrationsByOrganizationStmt              *sql.Stmt
+	findIntegrationsByOrganizationAndStatusStmt     *sql.Stmt
+	findIntegrationsByOrganizationAndTypeStmt       *sql.Stmt
+	findIntegrationsByOrganizationTypeAndStatusStmt *sql.Stmt
+	storeCredentialStmt                             *sql.Stmt
+	storeIntegrationStmt                            *sql.Stmt
+	updateCredentialStmt                            *sql.Stmt
+	updateGitHubRepositoryLastSyncTimeStmt          *sql.Stmt
+	updateGitHubRepositoryPermissionsStmt           *sql.Stmt
+	updateIntegrationStmt                           *sql.Stmt
+	updateIntegrationLastUsedStmt                   *sql.Stmt
+	updateIntegrationMetadataStmt                   *sql.Stmt
+	updateIntegrationStatusStmt                     *sql.Stmt
+	upsertGitHubRepositoryStmt                      *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                                 tx,
-		tx:                                 tx,
-		deleteCredentialStmt:               q.deleteCredentialStmt,
-		deleteIntegrationStmt:              q.deleteIntegrationStmt,
-		findCredentialByIntegrationStmt:    q.findCredentialByIntegrationStmt,
-		findExpiringCredentialsStmt:        q.findExpiringCredentialsStmt,
-		findIntegrationByIDStmt:            q.findIntegrationByIDStmt,
-		findIntegrationsByOrganizationStmt: q.findIntegrationsByOrganizationStmt,
-		findIntegrationsByOrganizationAndTypeStmt: q.findIntegrationsByOrganizationAndTypeStmt,
-		storeCredentialStmt:                       q.storeCredentialStmt,
-		storeIntegrationStmt:                      q.storeIntegrationStmt,
-		updateCredentialStmt:                      q.updateCredentialStmt,
-		updateIntegrationLastUsedStmt:             q.updateIntegrationLastUsedStmt,
-		updateIntegrationStatusStmt:               q.updateIntegrationStatusStmt,
+		db:                                   tx,
+		tx:                                   tx,
+		bulkDeleteGitHubRepositoriesStmt:     q.bulkDeleteGitHubRepositoriesStmt,
+		deleteCredentialStmt:                 q.deleteCredentialStmt,
+		deleteGitHubRepositoryByGitHubIDStmt: q.deleteGitHubRepositoryByGitHubIDStmt,
+		deleteIntegrationStmt:                q.deleteIntegrationStmt,
+		findCredentialByIntegrationStmt:      q.findCredentialByIntegrationStmt,
+		findExpiringCredentialsStmt:          q.findExpiringCredentialsStmt,
+		findGitHubRepositoriesByIntegrationIDStmt:       q.findGitHubRepositoriesByIntegrationIDStmt,
+		findGitHubRepositoryByGitHubIDStmt:              q.findGitHubRepositoryByGitHubIDStmt,
+		findIntegrationByBotIDAndTypeStmt:               q.findIntegrationByBotIDAndTypeStmt,
+		findIntegrationByIDStmt:                         q.findIntegrationByIDStmt,
+		findIntegrationsByOrganizationStmt:              q.findIntegrationsByOrganizationStmt,
+		findIntegrationsByOrganizationAndStatusStmt:     q.findIntegrationsByOrganizationAndStatusStmt,
+		findIntegrationsByOrganizationAndTypeStmt:       q.findIntegrationsByOrganizationAndTypeStmt,
+		findIntegrationsByOrganizationTypeAndStatusStmt: q.findIntegrationsByOrganizationTypeAndStatusStmt,
+		storeCredentialStmt:                             q.storeCredentialStmt,
+		storeIntegrationStmt:                            q.storeIntegrationStmt,
+		updateCredentialStmt:                            q.updateCredentialStmt,
+		updateGitHubRepositoryLastSyncTimeStmt:          q.updateGitHubRepositoryLastSyncTimeStmt,
+		updateGitHubRepositoryPermissionsStmt:           q.updateGitHubRepositoryPermissionsStmt,
+		updateIntegrationStmt:                           q.updateIntegrationStmt,
+		updateIntegrationLastUsedStmt:                   q.updateIntegrationLastUsedStmt,
+		updateIntegrationMetadataStmt:                   q.updateIntegrationMetadataStmt,
+		updateIntegrationStatusStmt:                     q.updateIntegrationStatusStmt,
+		upsertGitHubRepositoryStmt:                      q.upsertGitHubRepositoryStmt,
 	}
 }

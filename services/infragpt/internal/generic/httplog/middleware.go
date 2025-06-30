@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	// ANSI color codes
 	colorReset  = "\033[0m"
 	colorRed    = "\033[31m"
 	colorGreen  = "\033[32m"
@@ -53,21 +52,17 @@ func Middleware(enabled bool) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 
-			// Read and log request body
 			var requestBody []byte
 			if r.Body != nil {
 				requestBody, _ = io.ReadAll(r.Body)
 				r.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 			}
 
-			// Create response writer wrapper
 			rw := &responseWriter{
 				ResponseWriter: w,
 				statusCode:     http.StatusOK,
 				body:           &bytes.Buffer{},
 			}
-
-			// Log incoming request with colors
 			methodColor := getMethodColor(r.Method)
 			slog.Info(fmt.Sprintf("%s%s%s %s%s%s started",
 				colorBold, methodColor, r.Method,
@@ -78,10 +73,7 @@ func Middleware(enabled bool) func(http.Handler) http.Handler {
 				"request_body", string(requestBody),
 			)
 
-			// Process request
 			h.ServeHTTP(rw, r)
-
-			// Log response with colors
 			duration := time.Since(start)
 			statusColor := getStatusColor(rw.statusCode)
 			slog.Info(fmt.Sprintf("%s%s%s %s%s%s completed %s%d%s in %s%dms%s",

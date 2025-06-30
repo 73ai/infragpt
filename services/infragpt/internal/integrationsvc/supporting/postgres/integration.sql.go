@@ -24,6 +24,39 @@ func (q *Queries) DeleteIntegration(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const findIntegrationByBotIDAndType = `-- name: FindIntegrationByBotIDAndType :one
+SELECT id, organization_id, user_id, connector_type, status,
+       bot_id, connector_user_id, connector_organization_id,
+       metadata, created_at, updated_at, last_used_at
+FROM integrations
+WHERE bot_id = $1 AND connector_type = $2
+`
+
+type FindIntegrationByBotIDAndTypeParams struct {
+	BotID         sql.NullString `json:"bot_id"`
+	ConnectorType string         `json:"connector_type"`
+}
+
+func (q *Queries) FindIntegrationByBotIDAndType(ctx context.Context, arg FindIntegrationByBotIDAndTypeParams) (Integration, error) {
+	row := q.queryRow(ctx, q.findIntegrationByBotIDAndTypeStmt, findIntegrationByBotIDAndType, arg.BotID, arg.ConnectorType)
+	var i Integration
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.UserID,
+		&i.ConnectorType,
+		&i.Status,
+		&i.BotID,
+		&i.ConnectorUserID,
+		&i.ConnectorOrganizationID,
+		&i.Metadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastUsedAt,
+	)
+	return i, err
+}
+
 const findIntegrationByID = `-- name: FindIntegrationByID :one
 SELECT id, organization_id, user_id, connector_type, status,
        bot_id, connector_user_id, connector_organization_id,
@@ -63,6 +96,56 @@ ORDER BY created_at DESC
 
 func (q *Queries) FindIntegrationsByOrganization(ctx context.Context, organizationID uuid.UUID) ([]Integration, error) {
 	rows, err := q.query(ctx, q.findIntegrationsByOrganizationStmt, findIntegrationsByOrganization, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Integration
+	for rows.Next() {
+		var i Integration
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.UserID,
+			&i.ConnectorType,
+			&i.Status,
+			&i.BotID,
+			&i.ConnectorUserID,
+			&i.ConnectorOrganizationID,
+			&i.Metadata,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.LastUsedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findIntegrationsByOrganizationAndStatus = `-- name: FindIntegrationsByOrganizationAndStatus :many
+SELECT id, organization_id, user_id, connector_type, status,
+       bot_id, connector_user_id, connector_organization_id,
+       metadata, created_at, updated_at, last_used_at
+FROM integrations
+WHERE organization_id = $1 AND status = $2
+ORDER BY created_at DESC
+`
+
+type FindIntegrationsByOrganizationAndStatusParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Status         string    `json:"status"`
+}
+
+func (q *Queries) FindIntegrationsByOrganizationAndStatus(ctx context.Context, arg FindIntegrationsByOrganizationAndStatusParams) ([]Integration, error) {
+	rows, err := q.query(ctx, q.findIntegrationsByOrganizationAndStatusStmt, findIntegrationsByOrganizationAndStatus, arg.OrganizationID, arg.Status)
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +230,57 @@ func (q *Queries) FindIntegrationsByOrganizationAndType(ctx context.Context, arg
 	return items, nil
 }
 
+const findIntegrationsByOrganizationTypeAndStatus = `-- name: FindIntegrationsByOrganizationTypeAndStatus :many
+SELECT id, organization_id, user_id, connector_type, status,
+       bot_id, connector_user_id, connector_organization_id,
+       metadata, created_at, updated_at, last_used_at
+FROM integrations
+WHERE organization_id = $1 AND connector_type = $2 AND status = $3
+ORDER BY created_at DESC
+`
+
+type FindIntegrationsByOrganizationTypeAndStatusParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ConnectorType  string    `json:"connector_type"`
+	Status         string    `json:"status"`
+}
+
+func (q *Queries) FindIntegrationsByOrganizationTypeAndStatus(ctx context.Context, arg FindIntegrationsByOrganizationTypeAndStatusParams) ([]Integration, error) {
+	rows, err := q.query(ctx, q.findIntegrationsByOrganizationTypeAndStatusStmt, findIntegrationsByOrganizationTypeAndStatus, arg.OrganizationID, arg.ConnectorType, arg.Status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Integration
+	for rows.Next() {
+		var i Integration
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.UserID,
+			&i.ConnectorType,
+			&i.Status,
+			&i.BotID,
+			&i.ConnectorUserID,
+			&i.ConnectorOrganizationID,
+			&i.Metadata,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.LastUsedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const storeIntegration = `-- name: StoreIntegration :exec
 INSERT INTO integrations (
     id, organization_id, user_id, connector_type, status, 
@@ -190,6 +324,46 @@ func (q *Queries) StoreIntegration(ctx context.Context, arg StoreIntegrationPara
 	return err
 }
 
+const updateIntegration = `-- name: UpdateIntegration :exec
+UPDATE integrations
+SET connector_type = $2,
+    status = $3,
+    bot_id = $4,
+    connector_user_id = $5,
+    connector_organization_id = $6,
+    metadata = $7,
+    updated_at = $8,
+    last_used_at = $9
+WHERE id = $1
+`
+
+type UpdateIntegrationParams struct {
+	ID                      uuid.UUID             `json:"id"`
+	ConnectorType           string                `json:"connector_type"`
+	Status                  string                `json:"status"`
+	BotID                   sql.NullString        `json:"bot_id"`
+	ConnectorUserID         sql.NullString        `json:"connector_user_id"`
+	ConnectorOrganizationID sql.NullString        `json:"connector_organization_id"`
+	Metadata                pqtype.NullRawMessage `json:"metadata"`
+	UpdatedAt               time.Time             `json:"updated_at"`
+	LastUsedAt              sql.NullTime          `json:"last_used_at"`
+}
+
+func (q *Queries) UpdateIntegration(ctx context.Context, arg UpdateIntegrationParams) error {
+	_, err := q.exec(ctx, q.updateIntegrationStmt, updateIntegration,
+		arg.ID,
+		arg.ConnectorType,
+		arg.Status,
+		arg.BotID,
+		arg.ConnectorUserID,
+		arg.ConnectorOrganizationID,
+		arg.Metadata,
+		arg.UpdatedAt,
+		arg.LastUsedAt,
+	)
+	return err
+}
+
 const updateIntegrationLastUsed = `-- name: UpdateIntegrationLastUsed :exec
 UPDATE integrations
 SET last_used_at = NOW(), updated_at = NOW()
@@ -198,6 +372,22 @@ WHERE id = $1
 
 func (q *Queries) UpdateIntegrationLastUsed(ctx context.Context, id uuid.UUID) error {
 	_, err := q.exec(ctx, q.updateIntegrationLastUsedStmt, updateIntegrationLastUsed, id)
+	return err
+}
+
+const updateIntegrationMetadata = `-- name: UpdateIntegrationMetadata :exec
+UPDATE integrations
+SET metadata = $2, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateIntegrationMetadataParams struct {
+	ID       uuid.UUID             `json:"id"`
+	Metadata pqtype.NullRawMessage `json:"metadata"`
+}
+
+func (q *Queries) UpdateIntegrationMetadata(ctx context.Context, arg UpdateIntegrationMetadataParams) error {
+	_, err := q.exec(ctx, q.updateIntegrationMetadataStmt, updateIntegrationMetadata, arg.ID, arg.Metadata)
 	return err
 }
 

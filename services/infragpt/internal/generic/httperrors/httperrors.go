@@ -25,11 +25,9 @@ func From(err error) Error {
 		if err != nil {
 			msg = err.Error()
 		}
-		// if error is nil then return 200
 		if err == nil {
 			httpStatus = 200
 		}
-		// if error message has term internal then return 500
 		if err != nil && (strings.Contains(strings.ToLower(msg), "internal") ||
 			strings.Contains(err.Error(), "panic") ||
 			strings.Contains(err.Error(), "nil pointer dereference") ||
@@ -61,12 +59,10 @@ func (e Error) Is(target error) bool {
 		return false
 	}
 
-	// if code is matching, it is the same error
 	if e.Code == err.Code {
 		return true
 	}
 
-	// if code does not match then check if message is same
 	if e.Message == err.Message {
 		return true
 	}

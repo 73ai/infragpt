@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/infragpt"
 	"github.com/slack-go/slack"
 )
@@ -39,13 +40,23 @@ func (s *slackConnector) InitiateAuthorization(organizationID string, userID str
 	}, nil
 }
 
-func (s *slackConnector) ParseState(state string) (organizationID string, userID string, err error) {
+func (s *slackConnector) ParseState(state string) (organizationID uuid.UUID, userID uuid.UUID, err error) {
 	parts := strings.Split(state, ":")
 	if len(parts) < 3 {
-		return "", "", fmt.Errorf("invalid state format, expected organizationID:userID:timestamp")
+		return uuid.Nil, uuid.Nil, fmt.Errorf("invalid state format, expected organizationID:userID:timestamp")
 	}
-	
-	return parts[0], parts[1], nil
+
+	organizationID, err = uuid.Parse(parts[0])
+	if err != nil {
+		return uuid.Nil, uuid.Nil, fmt.Errorf("invalid organization ID: %w", err)
+	}
+
+	userID, err = uuid.Parse(parts[1])
+	if err != nil {
+		return uuid.Nil, uuid.Nil, fmt.Errorf("invalid user ID: %w", err)
+	}
+
+	return organizationID, userID, nil
 }
 
 func (s *slackConnector) CompleteAuthorization(authData infragpt.AuthorizationData) (infragpt.Credentials, error) {
@@ -228,4 +239,43 @@ func (s *slackConnector) convertToMessageEvent(rawEvent any) MessageEvent {
 		CreatedAt: time.Now(),
 		RawEvent:  make(map[string]any),
 	}
+}
+
+func (s *slackConnector) ProcessEvent(ctx context.Context, event any) error {
+	// Slack connector doesn't process events through this method
+	// Events are handled directly in the conversation service
+	// This is a no-op implementation
+	return nil
+}
+
+func (s *slackConnector) Sync(ctx context.Context, integration infragpt.Integration, params map[string]string) error {
+	// Sync workspace information and validate credentials
+	if err := s.syncWorkspace(ctx, integration); err != nil {
+		return fmt.Errorf("failed to sync workspace: %w", err)
+	}
+
+	// Sync channels information
+	if err := s.syncChannels(ctx, integration); err != nil {
+		return fmt.Errorf("failed to sync channels: %w", err)
+	}
+
+	return nil
+}
+
+func (s *slackConnector) syncWorkspace(ctx context.Context, integration infragpt.Integration) error {
+	// TODO: Implement workspace synchronization
+	// This could validate credentials and update workspace information
+	return s.ValidateCredentials(infragpt.Credentials{
+		Type: infragpt.CredentialTypeOAuth2,
+		Data: map[string]string{
+			"bot_access_token": integration.Metadata["bot_access_token"],
+		},
+	})
+}
+
+func (s *slackConnector) syncChannels(ctx context.Context, integration infragpt.Integration) error {
+	// TODO: Implement channel synchronization
+	// This could fetch and store channel information for the workspace
+	// For now, this is a no-op
+	return nil
 }

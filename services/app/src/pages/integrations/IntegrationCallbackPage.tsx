@@ -97,8 +97,7 @@ const IntegrationCallbackPage = observer(() => {
         }
         
         return { 
-          installation_id: installationId ? parseInt(installationId) : undefined,
-          setup_action: setupAction,
+          installation_id: installationId,
           code: githubCode,
           state: githubState
         };
