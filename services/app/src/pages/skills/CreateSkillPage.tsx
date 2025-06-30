@@ -148,7 +148,7 @@ jobs:
       <div className="flex-1 flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 64px)' }}>
         {/* Left Panel - YAML Editor (60%) */}
         <div className="w-full lg:w-[60%] border-r-0 lg:border-r border-b lg:border-b-0 flex flex-col">
-          <div className="flex-1 p-3 overflow-hidden">
+          <div className="flex-1 overflow-hidden">
                 <YamlEditor
                   ref={yamlEditorRef}
                   value={yamlContent}
