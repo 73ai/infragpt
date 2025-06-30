@@ -174,7 +174,7 @@ The service follows clean architecture principles with clear separation of conce
 
 ## Configuration
 
-The service is configured via `config.yaml` and environment variables. Copy `.env.example` to `.env` and customize your values:
+The service is configured via `config.yaml`. Copy `config-template.yaml` to `config.yaml` and customize your values:
 
 ```yaml
 port: 8080                # HTTP server port

@@ -1,12 +1,9 @@
 # GitHub App Setup
 
-Quick guide for setting up GitHub App integration with InfraGPT.
-
 ## 1. Create GitHub App
 
-**Go to**: GitHub Settings → Developer settings → GitHub Apps → "New GitHub App"
+Go to: GitHub Settings → Developer settings → GitHub Apps → "New GitHub App"
 
-**Basic info**:
 - **Name**: `InfraGPT-[YourOrgName]` (must be unique)
 - **Description**: `InfraGPT DevOps automation`
 - **Homepage URL**: Your organization URL
@@ -14,31 +11,19 @@ Quick guide for setting up GitHub App integration with InfraGPT.
 
 ## 2. Set Permissions
 
-**Repository permissions**:
-- Contents: Read
-- Issues: Read & Write  
-- Pull requests: Read & Write
-- Metadata: Read
-
-**Organization permissions**:
-- Members: Read
-
-**Account permissions**:
-- Email addresses: Read
+**Repository permissions**: Contents (Read), Issues (Read & Write), Pull requests (Read & Write), Metadata (Read)
+**Organization permissions**: Members (Read)
+**Account permissions**: Email addresses (Read)
 
 ## 3. Subscribe to Events
 
-Enable these webhook events:
-- Installation (created, deleted, modified)
-- Issues (opened, closed, edited)
-- Pull request (opened, closed, merged)
-- Push events
+Enable: Installation, Issues, Pull request, Push events
 
 ## 4. Generate Credentials
 
-1. **Generate private key** - download the .pem file
-2. **Note the App ID** from settings page
-3. **Save webhook secret** you created
+1. Generate private key (download .pem file)
+2. Note the App ID from settings page
+3. Save webhook secret
 
 ## 5. Environment Variables
 
@@ -52,7 +37,7 @@ MIIEpAIBAAKCAQEA...
 
 ## 6. Configuration
 
-Add to your `config.yaml`:
+Add to `config.yaml`:
 
 ```yaml
 integrations:
@@ -65,41 +50,6 @@ integrations:
 
 ## 7. Install and Test
 
-1. **Install the app** on a test repository
-2. **Start InfraGPT**: `go run ./cmd/main.go`
-3. **Test webhook**: Create an issue or PR to trigger events
-
-## Local Development with ngrok
-
-For local testing:
-
-```bash
-# Install ngrok
-brew install ngrok
-
-# Start tunnel
-ngrok http 8080
-
-# Update GitHub App webhook URL to:
-# https://your-id.ngrok.io/integrations/webhooks/github
-```
-
-## Troubleshooting
-
-**"failed to parse private key"**: Check PEM format is complete with headers
-
-**"webhook signature validation failed"**: Verify webhook secret matches
-
-**"installation access token failed"**: Check app permissions and installation
-
-## Test Commands
-
-```bash
-# Health check
-curl http://localhost:8080/health
-
-# Test JWT generation (if endpoint exists)
-curl -X POST http://localhost:8080/integrations/github/test
-```
-
-For detailed setup instructions, see the [Configuration Guide](./configuration.md).
+1. Install the app on a test repository
+2. Start InfraGPT: `go run ./cmd/main.go`
+3. Test by creating an issue or PR to trigger events

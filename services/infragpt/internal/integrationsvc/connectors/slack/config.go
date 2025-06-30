@@ -17,7 +17,7 @@ type Config struct {
 	AppToken      string   `mapstructure:"app_token"`
 }
 
-func (c Config) NewConnector() domain.Connector {
+func (c Config) New() domain.Connector {
 	c.Scopes = []string{
 		"app_mentions:read",
 		"chat:write",

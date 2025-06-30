@@ -2,7 +2,7 @@ package github
 
 import (
 	"crypto/rsa"
-	"log/slog"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -23,16 +23,28 @@ type Config struct {
 	CredentialRepository  domain.CredentialRepository
 }
 
-func (c Config) NewConnector() domain.Connector {
-	var privateKey *rsa.PrivateKey
+func (c Config) New() domain.Connector {
+	if c.AppID == "" {
+		panic("missing app_id")
+	}
+	if c.AppName == "" {
+		panic("missing app_name")
+	}
+	if c.PrivateKey == "" {
+		panic("missing private_key")
+	}
+	if c.WebhookSecret == "" {
+		panic("missing webhook_secret")
+	}
+	if c.RedirectURL == "" {
+		panic("missing redirect_url")
+	}
 
-	if c.PrivateKey != "" {
-		var err error
-		privateKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(c.PrivateKey))
-		if err != nil {
-			slog.Error("Failed to parse GitHub private key", "error", err)
-			privateKey = nil
-		}
+	var privateKey *rsa.PrivateKey
+	var err error
+	privateKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(c.PrivateKey))
+	if err != nil {
+		panic(fmt.Sprintf("Failed to parse GitHub private key: %v", err))
 	}
 
 	connector := &githubConnector{
