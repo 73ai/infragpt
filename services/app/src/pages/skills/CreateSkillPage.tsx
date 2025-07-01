@@ -15,16 +15,19 @@ const CreateSkillPage = () => {
     wasmExecPath: '/wasm_exec.js'
   });
   const yamlEditorRef = useRef<YamlEditorRef>(null);
-  const [yamlContent, setYamlContent] = useState(`# Test with invalid GitHub Actions YAML
-name: Test
-on: push
+  const [yamlContent, setYamlContent] = useState(`# GitHub Actions Workflow Template
+name: CI/CD Pipeline
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
 jobs:
-  test:
-    runs-on: invalid-runner
+  build:
+    runs-on: ubuntu-latest
     steps:
-    - uses: nonexistent/action@v999
-    - name: Invalid step
-      run: echo "test"
+    - name: Checkout code
       uses: actions/checkout@v4`);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,17 +62,31 @@ jobs:
   };
 
   const handleCommandInsert = (commandYaml: string) => {
-    // Find the insertion point - look for the jobs section or commands section
     const lines = yamlContent.split('\n');
     let insertIndex = -1;
     
-    // Look for existing jobs section
+    // The commandYaml from templates already has proper indentation, so use it as-is
+    const commandLines = commandYaml.split('\n').filter(line => line.trim() !== '');
+    
+    // Find the checkout step and insert immediately after it
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].trim().startsWith('jobs:')) {
-        // Find the end of the current jobs section to append new command
+      const line = lines[i];
+      const trimmed = line.trim();
+      
+      // Look for a step that contains "checkout" in the name
+      if (trimmed.includes('- name:') && 
+          (trimmed.includes('Checkout code') || trimmed.toLowerCase().includes('checkout'))) {
+        
+        // Found the checkout step, now find where it ends
         for (let j = i + 1; j < lines.length; j++) {
-          if (lines[j].trim() === '' || !lines[j].startsWith(' ')) {
-            insertIndex = j;
+          const nextLine = lines[j];
+          const nextTrimmed = nextLine.trim();
+          
+          // If we hit another step (starts with "- name:") or the end of the steps section
+          if (nextTrimmed.includes('- name:') || 
+              (!nextTrimmed && j + 1 < lines.length && !lines[j + 1].startsWith('  ')) ||
+              j === lines.length - 1) {
+            insertIndex = j === lines.length - 1 ? lines.length : j;
             break;
           }
         }
@@ -77,17 +94,25 @@ jobs:
       }
     }
     
-    // If no jobs section found or insert point not found, append at the end
+    // If no checkout step found, insert after the "steps:" line
+    if (insertIndex === -1) {
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.trim().startsWith('steps:')) {
+          insertIndex = i + 1;
+          break;
+        }
+      }
+    }
+    
+    // If still no insertion point found, append to the end
     if (insertIndex === -1) {
       insertIndex = lines.length;
     }
     
-    // Insert the command YAML with proper spacing
-    const commandLines = commandYaml.split('\n');
+    // Insert the new command steps after the checkout step
     const newLines = [
       ...lines.slice(0, insertIndex),
-      '',
-      '  # New command added',
       ...commandLines,
       ...lines.slice(insertIndex)
     ];
