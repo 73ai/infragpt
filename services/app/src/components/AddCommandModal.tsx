@@ -32,176 +32,322 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
 // Command templates for common GitHub Actions patterns
+// These templates provide only steps to be inserted into existing jobs
 const COMMAND_TEMPLATES = {
-  'ci-build': {
-    name: 'ci-build',
-    description: 'Build and test the project using CI/CD pipeline',
-    template: `  - name: "ci-build"
-    description: "Build and test the project using CI/CD pipeline"
-    parameters:
-      - name: "branch"
-        type: "string"
-        required: false
-        description: "Branch to build (defaults to main)"
-        default: "main"
-      - name: "environment"
-        type: "string"
-        required: false
-        description: "Target environment"
-        default: "staging"
-    actions:
-      - uses: actions/checkout@v4
+  'deploy-application': {
+    name: 'deploy-application',
+    description: 'Complete application deployment with GCP, database, and notifications',
+    steps: `      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          ref: \${{ parameters.branch }}
-      - uses: actions/setup-node@v4
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
         with:
-          node-version: '18'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run build
-      - run: npm test`
-  },
-  'deploy-service': {
-    name: 'deploy-service',
-    description: 'Deploy service to cloud infrastructure',
-    template: `  - name: "deploy-service"
-    description: "Deploy service to cloud infrastructure"
-    parameters:
-      - name: "service-name"
-        type: "string"
-        required: true
-        description: "Name of the service to deploy"
-      - name: "environment"
-        type: "string"
-        required: true
-        description: "Target environment (dev, staging, prod)"
-      - name: "image-tag"
-        type: "string"
-        required: false
-        description: "Docker image tag"
-        default: "latest"
-    actions:
-      - uses: actions/checkout@v4
-      - name: Configure credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: \${{ secrets.AWS_ROLE_ARN }}
-      - name: Deploy to ECS
+          project_id: \${{ vars.PROJECT_ID }}
+
+      - name: Authenticate to Google Cloud
         run: |
-          aws ecs update-service \\
-            --cluster \${{ parameters.environment }} \\
-            --service \${{ parameters.service-name }} \\
-            --force-new-deployment`
-  },
-  'run-tests': {
-    name: 'run-tests',
-    description: 'Execute test suite with coverage reporting',
-    template: `  - name: "run-tests"
-    description: "Execute test suite with coverage reporting"
-    parameters:
-      - name: "test-type"
-        type: "string"
-        required: false
-        description: "Type of tests to run (unit, integration, e2e)"
-        default: "unit"
-      - name: "coverage-threshold"
-        type: "number"
-        required: false
-        description: "Minimum coverage percentage required"
-        default: 80
-    actions:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-      - run: npm ci
-      - name: Run tests
-        run: npm run test:\${{ parameters.test-type }} -- --coverage
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          token: \${{ secrets.CODECOV_TOKEN }}`
-  },
-  'database-migration': {
-    name: 'database-migration',
-    description: 'Run database migrations safely',
-    template: `  - name: "database-migration"
-    description: "Run database migrations safely"
-    parameters:
-      - name: "migration-direction"
-        type: "string"
-        required: false
-        description: "Migration direction (up, down)"
-        default: "up"
-      - name: "environment"
-        type: "string"
-        required: true
-        description: "Target environment"
-      - name: "dry-run"
-        type: "boolean"
-        required: false
-        description: "Run migration in dry-run mode"
-        default: false
-    actions:
-      - uses: actions/checkout@v4
-      - name: Setup database connection
+          gcloud auth activate-service-account --key-file=\${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          gcloud config set project \${{ vars.PROJECT_ID }}
+
+      - name: Setup GCP resources
+        id: gcp_setup
+        timeout-minutes: 10
         run: |
-          echo "DB_URL=\${{ secrets.DATABASE_URL_\${{ upper(parameters.environment) }} }}" >> $GITHUB_ENV
-      - name: Run migrations
+          if ! gcloud compute instances describe \${{ vars.APP_NAME }}-vm --zone=\${{ vars.REGION }}-a >/dev/null 2>&1; then
+            gcloud compute instances create \${{ vars.APP_NAME }}-vm \\
+              --zone=\${{ vars.REGION }}-a \\
+              --machine-type=e2-medium \\
+              --image-family=debian-11 \\
+              --image-project=debian-cloud \\
+              --tags=webapp
+          fi
+          VM_IP=$(gcloud compute instances describe \${{ vars.APP_NAME }}-vm \\
+            --zone=\${{ vars.REGION }}-a \\
+            --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+          echo "vm_external_ip=$VM_IP" >> $GITHUB_OUTPUT
+
+      - name: Build application
+        timeout-minutes: 10
         run: |
-          if [ "\${{ parameters.dry-run }}" = "true" ]; then
-            npm run migrate:dry-run
+          python -m venv venv
+          source venv/bin/activate
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          if [ -f setup.py ]; then
+            python setup.py build
+            if [ -d tests ]; then
+              python -m pytest tests/ || echo "Tests failed but continuing..."
+            fi
+            python setup.py sdist bdist_wheel
+          fi
+
+      - name: Deploy to VM
+        timeout-minutes: 8
+        run: |
+          echo "\${{ secrets.SSH_PRIVATE_KEY }}" > ssh_key
+          chmod 600 ssh_key
+          ssh -i ssh_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 \\
+            deployment_user@\${{ steps.gcp_setup.outputs.vm_external_ip }} 'echo "SSH connection successful"'
+          if [ -d dist ]; then
+            scp -i ssh_key -o StrictHostKeyChecking=no -r dist/* \\
+              deployment_user@\${{ steps.gcp_setup.outputs.vm_external_ip }}:/opt/webapp/
+          fi
+          rm -f ssh_key
+
+      - name: Send deployment notification
+        if: always()
+        run: |
+          STATUS="\${{ job.status }}"
+          curl -X POST \\
+            -H "Content-Type: application/json" \\
+            -d "{\\"text\\": \\"Deployment $STATUS for \${{ vars.APP_NAME }} in \${{ vars.ENVIRONMENT }}\\"}" \\
+            \${{ secrets.SLACK_WEBHOOK_URL }} || echo "Notification failed"`
+  },
+  'gcloud-operations': {
+    name: 'gcloud-operations',
+    description: 'Google Cloud Platform resource management and operations',
+    steps: `      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: \${{ vars.PROJECT_ID }}
+
+      - name: Authenticate to Google Cloud
+        run: |
+          gcloud auth activate-service-account --key-file=\${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          gcloud config set project \${{ vars.PROJECT_ID }}
+
+      - name: Create VM instance
+        run: |
+          gcloud compute instances create \${{ vars.APP_NAME }}-vm \\
+            --zone=us-central1-a \\
+            --machine-type=e2-medium \\
+            --image-family=debian-11 \\
+            --image-project=debian-cloud \\
+            --tags=webapp
+
+      - name: Create storage bucket
+        run: |
+          gsutil mb gs://\${{ vars.PROJECT_ID }}-\${{ vars.APP_NAME }}-storage
+
+      - name: List created resources
+        run: |
+          echo "=== Compute Instances ==="
+          gcloud compute instances list
+          echo "=== Storage Buckets ==="
+          gsutil ls`
+  },
+  'kubectl-deployment': {
+    name: 'kubectl-deployment',
+    description: 'Kubernetes cluster deployment and management',
+    steps: `      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          gcloud container clusters get-credentials \${{ vars.CLUSTER_NAME }} \\
+            --region=us-central1
+
+      - name: Create namespace
+        run: |
+          kubectl create namespace \${{ vars.NAMESPACE }} \\
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to Kubernetes
+        run: |
+          if [ -d k8s ]; then
+            kubectl apply -f k8s/ -n \${{ vars.NAMESPACE }}
+            kubectl rollout status deployment/\${{ vars.APP_NAME }} \\
+              -n \${{ vars.NAMESPACE }} --timeout=300s
           else
-            npm run migrate:\${{ parameters.migration-direction }}
+            echo "No k8s directory found"
+          fi
+
+      - name: Get deployment status
+        run: |
+          kubectl get pods -n \${{ vars.NAMESPACE }}
+          kubectl get services -n \${{ vars.NAMESPACE }}`
+  },
+  'python-script': {
+    name: 'python-script',
+    description: 'Execute Python scripts with environment setup',
+    steps: `      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      - name: Execute Python script
+        run: |
+          source venv/bin/activate
+          python \${{ vars.SCRIPT_PATH }}
+
+      - name: Run tests if available
+        run: |
+          source venv/bin/activate
+          if [ -d tests ]; then
+            python -m pytest tests/ -v
           fi`
   },
-  'security-scan': {
-    name: 'security-scan',
-    description: 'Perform security vulnerability scanning',
-    template: `  - name: "security-scan"
-    description: "Perform security vulnerability scanning"
-    parameters:
-      - name: "scan-type"
-        type: "string"
-        required: false
-        description: "Type of security scan (dependencies, code, container)"
-        default: "dependencies"
-      - name: "fail-on-high"
-        type: "boolean"
-        required: false
-        description: "Fail build on high severity vulnerabilities"
-        default: true
-    actions:
-      - uses: actions/checkout@v4
-      - name: Dependency scan
-        if: parameters.scan-type == 'dependencies'
-        run: npm audit --audit-level=\${{ parameters.fail-on-high && 'high' || 'critical' }}
-      - name: Code scan
-        if: parameters.scan-type == 'code'
-        uses: github/codeql-action/analyze@v3
-      - name: Container scan
-        if: parameters.scan-type == 'container'
-        uses: aquasecurity/trivy-action@master
+  'git-operations': {
+    name: 'git-operations',
+    description: 'Git repository operations and management',
+    steps: `      - name: Checkout with full history
+        uses: actions/checkout@v4
         with:
-          image-ref: \${{ env.IMAGE_NAME }}
-          format: 'sarif'
-          output: 'trivy-results.sarif'`
+          token: \${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+
+      - name: Create new branch
+        run: |
+          git checkout -b \${{ vars.BRANCH_NAME }}
+          git push -u origin \${{ vars.BRANCH_NAME }}
+
+      - name: Tag release
+        run: |
+          TAG_NAME="v$(date +%Y%m%d-%H%M%S)"
+          git tag -a $TAG_NAME -m "Release $TAG_NAME"
+          git push origin $TAG_NAME
+          echo "Created tag: $TAG_NAME"`
+  },
+  'ssh-deployment': {
+    name: 'ssh-deployment',
+    description: 'Deploy application to remote servers via SSH',
+    steps: `      - name: Build application
+        run: |
+          if [ -f package.json ]; then
+            npm ci && npm run build
+          elif [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+            python setup.py build || echo "No setup.py found"
+          fi
+
+      - name: Deploy via SSH
+        run: |
+          echo "\${{ secrets.SSH_PRIVATE_KEY }}" > ssh_key
+          chmod 600 ssh_key
+          
+          # Test SSH connection
+          ssh -i ssh_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 \\
+            \${{ vars.SERVER_USER }}@\${{ vars.SERVER_HOST }} \\
+            'echo "SSH connection successful"'
+          
+          # Create deployment directory
+          ssh -i ssh_key -o StrictHostKeyChecking=no \\
+            \${{ vars.SERVER_USER }}@\${{ vars.SERVER_HOST }} \\
+            "sudo mkdir -p \${{ vars.DEPLOYMENT_PATH }}"
+          
+          # Transfer files
+          if [ -d dist ]; then
+            scp -i ssh_key -o StrictHostKeyChecking=no -r dist/* \\
+              \${{ vars.SERVER_USER }}@\${{ vars.SERVER_HOST }}:\${{ vars.DEPLOYMENT_PATH }}/
+          fi
+          
+          # Execute deployment commands
+          ssh -i ssh_key -o StrictHostKeyChecking=no \\
+            \${{ vars.SERVER_USER }}@\${{ vars.SERVER_HOST }} << 'EOF'
+            cd \${{ vars.DEPLOYMENT_PATH }}
+            if [ -f install.sh ]; then
+              chmod +x install.sh && ./install.sh
+            fi
+            if systemctl list-unit-files | grep -q webapp; then
+              sudo systemctl restart webapp
+              sudo systemctl status webapp --no-pager
+            fi
+          EOF
+          
+          rm -f ssh_key`
+  },
+  'api-webhook': {
+    name: 'api-webhook',
+    description: 'Call external APIs and webhooks',
+    steps: `      - name: Call API endpoint
+        run: |
+          curl -X POST \\
+            -H "Authorization: Bearer \${{ secrets.API_TOKEN }}" \\
+            -H "Content-Type: application/json" \\
+            -d '{"message": "Hello from GitHub Actions", "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' \\
+            \${{ vars.API_ENDPOINT }}
+
+      - name: Send Slack notification
+        if: always()
+        run: |
+          curl -X POST \\
+            -H "Content-Type: application/json" \\
+            -d '{
+              "text": "API call completed to \${{ vars.API_ENDPOINT }}",
+              "username": "GitHub Actions Bot",
+              "fields": [
+                {"title": "Status", "value": "\${{ job.status }}", "short": true},
+                {"title": "Timestamp", "value": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'", "short": true}
+              ]
+            }' \\
+            \${{ secrets.SLACK_WEBHOOK_URL }} || echo "Slack notification failed"`
+  },
+  'database-operations': {
+    name: 'database-operations',
+    description: 'PostgreSQL database operations and migrations',
+    steps: `      - name: Setup PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Run database migrations
+        run: |
+          if [ -d migrations ]; then
+            for migration in migrations/*.sql; do
+              echo "Running migration: $migration"
+              psql "\${{ secrets.DATABASE_URL }}" -f "$migration"
+            done
+          else
+            echo "No migrations directory found"
+          fi
+
+      - name: Create database backup
+        run: |
+          BACKUP_FILE="backup_$(date +%Y%m%d_%H%M%S).sql"
+          pg_dump "\${{ secrets.DATABASE_URL }}" > "$BACKUP_FILE"
+          echo "Database backup created: $BACKUP_FILE"
+
+      - name: Execute database query
+        run: |
+          psql "\${{ secrets.DATABASE_URL }}" -c "SELECT version();"
+          psql "\${{ secrets.DATABASE_URL }}" -c "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = 'public';"`
   },
   'custom': {
     name: 'custom-command',
     description: 'Create a custom command from scratch',
-    template: `  - name: "custom-command"
-    description: "Custom command description"
-    parameters:
-      - name: "example-param"
-        type: "string"
-        required: true
-        description: "Example parameter description"
-    actions:
-      - uses: actions/checkout@v4
-      - name: Custom step
-        run: echo "Add your custom commands here"`
+    steps: `      - name: Custom step
+        run: |
+          echo "Add your custom commands here"
+          
+          # Example: Install dependencies
+          # sudo apt-get update && sudo apt-get install -y your-package
+          
+          # Example: Run custom script
+          # ./scripts/custom-script.sh
+          
+          # Example: Set environment variables
+          # echo "CUSTOM_VAR=value" >> $GITHUB_ENV`
   }
 };
 
@@ -248,24 +394,10 @@ const AddCommandModal: React.FC<AddCommandModalProps> = ({
   const onSubmit = (data: FormData) => {
     const template = COMMAND_TEMPLATES[data.template as keyof typeof COMMAND_TEMPLATES];
     if (template) {
-      let commandYaml = template.template;
+      // Since we now provide only steps, pass them directly
+      const commandSteps = template.steps;
       
-      // Replace name and description if they were customized
-      if (data.name !== template.name) {
-        commandYaml = commandYaml.replace(
-          `name: "${template.name}"`,
-          `name: "${data.name}"`
-        );
-      }
-      
-      if (data.description !== template.description) {
-        commandYaml = commandYaml.replace(
-          `description: "${template.description}"`,
-          `description: "${data.description}"`
-        );
-      }
-
-      onAddCommand(commandYaml);
+      onAddCommand(commandSteps);
       
       // Reset form and close modal
       form.reset();
@@ -308,34 +440,52 @@ const AddCommandModal: React.FC<AddCommandModalProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="ci-build">
+                      <SelectItem value="deploy-application">
                         <div className="flex flex-col items-start">
-                          <span className="font-medium">CI Build</span>
-                          <span className="text-xs text-muted-foreground">Build and test project</span>
+                          <span className="font-medium">Deploy Application</span>
+                          <span className="text-xs text-muted-foreground">Complete deployment with GCP, database, and notifications</span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="deploy-service">
+                      <SelectItem value="gcloud-operations">
                         <div className="flex flex-col items-start">
-                          <span className="font-medium">Deploy Service</span>
-                          <span className="text-xs text-muted-foreground">Deploy to cloud infrastructure</span>
+                          <span className="font-medium">GCloud Operations</span>
+                          <span className="text-xs text-muted-foreground">Google Cloud Platform resource management</span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="run-tests">
+                      <SelectItem value="kubectl-deployment">
                         <div className="flex flex-col items-start">
-                          <span className="font-medium">Run Tests</span>
-                          <span className="text-xs text-muted-foreground">Execute test suite with coverage</span>
+                          <span className="font-medium">Kubernetes Deployment</span>
+                          <span className="text-xs text-muted-foreground">Deploy and manage Kubernetes clusters</span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="database-migration">
+                      <SelectItem value="python-script">
                         <div className="flex flex-col items-start">
-                          <span className="font-medium">Database Migration</span>
-                          <span className="text-xs text-muted-foreground">Run database migrations safely</span>
+                          <span className="font-medium">Python Script</span>
+                          <span className="text-xs text-muted-foreground">Execute Python scripts with environment setup</span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="security-scan">
+                      <SelectItem value="git-operations">
                         <div className="flex flex-col items-start">
-                          <span className="font-medium">Security Scan</span>
-                          <span className="text-xs text-muted-foreground">Perform vulnerability scanning</span>
+                          <span className="font-medium">Git Operations</span>
+                          <span className="text-xs text-muted-foreground">Repository operations and management</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="ssh-deployment">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">SSH Deployment</span>
+                          <span className="text-xs text-muted-foreground">Deploy to remote servers via SSH</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="api-webhook">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">API & Webhooks</span>
+                          <span className="text-xs text-muted-foreground">Call external APIs and webhooks</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="database-operations">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">Database Operations</span>
+                          <span className="text-xs text-muted-foreground">PostgreSQL operations and migrations</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="custom">
@@ -399,14 +549,14 @@ const AddCommandModal: React.FC<AddCommandModalProps> = ({
 
                 {/* Preview of the template */}
                 <div className="space-y-2">
-                  <Label>Template Preview</Label>
+                  <Label>Steps Preview</Label>
                   <div className="bg-muted/50 p-4 rounded-md border">
                     <pre className="text-xs overflow-x-auto whitespace-pre-wrap text-muted-foreground">
-                      {COMMAND_TEMPLATES[selectedTemplate as keyof typeof COMMAND_TEMPLATES]?.template}
+                      {COMMAND_TEMPLATES[selectedTemplate as keyof typeof COMMAND_TEMPLATES]?.steps}
                     </pre>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    This template will be inserted into your YAML editor. You can customize it further after adding.
+                    These steps will be inserted into your existing job. The base job already includes checkout@v4 and runs-on: ubuntu-latest.
                   </p>
                 </div>
               </>
