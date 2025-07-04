@@ -1,10 +1,10 @@
-# CLAUDE.md
+# Website Service
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+The public-facing marketing website for the InfraGPT platform built with modern web technologies.
 
-## Project Overview
+## Service Purpose
 
-This is the InfraGPT marketing website built with Astro 5, a modern static site generator. The site serves as the public-facing website for the InfraGPT platform - an AI SRE copilot for cloud infrastructure management.
+This is the InfraGPT marketing website built with Astro 5, a modern static site generator. The site serves as the primary public interface for the InfraGPT platform, showcasing the AI SRE copilot capabilities and providing information about cloud infrastructure management solutions. The website includes marketing content, blog posts, and serves as the entry point for potential users to learn about and engage with the InfraGPT platform.
 
 ## Development Commands
 

@@ -169,8 +169,6 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-CLAUDE.md
-
 NOTES.md
 # Local Netlify folder
 .netlify
@@ -186,3 +184,6 @@ services/infragpt/config.yaml
 .DS_Store
 
 ./*/DS_Store
+
+services/wwwroot/*
+services/mcp/*
