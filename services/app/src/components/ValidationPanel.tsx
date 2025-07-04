@@ -33,11 +33,6 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({
   isLoading,
   onErrorClick
 }) => {
-  console.log('[DEBUG] ValidationPanel rendered with:', { 
-    errorsCount: errors.length, 
-    isLoading, 
-    errors: errors.slice(0, 3) // Log first 3 errors for debugging
-  });
   const renderLoadingState = () => (
     <div className="space-y-3">
       <div className="flex items-center space-x-2">
@@ -82,6 +77,10 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({
       key={index}
       className="border rounded-lg p-3 cursor-pointer hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 hover:shadow-sm"
       onClick={() => onErrorClick?.(error)}
+      onKeyDown={(e) => e.key === 'Enter' && onErrorClick?.(error)}
+      tabIndex={0}
+      role="button"
+      aria-label={`Navigate to error at line ${error.line}, column ${error.column}`}
       title="Click to navigate to error location in editor"
     >
       <div className="flex items-start justify-between mb-2">

@@ -41,11 +41,11 @@ describe('useActionlint', () => {
 
   afterEach(() => {
     // Clean up globals
-    delete (window as any).runActionlint;
-    delete (window as any).onCheckCompleted;
-    delete (window as any).showError;
-    delete (window as any).dismissLoading;
-    delete (window as any).Go;
+    (window as any).runActionlint = undefined;
+    (window as any).onCheckCompleted = undefined;
+    (window as any).showError = undefined;
+    (window as any).dismissLoading = undefined;
+    (window as any).Go = undefined;
   });
 
   describe('initialization', () => {
@@ -266,4 +266,3 @@ jobs:
   });
 });
 
-export {};

@@ -1,6 +1,5 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import ValidationPanel, { ValidationError } from '@/components/ValidationPanel';
 import YamlEditor, { YamlEditorRef } from '@/components/YamlEditor';
 import AddCommandModal from '@/components/AddCommandModal';
@@ -34,13 +33,9 @@ jobs:
 
   // Auto-validate YAML content when it changes
   useEffect(() => {
-    console.log('[DEBUG] CreateSkillPage useEffect - isReady:', isReady, 'content length:', yamlContent.length);
     if (yamlContent.trim()) {
       if (isReady) {
-        console.log('[DEBUG] Calling validateYaml from CreateSkillPage');
         validateYaml(yamlContent);
-      } else {
-        console.log('[DEBUG] WASM not ready yet, validation will be deferred');
       }
     }
   }, [yamlContent, validateYaml, isReady]);
@@ -48,7 +43,6 @@ jobs:
   // Trigger validation when WASM becomes ready
   useEffect(() => {
     if (isReady && yamlContent.trim()) {
-      console.log('[DEBUG] WASM became ready, triggering initial validation');
       validateYaml(yamlContent);
     }
   }, [isReady]);
@@ -121,7 +115,6 @@ jobs:
   };
 
   const handleErrorClick = (error: ValidationError) => {
-    console.log('Error clicked:', error);
     if (yamlEditorRef.current) {
       // Navigate to the error location in the editor
       // Convert to 0-based column index for CodeMirror (error.column is 1-based)
@@ -137,14 +130,6 @@ jobs:
     message: error.message,
     kind: error.kind
   }));
-  
-  console.log('[DEBUG] CreateSkillPage state:', { 
-    isReady, 
-    isLoading: state.isLoading, 
-    errorsCount: state.errors.length,
-    error: state.error,
-    convertedErrorsCount: convertedErrors.length
-  });
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -153,7 +138,7 @@ jobs:
         <div className="flex h-16 items-center px-4 gap-4 justify-between">
           <div className="flex items-center gap-4">
             <SidebarTrigger />
-            <h1 className="text-xl font-semibold">Create a New skill</h1>
+            <h1 className="text-xl font-semibold">Create a New Skill</h1>
           </div>
           <div className="flex gap-2">
             <Button onClick={handleAddCommand}>
