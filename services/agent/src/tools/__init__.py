@@ -1,4 +1,4 @@
-"""Tools module for InfraGPT Agent Service."""
+"""Tools module for Backend Agent Service."""
 
 from .base import BaseTool, ToolExecutionResult
 from .registry import ToolRegistry

@@ -1,4 +1,4 @@
-"""gRPC service handlers for the InfraGPT Agent Service."""
+"""gRPC service handlers for the Backend Agent Service."""
 
 import logging
 from typing import Optional
@@ -22,8 +22,8 @@ class AgentServiceHandler(agent_pb2_grpc.AgentServiceServicer):
         self.settings = settings
         self.agent_system: Optional[AgentSystem] = None
         self.reply_handler = ReplyHandler(
-            infragpt_host=getattr(settings, 'infragpt_host', 'localhost'),
-            infragpt_port=getattr(settings, 'infragpt_port', 9090)
+            backend_host=getattr(settings, 'backend_service_host', 'localhost'),
+            backend_port=getattr(settings, 'backend_service_port', 9090)
         )
         logger.info("AgentServiceHandler initialized")
     
@@ -40,7 +40,7 @@ class AgentServiceHandler(agent_pb2_grpc.AgentServiceServicer):
         context: grpc.aio.ServicerContext
     ) -> agent_pb2.AgentResponse:
         """
-        Process incoming agent requests from InfraGPT service.
+        Process incoming agent requests from Backend service.
         
         Args:
             request: The gRPC request containing message and context
@@ -115,7 +115,7 @@ class AgentServiceHandler(agent_pb2_grpc.AgentServiceServicer):
         )
     
     async def _send_reply_to_slack(self, request: AgentRequest, response: AgentResponse) -> None:
-        """Send agent response back to Slack through InfraGPT service."""
+        """Send agent response back to Slack through Backend service."""
         try:
             # Extract conversation context
             context_dict = None

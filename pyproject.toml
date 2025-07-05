@@ -38,5 +38,5 @@ dependencies = { file = "requirements.txt" }
 [tool.uv.workspace]
 members = [
     "services/agent",
-    "services/infragpt/infragptapi/client/python"
+    "services/backend/backendapi/client/python"
 ]

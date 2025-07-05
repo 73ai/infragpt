@@ -1,4 +1,4 @@
-"""LLM module for InfraGPT Agent Service."""
+"""LLM module for Backend Agent Service."""
 
 from .client import LiteLLMClient
 from .models import ConversationContext, LLMResponse, Message

@@ -1,4 +1,4 @@
-"""Base tool implementation for InfraGPT Agent Service."""
+"""Base tool implementation for Backend Agent Service."""
 
 import asyncio
 import time

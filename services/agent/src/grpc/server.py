@@ -1,4 +1,4 @@
-"""gRPC server implementation for the InfraGPT Agent Service."""
+"""gRPC server implementation for the Backend Agent Service."""
 
 import asyncio
 import logging

@@ -1,5 +1,5 @@
 """
-Main entry point for the InfraGPT Agent Service.
+Main entry point for the Backend Agent Service.
 
 This service provides AI-powered infrastructure management capabilities
 through both FastAPI (health checks) and gRPC (agent processing) interfaces.
