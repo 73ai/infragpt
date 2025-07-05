@@ -36,7 +36,7 @@ packages = ["src"]
 
 
 [tool.uv.sources]
-infragptapi = { workspace = true }
+backendapi = { workspace = true }
 
 [dependency-groups]
 dev = [

@@ -1,4 +1,4 @@
-# InfraGPT Core Service
+# Backend Service
 
 Go-based Slack bot service that provides AI-powered infrastructure management through DevOps workflows.
 
@@ -24,8 +24,8 @@ slack:
 database:
   host: "localhost"
   port: 5432
-  db_name: "infragpt"
-  user: "infragpt"
+  db_name: "backend"
+  user: "backend"
   password: "..."
 agent:
   endpoint: "[::]:50051"
@@ -33,7 +33,7 @@ agent:
 
 ## Services
 
-- **InfraGPT Service**: Main Slack bot with Socket Mode integration
+- **Backend Service**: Main Slack bot with Socket Mode integration
 - **Identity Service**: Clerk authentication and organization management  
 - **Integration Service**: Multi-connector architecture (Slack, GitHub, AWS, GCP, PagerDuty, Datadog)
 

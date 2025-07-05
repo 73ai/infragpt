@@ -10,7 +10,7 @@ import (
 	"github.com/priyanshujain/infragpt/services/backend/internal/conversationsvc/domain"
 )
 
-func (db *InfraGPTDB) GetConversationByThread(ctx context.Context, teamID, channelID, threadTS string) (domain.Conversation, error) {
+func (db *BackendDB) GetConversationByThread(ctx context.Context, teamID, channelID, threadTS string) (domain.Conversation, error) {
 	dbConversation, err := db.Querier.GetConversationByThread(ctx, GetConversationByThreadParams{
 		TeamID:    teamID,
 		ChannelID: channelID,
@@ -30,7 +30,7 @@ func (db *InfraGPTDB) GetConversationByThread(ctx context.Context, teamID, chann
 	}, nil
 }
 
-func (db *InfraGPTDB) CreateConversation(ctx context.Context, teamID, channelID, threadTS string) (domain.Conversation, error) {
+func (db *BackendDB) CreateConversation(ctx context.Context, teamID, channelID, threadTS string) (domain.Conversation, error) {
 	dbConversation, err := db.Querier.CreateConversation(ctx, CreateConversationParams{
 		TeamID:    teamID,
 		ChannelID: channelID,
@@ -50,7 +50,7 @@ func (db *InfraGPTDB) CreateConversation(ctx context.Context, teamID, channelID,
 	}, nil
 }
 
-func (db *InfraGPTDB) StoreMessage(ctx context.Context, conversationID uuid.UUID, message domain.Message) (domain.Message, error) {
+func (db *BackendDB) StoreMessage(ctx context.Context, conversationID uuid.UUID, message domain.Message) (domain.Message, error) {
 	var senderUsername, senderEmail, senderName sql.NullString
 
 	if message.Sender.Username != "" {
@@ -93,7 +93,7 @@ func (db *InfraGPTDB) StoreMessage(ctx context.Context, conversationID uuid.UUID
 	}, nil
 }
 
-func (db *InfraGPTDB) GetConversationHistory(ctx context.Context, conversationID uuid.UUID) ([]domain.Message, error) {
+func (db *BackendDB) GetConversationHistory(ctx context.Context, conversationID uuid.UUID) ([]domain.Message, error) {
 	dbMessages, err := db.Querier.GetConversationHistory(ctx, conversationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get conversation history: %w", err)
@@ -120,7 +120,7 @@ func (db *InfraGPTDB) GetConversationHistory(ctx context.Context, conversationID
 	return messages, nil
 }
 
-func (db *InfraGPTDB) MessageBySlackTS(ctx context.Context, conversationID uuid.UUID, senderID, slackMessageTS string) (domain.Message, error) {
+func (db *BackendDB) MessageBySlackTS(ctx context.Context, conversationID uuid.UUID, senderID, slackMessageTS string) (domain.Message, error) {
 	dbMessage, err := db.Querier.MessageBySlackTS(ctx, MessageBySlackTSParams{
 		ConversationID: conversationID,
 		SenderUserID:   senderID,
@@ -149,7 +149,7 @@ func (db *InfraGPTDB) MessageBySlackTS(ctx context.Context, conversationID uuid.
 	}, nil
 }
 
-func (db *InfraGPTDB) Conversation(ctx context.Context, conversationID uuid.UUID) (domain.Conversation, error) {
+func (db *BackendDB) Conversation(ctx context.Context, conversationID uuid.UUID) (domain.Conversation, error) {
 	dbConversation, err := db.Querier.Conversation(ctx, conversationID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -168,4 +168,4 @@ func (db *InfraGPTDB) Conversation(ctx context.Context, conversationID uuid.UUID
 	}, nil
 }
 
-var _ domain.ConversationRepository = (*InfraGPTDB)(nil)
+var _ domain.ConversationRepository = (*BackendDB)(nil)

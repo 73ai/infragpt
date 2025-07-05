@@ -10,21 +10,21 @@ import (
 	"github.com/priyanshujain/infragpt/services/backend/internal/conversationsvc/domain"
 )
 
-type InfraGPTDB struct {
+type BackendDB struct {
 	db *sql.DB
 	Querier
 }
 
-func (i *InfraGPTDB) DB() *sql.DB {
+func (i *BackendDB) DB() *sql.DB {
 	return i.db
 }
 
-var _ domain.WorkSpaceTokenRepository = (*InfraGPTDB)(nil)
-var _ domain.IntegrationRepository = (*InfraGPTDB)(nil)
-var _ domain.ConversationRepository = (*InfraGPTDB)(nil)
-var _ domain.ChannelRepository = (*InfraGPTDB)(nil)
+var _ domain.WorkSpaceTokenRepository = (*BackendDB)(nil)
+var _ domain.IntegrationRepository = (*BackendDB)(nil)
+var _ domain.ConversationRepository = (*BackendDB)(nil)
+var _ domain.ChannelRepository = (*BackendDB)(nil)
 
-func (i InfraGPTDB) SaveToken(ctx context.Context, teamID, token string) error {
+func (i BackendDB) SaveToken(ctx context.Context, teamID, token string) error {
 	err := i.saveSlackToken(ctx, saveSlackTokenParams{
 		TeamID:  teamID,
 		Token:   token,
@@ -36,7 +36,7 @@ func (i InfraGPTDB) SaveToken(ctx context.Context, teamID, token string) error {
 	return nil
 }
 
-func (i InfraGPTDB) GetToken(ctx context.Context, teamID string) (string, error) {
+func (i BackendDB) GetToken(ctx context.Context, teamID string) (string, error) {
 	token, err := i.slackToken(ctx, teamID)
 	if err != nil {
 		return "", fmt.Errorf("failed to get slack token: %w", err)
@@ -44,7 +44,7 @@ func (i InfraGPTDB) GetToken(ctx context.Context, teamID string) (string, error)
 	return token, nil
 }
 
-func (i InfraGPTDB) Integrations(ctx context.Context, businessID uuid.UUID) ([]domain.Integration, error) {
+func (i BackendDB) Integrations(ctx context.Context, businessID uuid.UUID) ([]domain.Integration, error) {
 	is, err := i.integrations(ctx, businessID)
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func (i InfraGPTDB) Integrations(ctx context.Context, businessID uuid.UUID) ([]d
 	return integrations, nil
 }
 
-func (i InfraGPTDB) SaveIntegration(ctx context.Context, integration domain.Integration) error {
+func (i BackendDB) SaveIntegration(ctx context.Context, integration domain.Integration) error {
 	bid := uuid.MustParse(integration.BusinessID)
 	err := i.saveIntegration(ctx, saveIntegrationParams{
 		ID:                uuid.New(),

@@ -1,10 +1,10 @@
-# InfraGPT Core Service
+# Backend Service
 
 The main backend service that orchestrates DevOps workflows through Slack integration and serves as the platform's communication hub.
 
 ## Service Purpose
 
-The InfraGPT Core Service is the central backend service built with Go that coordinates all platform operations. It provides real-time Slack integration, user authentication, workflow orchestration, and serves as the communication bridge between Slack, the Agent Service (AI processing), and the Web Application.
+The Backend Service is the central backend service built with Go that coordinates all platform operations. It provides real-time Slack integration, user authentication, workflow orchestration, and serves as the communication bridge between Slack, the Agent Service (AI processing), and the Web Application.
 
 **Core Responsibilities:**
 - Slack Socket Mode integration for real-time messaging
@@ -18,13 +18,13 @@ The InfraGPT Core Service is the central backend service built with Go that coor
 ### Clean Architecture Layers
 The service follows clean architecture principles with dependency inversion:
 
-- **Domain Layer** (`internal/infragptsvc/domain/`) - Core business logic, entities, and repository interfaces
-- **Application Layer** (`internal/infragptsvc/service.go`) - Service orchestration, business workflows, and use cases
-- **Infrastructure Layer** (`internal/infragptsvc/supporting/`) - External integrations (Slack, PostgreSQL, gRPC)
-- **API Layer** (`infragptapi/`) - HTTP endpoint handlers and request/response models
+- **Domain Layer** (`internal/conversationsvc/domain/`) - Core business logic, entities, and repository interfaces
+- **Application Layer** (`internal/conversationsvc/service.go`) - Service orchestration, business workflows, and use cases
+- **Infrastructure Layer** (`internal/conversationsvc/supporting/`) - External integrations (Slack, PostgreSQL, gRPC)
+- **API Layer** (`backendapi/`) - HTTP endpoint handlers and request/response models
 
 ### Dual Service Design
-- **InfraGPT Service** (`internal/infragptsvc/`) - Main Slack bot, integration management, workflow orchestration
+- **Backend Service** (`internal/conversationsvc/`) - Main Slack bot, integration management, workflow orchestration
 - **Identity Service** (`internal/identitysvc/`) - User authentication, session management, organization context
 
 ### Core Components
@@ -45,7 +45,7 @@ The service follows clean architecture principles with dependency inversion:
 
 ### Testing and Quality Assurance
 - `go test ./...` - Run complete test suite
-- `go test ./internal/infragptsvc/... -v` - Verbose tests for InfraGPT service
+- `go test ./internal/conversationsvc/... -v` - Verbose tests for Backend service
 - `go test ./internal/identitysvc/... -v` - Verbose tests for Identity service
 - `go vet ./...` - Static analysis for common Go errors
 - `go mod verify` - Verify dependency integrity
@@ -90,7 +90,7 @@ encryption:
 ## Database Architecture and Management
 
 ### Multi-Service Database Pattern
-- **InfraGPT Service DB**: `internal/infragptsvc/supporting/postgres/`
+- **Backend Service DB**: `internal/conversationsvc/supporting/postgres/`
   - Schema: `schema/schema.sql` - Integration management, workflow state
   - Queries: `queries/*.sql` - CRUD operations for integrations and workflows
   - Generated: `*.sql.go` - Type-safe query methods
@@ -111,7 +111,7 @@ encryption:
 
 ### gRPC Integration with Agent Service
 - **Client Configuration**: gRPC client setup in infrastructure layer
-- **Message Processing Flow**: Slack message → Core Service → Agent Service → LLM → Response
+- **Message Processing Flow**: Slack message → Backend Service → Agent Service → LLM → Response
 - **Error Handling**: Graceful degradation when Agent Service unavailable
 - **Retry Logic**: Exponential backoff for failed gRPC calls
 

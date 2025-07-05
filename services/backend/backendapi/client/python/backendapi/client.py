@@ -10,7 +10,7 @@ from typing import Optional
 
 import grpc
 
-from .generated import infragpt_pb2, infragpt_pb2_grpc
+from .generated import backend_pb2, backend_pb2_grpc
 from .exceptions import BackendError, ConnectionError, RequestError
 
 
@@ -56,7 +56,7 @@ class BackendClient:
             self._ensure_connected()
             
             # Create request
-            request = infragpt_pb2.SendReplyCommand(
+            request = backend_pb2.SendReplyCommand(
                 conversation_id=conversation_id,
                 message=message
             )
@@ -87,7 +87,7 @@ class BackendClient:
         if self._client is None:
             try:
                 self._channel = grpc.insecure_channel(f'{self.host}:{self.port}')
-                self._client = infragpt_pb2_grpc.InfraGPTServiceStub(self._channel)
+                self._client = backend_pb2_grpc.BackendServiceStub(self._channel)
                 
                 self.logger.info(f"Connected to Backend service at {self.host}:{self.port}")
                 

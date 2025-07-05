@@ -8,7 +8,7 @@ import (
 	"github.com/priyanshujain/infragpt/services/backend/internal/conversationsvc/domain"
 )
 
-func (db *InfraGPTDB) AddChannel(ctx context.Context, teamID, channelID, channelName string) error {
+func (db *BackendDB) AddChannel(ctx context.Context, teamID, channelID, channelName string) error {
 	var dbChannelName sql.NullString
 	if channelName != "" {
 		dbChannelName = sql.NullString{String: channelName, Valid: true}
@@ -26,7 +26,7 @@ func (db *InfraGPTDB) AddChannel(ctx context.Context, teamID, channelID, channel
 	return nil
 }
 
-func (db *InfraGPTDB) SetChannelMonitoring(ctx context.Context, teamID, channelID string, isMonitored bool) error {
+func (db *BackendDB) SetChannelMonitoring(ctx context.Context, teamID, channelID string, isMonitored bool) error {
 	err := db.Querier.SetChannelMonitoring(ctx, SetChannelMonitoringParams{
 		TeamID:      teamID,
 		ChannelID:   channelID,
@@ -39,7 +39,7 @@ func (db *InfraGPTDB) SetChannelMonitoring(ctx context.Context, teamID, channelI
 	return nil
 }
 
-func (db *InfraGPTDB) GetMonitoredChannels(ctx context.Context, teamID string) ([]domain.Channel, error) {
+func (db *BackendDB) GetMonitoredChannels(ctx context.Context, teamID string) ([]domain.Channel, error) {
 	dbChannels, err := db.Querier.GetMonitoredChannels(ctx, teamID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get monitored channels: %w", err)
@@ -59,7 +59,7 @@ func (db *InfraGPTDB) GetMonitoredChannels(ctx context.Context, teamID string) (
 	return channels, nil
 }
 
-func (db *InfraGPTDB) IsChannelMonitored(ctx context.Context, teamID, channelID string) (bool, error) {
+func (db *BackendDB) IsChannelMonitored(ctx context.Context, teamID, channelID string) (bool, error) {
 	isMonitored, err := db.Querier.IsChannelMonitored(ctx, IsChannelMonitoredParams{
 		TeamID:    teamID,
 		ChannelID: channelID,
@@ -74,4 +74,4 @@ func (db *InfraGPTDB) IsChannelMonitored(ctx context.Context, teamID, channelID 
 	return isMonitored, nil
 }
 
-var _ domain.ChannelRepository = (*InfraGPTDB)(nil)
+var _ domain.ChannelRepository = (*BackendDB)(nil)

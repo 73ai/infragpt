@@ -9,13 +9,13 @@ type Config struct {
 	postgresconfig.Config
 }
 
-func (c Config) New() (*InfraGPTDB, error) {
+func (c Config) New() (*BackendDB, error) {
 	db, err := c.Init()
 	if err != nil {
 		return nil, err
 	}
 
-	return &InfraGPTDB{
+	return &BackendDB{
 		db:      db,
 		Querier: New(db),
 	}, nil

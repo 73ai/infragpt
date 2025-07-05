@@ -4,7 +4,7 @@ InfraGPT is a multi-service platform providing AI-powered infrastructure managem
 
 ## Core Services
 
-### InfraGPT Core Service
+### Backend Service
 **Purpose**: Central Slack bot and infrastructure management service that handles user interactions, maintains conversation state, and coordinates workflow execution.
 
 **Role**: Acts as the primary interface for users interacting with the platform through Slack. Manages authentication, organization context, and serves as the orchestration layer for all platform operations.
@@ -24,20 +24,20 @@ InfraGPT is a multi-service platform providing AI-powered infrastructure managem
 The services form a cohesive ecosystem where each component has a specific responsibility:
 
 1. **User Interaction Layer**: Users interact primarily through Slack channels, with the Web Application providing administrative capabilities
-2. **Message Processing**: The Core Service receives all user messages and determines routing and context
+2. **Message Processing**: The Backend Service receives all user messages and determines routing and context
 3. **AI Processing**: The Agent Service applies natural language understanding and generates intelligent responses
-4. **Response Delivery**: Processed responses flow back through the Core Service to users via Slack
+4. **Response Delivery**: Processed responses flow back through the Backend Service to users via Slack
 5. **Management Interface**: The Web Application provides oversight and configuration capabilities across all operations
 
 ## Service Communication Patterns
 
 ### Synchronous Communication
-- Core Service communicates with Agent Service via gRPC for real-time message processing
-- Web Application communicates with Core Service via REST APIs for configuration management
+- Backend Service communicates with Agent Service via gRPC for real-time message processing
+- Web Application communicates with Backend Service via REST APIs for configuration management
 
 ### Shared Context
 - All services maintain consistent authentication and organization context
-- Database state is managed centrally through the Core Service
+- Database state is managed centrally through the Backend Service
 - Configuration changes propagate across services through established patterns
 
 ### Event-Driven Operations
