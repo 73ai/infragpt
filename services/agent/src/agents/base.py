@@ -1,4 +1,4 @@
-"""Base agent classes for the InfraGPT Agent System."""
+"""Base agent classes for the Agent System."""
 
 from abc import ABC, abstractmethod
 from enum import Enum

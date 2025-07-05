@@ -1,5 +1,5 @@
 -- Migration: Add Integration System Tables
--- Run this against the infragpt database
+-- Run this against the backend database
 -- This migration adds all tables needed for the integration service
 
 -- Main integrations table

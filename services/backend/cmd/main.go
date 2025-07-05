@@ -134,7 +134,7 @@ func main() {
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if r := recover(); r != nil {
-				slog.Info("infragpt: http server panic", "recover", r)
+				slog.Info("backend: http server panic", "recover", r)
 			}
 		}()
 		if strings.HasPrefix(r.URL.Path, "/identity/") {
@@ -155,13 +155,13 @@ func main() {
 	}
 
 	g.Go(func() error {
-		slog.Info("infragpt: http server starting", "port", c.Port)
+		slog.Info("backend: http server starting", "port", c.Port)
 		err = httpServer.ListenAndServe()
 		if errors.Is(err, http.ErrServerClosed) {
-			slog.Info("autopayd: http server stopped")
+			slog.Info("backend: http server stopped")
 			return nil
 		}
-		slog.Error("autopayd: http server failed", "error", err)
+		slog.Error("backend: http server failed", "error", err)
 		return fmt.Errorf("http server failed: %w", err)
 	})
 
@@ -172,33 +172,33 @@ func main() {
 	}
 
 	g.Go(func() error {
-		slog.Info("infragpt: grpc server starting", "port", c.GrpcPort)
+		slog.Info("backend: grpc server starting", "port", c.GrpcPort)
 		err = grpcServer.Serve(grpcListener)
 		if err != nil {
-			slog.Error("infragpt: grpc server failed", "error", err)
+			slog.Error("backend: grpc server failed", "error", err)
 			return fmt.Errorf("grpc server failed: %w", err)
 		}
 		return nil
 	})
 
 	g.Go(func() error {
-		slog.Info("infragpt: identity service webhook server starting", "port", c.Identity.Clerk.Port)
+		slog.Info("backend: identity service webhook server starting", "port", c.Identity.Clerk.Port)
 		err = identityService.Subscribe(ctx)
 		if err == nil || errors.Is(err, context.Canceled) {
-			slog.Info("infragpt: identity service webhook server stopped")
+			slog.Info("backend: identity service webhook server stopped")
 			return nil
 		}
 		return nil
 	})
 
 	g.Go(func() error {
-		slog.Info("infragpt: integration service connectors starting")
+		slog.Info("backend: integration service connectors starting")
 		err = integrationService.Subscribe(ctx)
 		if err == nil || errors.Is(err, context.Canceled) {
-			slog.Info("infragpt: integration service connectors stopped")
+			slog.Info("backend: integration service connectors stopped")
 			return nil
 		}
-		slog.Error("infragpt: integration service connectors failed", "error", err)
+		slog.Error("backend: integration service connectors failed", "error", err)
 		return fmt.Errorf("integration service connectors failed: %w", err)
 	})
 

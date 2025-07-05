@@ -30,7 +30,7 @@ class ToolCapability(BaseModel):
 
 
 class BaseTool(ABC):
-    """Base class for all tools in the InfraGPT agent system."""
+    """Base class for all tools in the Agent system."""
     
     def __init__(self, name: str, description: str):
         """Initialize the tool.

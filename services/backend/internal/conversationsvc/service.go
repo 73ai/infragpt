@@ -90,7 +90,7 @@ func (s *Service) SendReply(ctx context.Context, command backend.SendReplyComman
 		Sender: domain.SlackUser{
 			ID:       "bot",
 			Username: "bot",
-			Name:     "InfraGPT Bot",
+			Name:     "Backend Bot",
 		},
 		MessageText:  command.Message,
 		IsBotMessage: true,

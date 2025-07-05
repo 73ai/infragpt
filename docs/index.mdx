@@ -64,7 +64,7 @@ InfraGPT is an AI SRE Copilot for the Cloud that provides infrastructure managem
     icon="slack"
     href="/api-reference/introduction"
   >
-    Core service for Slack integration and infrastructure management
+    Backend service for Slack integration and infrastructure management
   </Card>
   <Card
     title="Agent Framework"
@@ -79,7 +79,7 @@ InfraGPT is an AI SRE Copilot for the Cloud that provides infrastructure managem
 
 The services work together in this message flow:
 1. User posts in Slack channel or uses CLI
-2. InfraGPT Core Service receives requests via Socket Mode
-3. Core Service calls Agent Service via gRPC for AI processing
+2. Backend Service receives requests via Socket Mode
+3. Backend Service calls Agent Service via gRPC for AI processing
 4. Agent Service processes with LLM intelligence
 5. Responses flow back through the system to Slack or CLI

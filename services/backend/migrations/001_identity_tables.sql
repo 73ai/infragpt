@@ -1,5 +1,5 @@
 -- Migration: Add Identity Tables for Clerk Integration
--- Run this against the infragpt database
+-- Run this against the backend database
 
 -- Users table (synced from Clerk)
 CREATE TABLE IF NOT EXISTS users (

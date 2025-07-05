@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Development setup script for InfraGPT Python client
+# Development setup script for Backend Python client
 
 set -e
 
-echo "Setting up InfraGPT Python client development environment..."
+echo "Setting up Backend Python client development environment..."
 
 # Create virtual environment if it doesn't exist
 if [ ! -d "venv" ]; then
