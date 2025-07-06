@@ -1,6 +1,6 @@
-# InfraGPT Web Application
+# InfraGPT Console Service
 
-React TypeScript client for AI-powered infrastructure management with Clerk authentication and integration management.
+React TypeScript console service for AI-powered infrastructure management with Clerk authentication and integration management.
 
 ## Quick Start
 

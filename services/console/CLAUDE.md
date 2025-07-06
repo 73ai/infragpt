@@ -1,10 +1,10 @@
-# InfraGPT Web Application
+# InfraGPT Console Service
 
-Modern React TypeScript web application for AI-powered infrastructure management with comprehensive authentication, onboarding, and integration workflows.
+Modern React TypeScript console service for AI-powered infrastructure management with comprehensive authentication, onboarding, and integration workflows.
 
 ## Service Overview
 
-The web application serves as the primary user interface for InfraGPT platform, providing:
+The console service serves as the primary user interface for InfraGPT platform, providing:
 - **User Authentication & Authorization**: Clerk-based OAuth integration with organization management
 - **Organization Onboarding**: Multi-step wizard for new organization setup and metadata collection
 - **Integration Management**: Configuration and management of external service integrations (Slack, GitHub, AWS, GCP, Datadog, PagerDuty)
@@ -183,7 +183,7 @@ npx tsc --noEmit
 - **Security**: Configure CSP headers and secure cookie settings
 
 ### Deployment Process
-1. Build application: `npm run build`
+1. Build console service: `npm run build`
 2. Static files output to `../wwwroot/`
 3. Go backend serves static files and handles API routes
 4. CDN integration for asset delivery (if configured)

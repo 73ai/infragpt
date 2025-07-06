@@ -47,7 +47,7 @@ const data = {
   ],
 }
 
-const AppSidebar = observer(({ ...props }: React.ComponentProps<typeof Sidebar>) => {
+const ConsoleSidebar = observer(({ ...props }: React.ComponentProps<typeof Sidebar>) => {
 
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
@@ -84,4 +84,4 @@ const AppSidebar = observer(({ ...props }: React.ComponentProps<typeof Sidebar>)
   )
 })
 
-export { AppSidebar };
+export { ConsoleSidebar };

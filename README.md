@@ -107,7 +107,7 @@ Main Slack bot and infrastructure management service
   ToolManager --> CustomTools[Custom<br>Tools]
 ```
 
-### 4. Web Application (`/services/app/`)
+### 4. Console Service (`/services/console/`)
 Web client interface for InfraGPT platform
 
 - Modern React with Vite and TypeScript

@@ -14,7 +14,7 @@ InfraGPT is a multi-service platform providing AI-powered infrastructure managem
 
 **Role**: Provides the cognitive layer of the platform, processing user intents and converting them into actionable infrastructure commands and recommendations.
 
-### Web Application
+### Console Service
 **Purpose**: Administrative interface for platform management, configuration, and monitoring of infrastructure operations.
 
 **Role**: Enables users to manage platform settings, view operation history, configure integrations, and access detailed analytics outside of the Slack interface.
@@ -23,17 +23,17 @@ InfraGPT is a multi-service platform providing AI-powered infrastructure managem
 
 The services form a cohesive ecosystem where each component has a specific responsibility:
 
-1. **User Interaction Layer**: Users interact primarily through Slack channels, with the Web Application providing administrative capabilities
+1. **User Interaction Layer**: Users interact primarily through Slack channels, with the Console Service providing administrative capabilities
 2. **Message Processing**: The Backend Service receives all user messages and determines routing and context
 3. **AI Processing**: The Agent Service applies natural language understanding and generates intelligent responses
 4. **Response Delivery**: Processed responses flow back through the Backend Service to users via Slack
-5. **Management Interface**: The Web Application provides oversight and configuration capabilities across all operations
+5. **Management Interface**: The Console Service provides oversight and configuration capabilities across all operations
 
 ## Service Communication Patterns
 
 ### Synchronous Communication
 - Backend Service communicates with Agent Service via gRPC for real-time message processing
-- Web Application communicates with Backend Service via REST APIs for configuration management
+- Console Service communicates with Backend Service via REST APIs for configuration management
 
 ### Shared Context
 - All services maintain consistent authentication and organization context
