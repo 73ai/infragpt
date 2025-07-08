@@ -62,30 +62,9 @@ The service follows clean architecture principles with dependency inversion:
 
 ## Configuration Management
 
-### Required Configuration Structure
-```yaml
-port: 8080
-slack:
-  bot_token: "xoxb-your-bot-token"
-  app_token: "xapp-your-app-token"  
-  signing_secret: "your-signing-secret"
-database:
-  host: "localhost"
-  port: 5432
-  user: "infragpt"
-  password: "your-password"
-  dbname: "infragpt"
-  sslmode: "disable"
-agent_service:
-  grpc_address: "localhost:50051"
-encryption:
-  key_derivation_env: "ENCRYPTION_KEY_BASE"
-```
-
 ### Environment-Specific Configurations
 - Development: `config.yaml` with local PostgreSQL and test Slack workspace
 - Production: Environment variables override config.yaml values
-- Testing: In-memory configurations with testcontainers
 
 ## Database Architecture and Management
 

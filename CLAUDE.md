@@ -8,7 +8,7 @@ The platform follows a services-based architecture with shared modules and a cen
 
 ### Services (`/services/`)
 
-#### InfraGPT Server
+#### Backend Service
 Backend API server providing core platform functionality and integrations with external services.
 
 #### Web Application  

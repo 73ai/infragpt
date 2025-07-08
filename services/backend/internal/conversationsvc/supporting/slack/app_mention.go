@@ -14,7 +14,7 @@ import (
 func (s *Slack) handleAppMention(ctx context.Context, teamID string, event *slackevents.AppMentionEvent, handler func(context.Context, domain.UserCommand) error) error {
 	teamToken, err := s.tokenRepository.GetToken(ctx, teamID)
 	if err != nil {
-		return fmt.Errorf("error getting team token for tead_id:%s err:%w", teamID, err)
+		return fmt.Errorf("error getting team token for team_id:%s err:%w", teamID, err)
 	}
 
 	teamClient := slack.New(teamToken)

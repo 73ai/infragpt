@@ -1,6 +1,6 @@
 # Agent Go Client
 
-Go client library for the InfraGPT Agent gRPC service.
+Go client library for the Backend Agent gRPC service.
 
 ## Usage
 

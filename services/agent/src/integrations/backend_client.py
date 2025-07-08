@@ -1,7 +1,6 @@
 """Backend API client integration for the agent service."""
 
 import logging
-from typing import Optional
 
 from backendapi.client import BackendClient as BaseBackendClient
 from backendapi.exceptions import BackendError, ConnectionError, RequestError

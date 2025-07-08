@@ -3,7 +3,7 @@ name = "backend-agent"
 version = "0.1.0"
 description = "Backend Agent Service - AI-powered infrastructure management agent"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi",
     "uvicorn[standard]",

@@ -78,7 +78,10 @@ func ApiHandlerFunc[X any, Y any](api func(
 		request := new(X)
 		bodyBytes, err := io.ReadAll(r.Body)
 
-		json.Unmarshal(bodyBytes, request)
+		if err := json.Unmarshal(bodyBytes, request); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		res, err := api(ctx, *request)

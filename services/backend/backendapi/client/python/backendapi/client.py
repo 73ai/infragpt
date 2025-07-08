@@ -6,7 +6,6 @@ to communicate with the Go Backend service, hiding all gRPC complexity.
 """
 
 import logging
-from typing import Optional
 
 import grpc
 

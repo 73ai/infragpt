@@ -48,7 +48,7 @@ uv run pytest tests/test_agents.py -v
 │   ├── llm/             # LiteLLM client integration
 │   ├── tools/           # Tool registry framework
 │   ├── models/          # Data models and types
-│   └── integrations/    # InfraGPT API client wrapper
+│   └── integrations/    # Backend API client wrapper
 ├── tests/               # Test suite
 ├── main.py             # Service entry point
 └── Dockerfile          # Container configuration
@@ -85,7 +85,7 @@ agent = agent_registry.get_agent_for_intent(intent)
 1. Slack message → Go service (Socket Mode)
 2. Go service → Python agent (gRPC ProcessMessage)
 3. Agent processes with LLM intelligence
-4. Agent replies via InfraGPT API client
+4. Agent replies via Backend API client
 5. Response appears in Slack thread
 
 ### Service Interface
@@ -137,6 +137,6 @@ agent:
 
 ## Related Components
 
-- Main InfraGPT service: `../infragpt/`
+- Main Backend service: `../backend/`
 - gRPC client: `../infragpt/infragptapi/client/python/`
 - Go domain models: `../infragpt/internal/infragptsvc/domain/agent.go`
