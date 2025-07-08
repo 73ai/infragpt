@@ -1,4 +1,4 @@
-"""Health check endpoints for the InfraGPT Agent Service."""
+"""Health check endpoints for the Backend Agent Service."""
 
 import asyncio
 from datetime import datetime, UTC

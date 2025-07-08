@@ -15,8 +15,8 @@ InfraGPT is an AI SRE Copilot for the Cloud that provides infrastructure managem
 
 The services work together in this message flow:
 1. User posts in Slack channel or uses CLI
-2. InfraGPT Core Service receives requests via Socket Mode
-3. Core Service calls Agent Service via gRPC for AI processing
+2. Backend Service receives requests via Socket Mode
+3. Backend Service calls Agent Service via gRPC for AI processing
 4. Agent Service processes with LLM intelligence
 5. Responses flow back through the system to Slack or CLI
 
@@ -68,9 +68,9 @@ Multi-agent framework with LLM integration
 
 - Conversation management and RCA analysis
 - FastAPI + gRPC dual server architecture
-- Integration with InfraGPT core service
+- Integration with Backend service
 
-### 3. Core Service (`/services/infragpt/`)
+### 3. Backend Service (`/services/backend/`)
 
 Main Slack bot and infrastructure management service
 
@@ -85,9 +85,9 @@ Main Slack bot and infrastructure management service
   graph TD
 
   subgraph Core Services
-    GoInfraGPT[Go InfraGPT<br>Service]
+    GoBackend[Go Backend<br>Service]
     PythonAgent[Python Agent<br>Service]
-    GoInfraGPT <--> |gRPC| PythonAgent
+    GoBackend <--> |gRPC| PythonAgent
   end
 
   PythonAgent --> MainAgent["Main Agent<br>(Orchestrator)"]
@@ -107,7 +107,7 @@ Main Slack bot and infrastructure management service
   ToolManager --> CustomTools[Custom<br>Tools]
 ```
 
-### 4. Web Application (`/services/app/`)
+### 4. Console Service (`/services/console/`)
 Web client interface for InfraGPT platform
 
 - Modern React with Vite and TypeScript

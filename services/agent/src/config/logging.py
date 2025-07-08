@@ -1,4 +1,4 @@
-"""Logging configuration for the InfraGPT Agent Service."""
+"""Logging configuration for the Backend Agent Service."""
 
 import logging
 import sys

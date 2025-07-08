@@ -1,4 +1,4 @@
-"""Agent system package for InfraGPT."""
+"""Agent system package for Backend."""
 
 from .base import BaseAgent, AgentType
 from .main_agent import MainAgent

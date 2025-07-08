@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "backendapi"
+version = "1.0.0"
+description = "Python client for Backend service"
+readme = "README.md"
+requires-python = ">=3.13"
+authors = [
+    {name = "InfraGPT Team"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "grpcio>=1.50.0",
+    "grpcio-tools>=1.50.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["backendapi*"]

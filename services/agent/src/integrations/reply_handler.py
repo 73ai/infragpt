@@ -4,28 +4,28 @@ import json
 import logging
 from typing import Dict, Any, Optional
 
-from .infragpt_client import InfraGPTClient
+from .backend_client import BackendClient
 
 logger = logging.getLogger(__name__)
 
 
 class ReplyHandler:
     """
-    Handles sending agent responses back to Slack through InfraGPT service.
+    Handles sending agent responses back to Slack through Backend service.
     
     Manages the integration between agent responses and Slack messaging,
     including conversation context and error handling.
     """
     
-    def __init__(self, infragpt_host: str = "localhost", infragpt_port: int = 9090):
+    def __init__(self, backend_host: str = "localhost", backend_port: int = 9090):
         """
         Initialize reply handler.
         
         Args:
-            infragpt_host: InfraGPT service host
-            infragpt_port: InfraGPT service gRPC port
+            backend_host: Backend service host
+            backend_port: Backend service gRPC port
         """
-        self.infragpt_client = InfraGPTClient(host=infragpt_host, port=infragpt_port)
+        self.backend_client = BackendClient(host=backend_host, port=backend_port)
         self.logger = logger
     
     async def send_agent_response(
@@ -64,8 +64,8 @@ class ReplyHandler:
                     }
                 )
             
-            # Send the reply through InfraGPT service
-            success = await self.infragpt_client.send_reply(
+            # Send the reply through Backend service
+            success = await self.backend_client.send_reply(
                 conversation_id=conversation_id,
                 message=response_text
             )
@@ -141,5 +141,5 @@ class ReplyHandler:
             return None
     
     def close(self):
-        """Close the InfraGPT client connection."""
-        self.infragpt_client.close()
+        """Close the Backend client connection."""
+        self.backend_client.close()

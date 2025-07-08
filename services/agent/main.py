@@ -1,5 +1,5 @@
 """
-Main entry point for the InfraGPT Agent Service.
+Main entry point for the Backend Agent Service.
 
 This service provides AI-powered infrastructure management capabilities
 through both FastAPI (health checks) and gRPC (agent processing) interfaces.
@@ -29,7 +29,7 @@ async def lifespan(app: FastAPI):
     global grpc_server, logger
     
     # Startup
-    logger.info("Starting InfraGPT Agent Service...")
+    logger.info("Starting Agent Service...")
     
     # Start gRPC server
     settings = Settings()
@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     yield
     
     # Shutdown
-    logger.info("Shutting down InfraGPT Agent Service...")
+    logger.info("Shutting down Agent Service...")
     if grpc_server:
         await grpc_server.stop()
     logger.info("Service shutdown completed")
@@ -58,7 +58,7 @@ def create_app() -> FastAPI:
     
     # Create FastAPI app
     app = FastAPI(
-        title="InfraGPT Agent Service",
+        title="Agent Service",
         description="AI-powered infrastructure management agent",
         version="0.1.0",
         lifespan=lifespan

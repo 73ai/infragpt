@@ -16,7 +16,7 @@ def create_test_app() -> FastAPI:
     setup_logging(settings.log_level)
     
     app = FastAPI(
-        title="InfraGPT Agent Service (Test)",
+        title="Agent Service (Test)",
         description="AI-powered infrastructure management agent",
         version="0.1.0"
     )

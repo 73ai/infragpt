@@ -1,9 +1,9 @@
 [project]
-name = "infragpt-agent"
+name = "backend-agent"
 version = "0.1.0"
-description = "InfraGPT Agent Service - AI-powered infrastructure management agent"
+description = "Backend Agent Service - AI-powered infrastructure management agent"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi",
     "uvicorn[standard]",
@@ -16,7 +16,7 @@ dependencies = [
     "structlog",
     "langchain",
     "litellm",
-    "infragptapi",
+    "backendapi",
 ]
 
 [project.optional-dependencies]
@@ -36,7 +36,7 @@ packages = ["src"]
 
 
 [tool.uv.sources]
-infragptapi = { workspace = true }
+backendapi = { workspace = true }
 
 [dependency-groups]
 dev = [

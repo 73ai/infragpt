@@ -1,4 +1,4 @@
-"""Configuration settings for the InfraGPT Agent Service."""
+"""Configuration settings for the Backend Agent Service."""
 
 from typing import Optional
 from pydantic import Field
@@ -16,13 +16,13 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", description="Logging level")
     
     # External service configuration
-    infragpt_service_host: str = Field(
+    backend_service_host: str = Field(
         default="localhost", 
-        description="InfraGPT main service host"
+        description="Backend main service host"
     )
-    infragpt_service_port: int = Field(
+    backend_service_port: int = Field(
         default=9090, 
-        description="InfraGPT main service gRPC port"
+        description="Backend main service gRPC port"
     )
     
     # LLM configuration
