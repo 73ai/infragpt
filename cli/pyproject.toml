@@ -20,14 +20,14 @@ classifiers = [
 ]
 
 dependencies = [
-    "langchain-core>=0.1.18",
-    "langchain-openai>=0.0.5",
-    "langchain-anthropic>=0.1.1",
-    "rich>=13.7.0",
-    "prompt-toolkit>=3.0.43",
-    "click>=8.1.7",
-    "pyperclip>=1.8.2",
-    "pyyaml>=6.0",
+    "langchain-core>=0.3.68",
+    "langchain-openai>=0.3.27",
+    "langchain-anthropic>=0.3.17",
+    "rich>=14.0.0",
+    "prompt-toolkit>=3.0.51",
+    "click>=8.2.1",
+    "pyperclip>=1.9.0",
+    "pyyaml>=6.0.2",
 ]
 
 [project.urls]
@@ -40,5 +40,5 @@ infragpt = "infragpt.main:cli"
 
 [dependency-groups]
 dev = [
-    "pytest>=7.4.3",
+    "pytest>=8.4.1",
 ]
