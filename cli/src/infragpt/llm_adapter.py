@@ -14,13 +14,13 @@ from typing import Optional, Dict, Any
 from rich.console import Console
 from rich.prompt import Prompt
 
-from cli.config import (
+from infragpt.config import (
     CONFIG_FILE, load_config, save_config
 )
-from cli.history import log_interaction
+from infragpt.history import log_interaction
 
-# Import from shared LLM module
-from llm import (
+# Import from local LLM module
+from infragpt.llm import (
     MODEL_TYPE,
     validate_api_key as llm_validate_api_key,
     get_llm_client,

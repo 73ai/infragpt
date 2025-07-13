@@ -52,13 +52,13 @@ def init_config():
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     
     # Initialize history directory
-    from cli.history import init_history_dir
+    from infragpt.history import init_history_dir
     init_history_dir()
     
     config = {}
     
     # Importing here to avoid circular imports
-    from cli.llm import validate_env_api_keys
+    from infragpt.llm import validate_env_api_keys
     
     # Check for environment variables to populate initial config
     openai_key = os.getenv("OPENAI_API_KEY")

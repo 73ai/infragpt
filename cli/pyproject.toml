@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "infragpt"
@@ -19,22 +19,26 @@ classifiers = [
     "Topic :: System :: Systems Administration",
 ]
 
-dynamic = ["dependencies"]
+dependencies = [
+    "langchain-core>=0.1.18",
+    "langchain-openai>=0.0.5",
+    "langchain-anthropic>=0.1.1",
+    "rich>=13.7.0",
+    "prompt-toolkit>=3.0.43",
+    "click>=8.1.7",
+    "pyperclip>=1.8.2",
+    "pyyaml>=6.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/priyanshujain/infragpt"
 
 [project.scripts]
-infragpt = "cli.cli:cli"
+infragpt = "infragpt.main:cli"
 
-[tool.setuptools.packages.find]
-include = ["cli", "llm"]
 
-[tool.setuptools.dynamic]
-dependencies = { file = "requirements.txt" }
 
-[tool.uv.workspace]
-members = [
-    "services/agent",
-    "services/backend/backendapi/client/python"
+[dependency-groups]
+dev = [
+    "pytest>=7.4.3",
 ]

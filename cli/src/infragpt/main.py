@@ -19,14 +19,15 @@ try:
 except ImportError:
     pass
 
-from cli.config import (
+from infragpt.config import (
     CONFIG_FILE, load_config, init_config, console
 )
-from cli.llm import (
-    MODEL_TYPE, generate_gcloud_command, prompt_credentials, validate_env_api_keys
+from infragpt.llm.models import MODEL_TYPE
+from infragpt.llm_adapter import (
+    generate_gcloud_command, validate_env_api_keys, prompt_credentials
 )
-from cli.prompts import handle_command_result
-from cli.history import history_command
+from infragpt.prompts import handle_command_result
+from infragpt.history import history_command
 
 def interactive_mode(model_type: Optional[MODEL_TYPE] = None, api_key: Optional[str] = None, verbose: bool = False):
     """Run InfraGPT in interactive mode with natural language prompting."""

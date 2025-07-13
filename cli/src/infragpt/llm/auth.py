@@ -8,8 +8,8 @@ from typing import Optional
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 
-from llm.models import MODEL_TYPE
-from llm.errors import AuthenticationError
+from infragpt.llm.models import MODEL_TYPE
+from infragpt.llm.errors import AuthenticationError
 
 
 def validate_api_key(model_type: MODEL_TYPE, api_key: str) -> bool:

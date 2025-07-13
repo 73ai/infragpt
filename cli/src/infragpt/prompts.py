@@ -12,12 +12,13 @@ from rich.panel import Panel
 from rich.prompt import Prompt, Confirm
 from langchain_core.prompts import ChatPromptTemplate
 
-from cli.config import CLIPBOARD_AVAILABLE
-from cli.history import log_interaction
-from cli.llm import MODEL_TYPE, get_parameter_info
+from infragpt.config import CLIPBOARD_AVAILABLE
+from infragpt.history import log_interaction
+from infragpt.llm.models import MODEL_TYPE
+from infragpt.llm_adapter import get_parameter_info
 
-# Import from shared LLM module
-from llm.prompts import get_prompt_template
+# Import from local LLM module
+from infragpt.llm.prompts import get_prompt_template
 
 # Initialize console for rich output
 console = Console()
