@@ -13,10 +13,10 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from llm.models import MODEL_TYPE, MODEL_MAP, DEFAULT_PARAMS
-from llm.errors import AuthenticationError, GenerationError, ValidationError
-from llm.auth import validate_api_key
-from llm.prompts import get_prompt_template
+from infragpt.llm.models import MODEL_TYPE, MODEL_MAP, DEFAULT_PARAMS
+from infragpt.llm.errors import AuthenticationError, GenerationError, ValidationError
+from infragpt.llm.auth import validate_api_key
+from infragpt.llm.prompts import get_prompt_template
 
 
 def get_llm_client(
@@ -195,9 +195,9 @@ def get_parameter_info(
         # Re-raise authentication errors
         raise
     except json.JSONDecodeError as e:
-        from llm.errors import ParsingError
+        from infragpt.llm.errors import ParsingError
         raise ParsingError(f"Failed to parse parameter info: {str(e)}") from e
     except Exception as e:
         # Wrap other errors
-        from llm.errors import ParsingError
+        from infragpt.llm.errors import ParsingError
         raise ParsingError(f"Failed to get parameter info: {str(e)}") from e

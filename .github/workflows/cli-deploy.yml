@@ -18,14 +18,14 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
 
       - name: Configure Git
         run: |
@@ -35,11 +35,11 @@ jobs:
       - name: Bump version
         run: |
           # Make bump_version.py executable
-          chmod +x bump_version.py
+          chmod +x cli/bump_version.py
 
           # Run the bump_version script with patch and commit flags
           # Use echo to automatically confirm the prompt
-          echo "y" | python bump_version.py patch --commit
+          echo "y" | python cli/bump_version.py patch --commit
 
       - name: Push changes
         run: |
