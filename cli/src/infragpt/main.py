@@ -2,101 +2,21 @@
 
 import os
 import sys
-import json
-import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional
 
 import click
-from prompt_toolkit import PromptSession
-from prompt_toolkit.history import FileHistory
-from prompt_toolkit.styles import Style
 from rich.panel import Panel
-from rich.text import Text
-import pathlib
-
-try:
-    import pyperclip
-except ImportError:
-    pass
 
 from infragpt.config import (
     CONFIG_FILE, load_config, init_config, console
 )
 from infragpt.llm.models import MODEL_TYPE
 from infragpt.llm_adapter import (
-    generate_gcloud_command, validate_env_api_keys, prompt_credentials
+    validate_env_api_keys, prompt_credentials
 )
-from infragpt.prompts import handle_command_result
 from infragpt.history import history_command
+from infragpt.agent import run_shell_agent
 
-def interactive_mode(model_type: Optional[MODEL_TYPE] = None, api_key: Optional[str] = None, verbose: bool = False):
-    """Run InfraGPT in interactive mode with natural language prompting."""
-    # Ensure history directory exists
-    history_dir = pathlib.Path.home() / ".infragpt"
-    history_dir.mkdir(exist_ok=True)
-    history_file = history_dir / "history"
-    
-    # Setup prompt toolkit session with history
-    session = PromptSession(history=FileHistory(str(history_file)))
-    
-    # Style for prompt
-    style = Style.from_dict({
-        'prompt': '#00FFFF bold',
-    })
-    
-    # Get actual model to display, either from params or config
-    actual_model = model_type
-    if not actual_model:
-        config = load_config()
-        actual_model = config.get("model")
-    
-    # Welcome message
-    console.print(Panel.fit(
-        Text("InfraGPT - Interactive natural language to gcloud commands", style="bold green"),
-        border_style="blue"
-    ))
-    
-    # If no model configured or empty API key, prompt for credentials now
-    config = load_config()
-    has_model = actual_model is not None
-    has_api_key = api_key is not None and api_key.strip()
-    
-    if not has_model and not has_api_key:
-        # Check config as well for empty API key
-        config_api_key = config.get("api_key", "")
-        if actual_model and (not config_api_key or not config_api_key.strip()):
-            model_type, api_key = prompt_credentials(actual_model)
-        else:
-            model_type, api_key = prompt_credentials(actual_model)
-        actual_model = model_type
-    
-    console.print(f"[yellow]Using model:[/yellow] [bold]{actual_model}[/bold]")
-    console.print("[dim]Press Ctrl+D to exit, Ctrl+C to clear input[/dim]\n")
-    
-    while True:
-        try:
-            # Get user input with prompt toolkit
-            user_input = session.prompt(
-                [('class:prompt', '> ')], 
-                style=style,
-                multiline=False
-            )
-            
-            if not user_input.strip():
-                continue
-                
-            with console.status("[bold green]Generating command...[/bold green]", spinner="dots"):
-                result = generate_gcloud_command(user_input, model_type, verbose)
-            
-            handle_command_result(result, model_type, verbose)
-        except KeyboardInterrupt:
-            # Clear the current line and show a new prompt
-            console.print("\n[yellow]Input cleared. Enter a new prompt:[/yellow]")
-            continue
-        except EOFError:
-            # Exit on Ctrl+D
-            console.print("\n[bold]Exiting InfraGPT.[/bold]")
-            sys.exit(0)
 
 @click.group(invoke_without_command=True)
 @click.pass_context
@@ -106,7 +26,7 @@ def interactive_mode(model_type: Optional[MODEL_TYPE] = None, api_key: Optional[
 @click.option('--api-key', '-k', help='API key for the selected model')
 @click.option('--verbose', '-v', is_flag=True, help='Enable verbose output')
 def cli(ctx, model, api_key, verbose):
-    """InfraGPT - Convert natural language to Google Cloud commands in interactive mode."""
+    """InfraGPT - Interactive shell operations and debugging agent."""
     # If no subcommand is specified, go to interactive mode
     if ctx.invoked_subcommand is None:
         main(model=model, api_key=api_key, verbose=verbose)
@@ -120,7 +40,7 @@ def history_cli(limit, type, export):
     history_command(limit, type, export)
 
 def main(model, api_key, verbose):
-    """InfraGPT - Convert natural language to Google Cloud commands in interactive mode."""
+    """InfraGPT - Interactive shell operations and debugging agent."""
     # Initialize config file if it doesn't exist
     init_config()
     
@@ -155,8 +75,12 @@ def main(model, api_key, verbose):
                 # No credentials anywhere, prompt before continuing
                 model, api_key = prompt_credentials()
     
-    # Enter interactive mode
-    interactive_mode(model, api_key, verbose)
+    # Enter shell agent mode
+    # Get credentials if not provided
+    from infragpt.llm_adapter import get_credentials
+    resolved_model, resolved_api_key = get_credentials(model, api_key, verbose)
+    
+    run_shell_agent(resolved_model, resolved_api_key, verbose)
 
 if __name__ == "__main__":
     cli()

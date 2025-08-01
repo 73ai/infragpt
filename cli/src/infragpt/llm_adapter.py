@@ -8,8 +8,7 @@ the original code while using the new shared LLM module.
 
 import os
 import sys
-import datetime
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from rich.console import Console
 from rich.prompt import Prompt
@@ -17,15 +16,12 @@ from rich.prompt import Prompt
 from infragpt.config import (
     CONFIG_FILE, load_config, save_config
 )
-from infragpt.history import log_interaction
 
 # Import from local LLM module
 from infragpt.llm import (
     MODEL_TYPE,
     validate_api_key as llm_validate_api_key,
     get_llm_client,
-    generate_gcloud_command as llm_generate_command,
-    get_parameter_info as llm_get_parameter_info,
 )
 
 # Initialize console for rich output
@@ -268,65 +264,20 @@ def get_llm(model_type: Optional[MODEL_TYPE] = None, api_key: Optional[str] = No
     )
 
 
-def generate_gcloud_command(prompt: str, model_type: Optional[MODEL_TYPE] = None, api_key: Optional[str] = None, verbose: bool = False) -> str:
-    """Generate a gcloud command based on the user's natural language prompt."""
-    # Get credentials and actual model type
-    resolved_model, resolved_api_key = get_credentials(model_type, api_key, verbose)
-
-    # Get the actual model being used from configuration or parameters
-    actual_model = resolved_model
-
-    if verbose and actual_model:
-        console.print(f"[dim]Generating command using {actual_model}...[/dim]")
-
-    # Use the shared LLM module for command generation
-    start_time = datetime.datetime.now()
-    result = llm_generate_command(
-        prompt=prompt,
-        model_type=resolved_model,
-        api_key=resolved_api_key
-    )
-    end_time = datetime.datetime.now()
-
-    # Log the interaction for future intelligence
-    try:
-        interaction_data = {
-            "model": actual_model,
-            "prompt": prompt,
-            "result": result.strip(),
-            "duration_ms": (end_time - start_time).total_seconds() * 1000,
-            "verbose": verbose
-        }
-        log_interaction("command_generation", interaction_data)
-    except Exception:
-        # Log failures should not interrupt the flow
-        pass
-
-    return result.strip()
+def get_llm_with_tools(model_type: Optional[MODEL_TYPE] = None, api_key: Optional[str] = None, 
+                      verbose: bool = False, tools: Optional[list] = None):
+    """Initialize the appropriate LLM with tool calling support."""
+    # Get the base LLM
+    llm = get_llm(model_type, api_key, verbose)
+    
+    # Bind tools if provided
+    if tools and hasattr(llm, 'bind_tools'):
+        return llm.bind_tools(tools)
+    
+    return llm
 
 
-def get_parameter_info(command: str, model_type: MODEL_TYPE) -> Dict[str, Dict[str, Any]]:
-    """Get information about parameters from the LLM."""
-    import re
 
-    # Extract parameters that need filling in (those in square brackets)
-    bracket_params = re.findall(r'\[([A-Z_]+)\]', command)
 
-    if not bracket_params:
-        return {}
 
-    # Get credentials
-    resolved_model, resolved_api_key = get_credentials(model_type, None, False)
 
-    # Use the shared LLM module for parameter info
-    try:
-        with console.status("[bold blue]Analyzing command parameters...[/bold blue]", spinner="dots"):
-            parameter_info = llm_get_parameter_info(
-                command=command,
-                model_type=resolved_model,
-                api_key=resolved_api_key
-            )
-        return parameter_info
-    except Exception as e:
-        console.print(f"[bold yellow]Warning:[/bold yellow] Could not get parameter info: {e}")
-        return {}

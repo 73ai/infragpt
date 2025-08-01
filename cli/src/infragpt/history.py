@@ -98,6 +98,26 @@ def display_history_entry(i: int, entry: Dict[str, Any]):
         console.print(f"\n[dim]{i+1}. {timestamp_short}[/dim] [bold green]Command Execution[/bold green] [dim](exit: {exit_code}, {duration:.2f}s)[/dim]")
         console.print(f"[bold cyan]Command:[/bold cyan] {command}")
     
+    elif entry_type == 'agent_conversation':
+        data = entry.get('data', {})
+        model = data.get('model', 'unknown')
+        user_input = data.get('user_input', '')
+        assistant_response = data.get('assistant_response', '')
+        tool_calls = data.get('tool_calls', [])
+        
+        console.print(f"\n[dim]{i+1}. {timestamp_short}[/dim] [bold purple]Agent Conversation[/bold purple] [dim]({model})[/dim]")
+        console.print(f"[bold cyan]User:[/bold cyan] {user_input}")
+        
+        # Truncate long responses for display
+        if len(assistant_response) > 200:
+            response_preview = assistant_response[:200] + "..."
+        else:
+            response_preview = assistant_response
+        console.print(f"[bold green]Assistant:[/bold green] {response_preview}")
+        
+        if tool_calls:
+            console.print(f"[bold yellow]Tool Calls:[/bold yellow] {len(tool_calls)} executed")
+    
     else:
         console.print(f"\n[dim]{i+1}. {timestamp_short}[/dim] [bold]{entry_type}[/bold]")
         console.print(json.dumps(entry.get('data', {}), indent=2))

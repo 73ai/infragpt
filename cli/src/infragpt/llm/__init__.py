@@ -12,8 +12,6 @@ __version__ = "0.1.0"
 # Public exports from client.py
 from infragpt.llm.client import (
     get_llm_client,
-    generate_gcloud_command,
-    get_parameter_info,
 )
 
 # Public exports from auth.py
