@@ -1,33 +1,45 @@
-#!/usr/bin/env python3
 """
-Type definitions and model-related constants for LLM interactions.
+Data models for unified LLM interface.
 """
 
-from typing import Literal, Dict, Any
+from dataclasses import dataclass, field
+from typing import Dict, Any, Optional, List, Union
+from datetime import datetime
+import uuid
 
-# Model type definitions
-MODEL_TYPE = Literal["gpt4o", "claude"]
 
-# Provider-specific model identifiers
-OPENAI_MODEL = Literal["o4-mini"]
-ANTHROPIC_MODEL = Literal["claude-sonnet-4-20250514"]
+@dataclass
+class ToolCall:
+    """Standardized tool call representation."""
+    id: str
+    name: str
+    arguments: Dict[str, Any]
 
-# Mapping from MODEL_TYPE to actual model identifier
-MODEL_MAP: Dict[MODEL_TYPE, str] = {
-    "gpt4o": "o4-mini",
-    "claude": "claude-sonnet-4-20250514"
-}
 
-# Default parameters for each model
-DEFAULT_PARAMS: Dict[MODEL_TYPE, Dict[str, Any]] = {
-    "gpt4o": {
-        "temperature": 0.0,
-        "max_tokens": None,  # Use model default
-        "top_p": 1.0,
-    },
-    "claude": {
-        "temperature": 0.0,
-        "max_tokens": 4096,  # Claude requires max_tokens to be specified
-        "top_p": 1.0,
-    }
-}
+@dataclass
+class StreamChunk:
+    """Standardized streaming chunk."""
+    content: Optional[str] = None
+    tool_calls: Optional[List[ToolCall]] = None
+    finish_reason: Optional[str] = None
+
+
+@dataclass
+class Message:
+    """Provider-agnostic message format."""
+    role: str  # 'user', 'assistant', 'system', 'tool'
+    content: Union[str, List[Dict[str, Any]]]
+    timestamp: datetime = field(default_factory=datetime.now)
+    
+    # Tool calling support
+    tool_calls: Optional[List[ToolCall]] = None
+    tool_call_id: Optional[str] = None
+    
+    # Provider-native storage for efficiency
+    _provider_native: Dict[str, Any] = field(default_factory=dict)
+    
+    # Metadata
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    # Message ID for referencing
+    message_id: str = field(default_factory=lambda: str(uuid.uuid4()))

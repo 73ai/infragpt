@@ -111,11 +111,7 @@ class CommandExecutor:
                 console.print("\n[bold yellow]Command cancelled by user[/bold yellow]")
                 return -1, output, True
             
-            # Display exit code
-            if exit_code == 0:
-                console.print(f"\n[bold green]Command completed successfully (exit code: {exit_code})[/bold green]")
-            else:
-                console.print(f"\n[bold red]Command failed (exit code: {exit_code})[/bold red]")
+            # Don't display exit code here - let the caller handle it
                 
             return exit_code, output, False
             
@@ -141,6 +137,7 @@ class CommandExecutor:
                             if data:
                                 output_lines.append(data)
                                 console.print(data, end='')
+                                console.file.flush()  # Force flush for real-time output
                     except (OSError, ValueError):
                         pass
                     break
@@ -153,6 +150,7 @@ class CommandExecutor:
                         if data:
                             output_lines.append(data)
                             console.print(data, end='')
+                            console.file.flush()  # Force flush for real-time output
                     
                     # Check if cancelled
                     if self.cancelled:
@@ -163,6 +161,7 @@ class CommandExecutor:
                     break
                 except KeyboardInterrupt:
                     # Handle Ctrl+C gracefully
+                    self.cancelled = True
                     self._terminate_command()
                     break
                     
@@ -234,23 +233,6 @@ class CommandExecutor:
         return self.env.copy()
 
 
-def execute_shell_command(command: str, timeout: int = 60, 
-                         executor: Optional[CommandExecutor] = None) -> Tuple[int, str, bool]:
-    """
-    Execute a shell command with the given executor or create a new one.
-    
-    Args:
-        command: Shell command to execute
-        timeout: Command timeout in seconds
-        executor: Existing CommandExecutor instance to reuse environment
-        
-    Returns:
-        Tuple of (exit_code, output, was_cancelled)
-    """
-    if executor is None:
-        executor = CommandExecutor(timeout=timeout)
-    
-    return executor.execute_command(command)
 
 
 def parse_environment_changes(output: str) -> Dict[str, str]:
