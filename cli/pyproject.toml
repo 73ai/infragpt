@@ -20,14 +20,14 @@ classifiers = [
 ]
 
 dependencies = [
-    "langchain-core>=0.3.68",
-    "langchain-openai>=0.3.27",
-    "langchain-anthropic>=0.3.17",
     "rich>=14.0.0",
     "prompt-toolkit>=3.0.51",
     "click>=8.2.1",
     "pyperclip>=1.9.0",
     "pyyaml>=6.0.2",
+    "langchain-anthropic>=0.3.18",
+    "langchain-openai>=0.3.28",
+    "langchain-core>=0.3.72",
 ]
 
 [project.urls]

@@ -74,6 +74,16 @@ class ConversationContext:
                 'content': self.system_message.content
             })
         
+        # Collect valid tool call IDs from all assistant messages
+        valid_tool_ids = set()
+        
+        # First pass: collect all valid tool call IDs
+        for msg in self.messages:
+            if msg.tool_calls and msg.role == 'assistant':
+                for tc in msg.tool_calls:
+                    if isinstance(tc, dict) and tc.get('name') and tc.get('id'):
+                        valid_tool_ids.add(str(tc.get('id')))
+        
         # Add conversation messages
         for msg in self.messages:
             message_dict = {
@@ -81,16 +91,35 @@ class ConversationContext:
                 'content': msg.content
             }
             
-            # Add tool calls if present (skip for Claude as it uses content format)
+            # Add tool calls if present - ensure proper format and filter empty ones
             if msg.tool_calls and msg.role == 'assistant':
-                # For Claude, tool calls are part of the content structure
-                # Skip adding tool_calls to the message dict for now
-                pass
+                # Filter and format valid tool calls only
+                formatted_tool_calls = []
+                for tc in msg.tool_calls:
+                    if isinstance(tc, dict):
+                        # Only include tool calls with valid name and ID
+                        if tc.get('name') and tc.get('id'):
+                            formatted_tc = tc.copy()
+                            formatted_tc['id'] = str(tc.get('id'))  # Ensure ID is string
+                            formatted_tool_calls.append(formatted_tc)
+                    else:
+                        # Handle non-dict tool calls (shouldn't happen but just in case)
+                        if hasattr(tc, 'name') and hasattr(tc, 'id') and tc.name and tc.id:
+                            formatted_tool_calls.append(tc)
+                
+                # Only add tool_calls if we have valid ones
+                if formatted_tool_calls:
+                    message_dict['tool_calls'] = formatted_tool_calls
             
-            # Add tool call ID if this is a tool result
+            # Add tool call ID if this is a tool result - but only if the ID is valid
             if msg.tool_call_id and msg.role == 'tool':
-                message_dict['tool_call_id'] = msg.tool_call_id
-                message_dict['name'] = 'execute_shell_command'  # Add tool name for Claude
+                # Only include tool results for tool calls that exist in assistant messages
+                if str(msg.tool_call_id) in valid_tool_ids:
+                    message_dict['tool_call_id'] = msg.tool_call_id
+                    message_dict['name'] = 'execute_shell_command'  # Add tool name for Claude
+                else:
+                    # Skip this tool result message as its corresponding tool call was filtered out
+                    continue
             
             context.append(message_dict)
         
@@ -186,6 +215,16 @@ class ModernShellAgent:
                 # Get context messages
                 messages = self.context.get_context_messages()
                 
+                # Debug: Show message structure if verbose
+                if self.verbose:
+                    console.print(f"[dim]Context has {len(messages)} messages[/dim]")
+                    for i, msg in enumerate(messages):
+                        role = msg.get('role', 'unknown')
+                        has_tools = 'tool_calls' in msg
+                        has_tool_id = 'tool_call_id' in msg
+                        content_len = len(str(msg.get('content', '')))
+                        console.print(f"[dim]  {i}: {role} (content: {content_len} chars, tools: {has_tools}, tool_id: {has_tool_id})[/dim]")
+                
                 # Show thinking and stream response
                 console.print("\n[dim]Thinking...[/dim]")
                 
@@ -256,25 +295,33 @@ class ModernShellAgent:
                                 if self.verbose:
                                     console.print(f"[dim]Failed to parse tool JSON: {json_str}[/dim]")
                         
-                        tool_calls.append({
-                            'id': tool_data['id'],
-                            'name': tool_data['name'],
-                            'args': tool_data['args']
-                        })
+                        # Only add valid tool calls
+                        if tool_data['name'] and tool_data['id']:
+                            tool_calls.append({
+                                'id': str(tool_data['id']),  # Ensure string ID
+                                'name': tool_data['name'],
+                                'args': tool_data['args']
+                            })
                 
                 # Add newline after streaming
                 if response_content:
                     console.print()
                 
                 # Debug tool calls
-                if self.verbose and tool_calls:
-                    console.print(f"[dim]Found {len(tool_calls)} tool calls[/dim]")
-                    for tc in tool_calls:
-                        console.print(f"[dim]Tool call: {tc}[/dim]")
+                if self.verbose:
+                    if tool_calls:
+                        console.print(f"[dim]Found {len(tool_calls)} total tool calls[/dim]")
+                        for i, tc in enumerate(tool_calls):
+                            valid = tc.get('name') and tc.get('id')
+                            status = "valid" if valid else "invalid"
+                            console.print(f"[dim]  Tool call {i} ({status}): {tc}[/dim]")
             
+                # Filter out empty tool calls before processing
+                valid_tool_calls = [tc for tc in tool_calls if tc.get('name') and tc.get('id')]
+                
                 # Handle tool calls if present
-                if tool_calls:
-                    self._handle_tool_calls(tool_calls, response_content)
+                if valid_tool_calls:
+                    self._handle_tool_calls(valid_tool_calls, response_content)
                     # Continue the loop to process LLM's response to tool results
                     if self.should_exit:
                         break
@@ -295,10 +342,13 @@ class ModernShellAgent:
     def _handle_tool_calls(self, tool_calls: List[Dict], response_content: str):
         """Handle tool calls with user confirmation using modern patterns."""
         try:
-            # Add assistant message with tool calls
-            self.context.add_message('assistant', response_content, tool_calls=tool_calls)
+            # Filter tool calls once more to ensure consistency
+            valid_tool_calls = [tc for tc in tool_calls if tc.get('name') and tc.get('id')]
             
-            for tool_call in tool_calls:
+            # Add assistant message with only valid tool calls
+            self.context.add_message('assistant', response_content, tool_calls=valid_tool_calls)
+            
+            for tool_call in valid_tool_calls:
                 if self.should_exit:
                     break
                 
