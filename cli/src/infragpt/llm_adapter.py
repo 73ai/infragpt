@@ -2,6 +2,7 @@
 New LLM adapter using direct SDKs instead of LangChain.
 """
 
+import json
 from typing import Iterator, List, Dict, Any, Optional
 from rich.console import Console
 
@@ -169,14 +170,14 @@ class LLMAdapter:
             # OpenAI format: assistant message with tool_calls, then tool messages
             tool_call_message = {
                 "role": "assistant",
-                "content": "I'll execute the requested commands.",
+                "content": None,  # OpenAI allows null content when using tools
                 "tool_calls": [
                     {
                         "id": tc.id,
                         "type": "function",
                         "function": {
                             "name": tc.name,
-                            "arguments": tc.arguments if isinstance(tc.arguments, str) else str(tc.arguments)
+                            "arguments": tc.arguments if isinstance(tc.arguments, str) else json.dumps(tc.arguments)
                         }
                     }
                     for tc in tool_calls

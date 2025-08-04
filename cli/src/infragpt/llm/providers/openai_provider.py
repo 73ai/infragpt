@@ -29,11 +29,19 @@ class OpenAIProvider(BaseLLMProvider):
     def validate_api_key(self) -> bool:
         """Validate API key with a simple test call."""
         try:
-            response = self._client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": "hi"}],
-                max_tokens=1
-            )
+            # Use appropriate parameter based on model
+            params = {
+                "model": self.model,
+                "messages": [{"role": "user", "content": "hi"}]
+            }
+            
+            # Newer models like o4-mini use max_completion_tokens
+            if self.model.startswith("o4") or self.model.startswith("o1"):
+                params["max_completion_tokens"] = 10
+            else:
+                params["max_tokens"] = 10
+                
+            response = self._client.chat.completions.create(**params)
             return True
         except Exception as e:
             raise self._map_error(e)
@@ -47,8 +55,10 @@ class OpenAIProvider(BaseLLMProvider):
             # Stream response
             response = self._client.chat.completions.create(**request_params)
             
-            # Buffer for tool calls
+            # Buffer for tool calls - persistent across chunks
             tool_call_buffer = {}
+            accumulated_tool_calls = []
+            last_call_id = None  # Track the last call ID for continuations
             
             for chunk in response:
                 if chunk.choices and len(chunk.choices) > 0:
@@ -62,16 +72,34 @@ class OpenAIProvider(BaseLLMProvider):
                     # Handle tool calls
                     tool_calls = None
                     if choice.delta.tool_calls:
-                        tool_calls = self._process_tool_calls(choice.delta.tool_calls, tool_call_buffer)
+                        # Update last_call_id if we see a new ID
+                        for tc in choice.delta.tool_calls:
+                            if tc.id:
+                                last_call_id = tc.id
+                                
+                        tool_calls = self._process_tool_calls(choice.delta.tool_calls, tool_call_buffer, last_call_id)
+                        if tool_calls:
+                            accumulated_tool_calls.extend(tool_calls)
                     
                     # Handle finish reason
                     finish_reason = choice.finish_reason
                     
-                    yield StreamChunk(
-                        content=content,
-                        tool_calls=tool_calls,
-                        finish_reason=finish_reason
-                    )
+                    # Yield content chunks without tool calls
+                    if content or (finish_reason and finish_reason != "tool_calls"):
+                        yield StreamChunk(
+                            content=content,
+                            tool_calls=None,  # Don't yield tool calls during streaming
+                            finish_reason=finish_reason if finish_reason != "tool_calls" else None
+                        )
+                    
+                    # Only emit tool calls once when we get the finish reason
+                    if finish_reason == "tool_calls" and accumulated_tool_calls:
+                        yield StreamChunk(
+                            content=None,
+                            tool_calls=accumulated_tool_calls,
+                            finish_reason=finish_reason
+                        )
+                        accumulated_tool_calls = []  # Reset after emitting
                     
         except Exception as e:
             raise self._map_error(e)
@@ -82,11 +110,21 @@ class OpenAIProvider(BaseLLMProvider):
             "model": self.model,
             "messages": messages,
             "stream": True,
-            "temperature": kwargs.get("temperature", 0.0),
         }
         
+        # Handle temperature - o4 models only support default temperature of 1.0
+        if self.model.startswith("o4") or self.model.startswith("o1"):
+            # Don't set temperature for o4/o1 models (uses default 1.0)
+            pass
+        else:
+            request["temperature"] = kwargs.get("temperature", 0.0)
+        
         if kwargs.get("max_tokens"):
-            request["max_tokens"] = kwargs["max_tokens"]
+            # Use appropriate parameter based on model
+            if self.model.startswith("o4") or self.model.startswith("o1"):
+                request["max_completion_tokens"] = kwargs["max_tokens"]
+            else:
+                request["max_tokens"] = kwargs["max_tokens"]
         
         if tools:
             request["tools"] = self._convert_tools(tools)
@@ -132,13 +170,16 @@ class OpenAIProvider(BaseLLMProvider):
         
         return openai_tools
     
-    def _process_tool_calls(self, delta_tool_calls, buffer) -> Optional[List[ToolCall]]:
+    def _process_tool_calls(self, delta_tool_calls, buffer, last_known_id=None) -> Optional[List[ToolCall]]:
         """Process streaming tool calls."""
         completed_tools = []
+        current_call_id = None
         
-        for delta_call in delta_tool_calls:
+        for i, delta_call in enumerate(delta_tool_calls):
+            # Get call ID - if None, use the last known call ID (continuation of previous)
             call_id = delta_call.id
             if call_id:
+                current_call_id = call_id
                 if call_id not in buffer:
                     buffer[call_id] = {
                         "id": call_id,
@@ -146,31 +187,35 @@ class OpenAIProvider(BaseLLMProvider):
                         "arguments": "",
                         "complete": False
                     }
+            else:
+                # No ID in this delta - use last known ID from parameter or current
+                call_id = last_known_id if last_known_id else current_call_id
+                if not call_id:
+                    continue
                 
-                if delta_call.function:
-                    if delta_call.function.name:
-                        buffer[call_id]["name"] = delta_call.function.name
-                    if delta_call.function.arguments:
-                        buffer[call_id]["arguments"] += delta_call.function.arguments
-                
-                # Check if this tool call is complete (no more deltas expected)
-                tool_data = buffer[call_id]
-                if (not buffer[call_id]["complete"] and 
-                    tool_data["name"] and 
-                    tool_data["arguments"] and
-                    not (delta_call.function and delta_call.function.arguments)):
-                    
-                    # Mark as complete and try to parse
+            if delta_call.function:
+                if delta_call.function.name:
+                    buffer[call_id]["name"] = delta_call.function.name
+                if delta_call.function.arguments:
+                    buffer[call_id]["arguments"] += delta_call.function.arguments
+            
+            # Check if this tool call is complete
+            # For o4 models, we need to check if the arguments form valid JSON
+            tool_data = buffer[call_id]
+            if not buffer[call_id]["complete"] and tool_data["name"] and tool_data["arguments"]:
+                # Try to parse the arguments to see if they're complete JSON
+                try:
+                    arguments = json.loads(tool_data["arguments"])
+                    # If parsing succeeds, the tool call is complete
                     buffer[call_id]["complete"] = True
-                    try:
-                        arguments = json.loads(tool_data["arguments"]) if tool_data["arguments"].strip() else {}
-                        completed_tools.append(ToolCall(
-                            id=tool_data["id"],
-                            name=tool_data["name"],
-                            arguments=arguments
-                        ))
-                    except json.JSONDecodeError as e:
-                        print(f"Warning: Failed to parse JSON for {tool_data['name']}: {tool_data['arguments']} - Error: {e}")
+                    completed_tools.append(ToolCall(
+                        id=tool_data["id"],
+                        name=tool_data["name"],
+                        arguments=arguments
+                    ))
+                except json.JSONDecodeError:
+                    # Not complete yet, keep accumulating
+                    pass
         
         return completed_tools if completed_tools else None
     
