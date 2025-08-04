@@ -37,8 +37,8 @@ class BaseLLMProvider(ABC):
         pass
     
     @abstractmethod
-    def _convert_tools(self, tools: List[Dict]) -> List[Dict]:
-        """Convert unified tool format to provider-specific format."""
+    def _convert_tools(self, tools: List['Tool']) -> List[Dict]:
+        """Convert Tool objects to provider-specific format."""
         pass
     
     @abstractmethod

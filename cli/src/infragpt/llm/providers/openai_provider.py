@@ -72,20 +72,6 @@ class OpenAIProvider(BaseLLMProvider):
                         tool_calls=tool_calls,
                         finish_reason=finish_reason
                     )
-            
-            # Yield final tool calls if any
-            if tool_call_buffer:
-                final_tool_calls = [
-                    ToolCall(
-                        id=tc["id"],
-                        name=tc["name"],
-                        arguments=json.loads(tc["arguments"]) if tc["arguments"] else {}
-                    )
-                    for tc in tool_call_buffer.values()
-                    if tc.get("name") and tc.get("arguments")
-                ]
-                if final_tool_calls:
-                    yield StreamChunk(tool_calls=final_tool_calls, finish_reason="tool_calls")
                     
         except Exception as e:
             raise self._map_error(e)
@@ -113,27 +99,43 @@ class OpenAIProvider(BaseLLMProvider):
         # OpenAI format is already our unified format
         return messages
     
-    def _convert_tools(self, tools: List[Dict]) -> List[Dict]:
-        """Convert unified tool format to OpenAI format."""
+    def _convert_tools(self, tools: List['Tool']) -> List[Dict]:
+        """Convert Tool objects to OpenAI format."""
+        from ..models import Tool
+        
         openai_tools = []
         for tool in tools:
-            if "function" in tool:
-                # Already in OpenAI format
-                openai_tools.append(tool)
-            else:
-                # Convert from unified format
-                openai_tools.append({
-                    "type": "function",
-                    "function": {
-                        "name": tool["name"],
-                        "description": tool.get("description", ""),
-                        "parameters": tool.get("input_schema", tool.get("parameters", {}))
+            # Convert InputSchema to dict format (same as Anthropic but wrapped differently)
+            parameters_dict = {
+                "type": tool.input_schema.type,
+                "properties": {
+                    name: {
+                        "type": param.type,
+                        "description": param.description,
+                        **({"enum": param.enum} if param.enum else {}),
+                        **({"default": param.default} if param.default is not None else {})
                     }
-                })
+                    for name, param in tool.input_schema.properties.items()
+                },
+                "required": tool.input_schema.required,
+                "additionalProperties": tool.input_schema.additionalProperties
+            }
+            
+            openai_tools.append({
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": parameters_dict
+                }
+            })
+        
         return openai_tools
     
     def _process_tool_calls(self, delta_tool_calls, buffer) -> Optional[List[ToolCall]]:
         """Process streaming tool calls."""
+        completed_tools = []
+        
         for delta_call in delta_tool_calls:
             call_id = delta_call.id
             if call_id:
@@ -141,7 +143,8 @@ class OpenAIProvider(BaseLLMProvider):
                     buffer[call_id] = {
                         "id": call_id,
                         "name": "",
-                        "arguments": ""
+                        "arguments": "",
+                        "complete": False
                     }
                 
                 if delta_call.function:
@@ -149,8 +152,27 @@ class OpenAIProvider(BaseLLMProvider):
                         buffer[call_id]["name"] = delta_call.function.name
                     if delta_call.function.arguments:
                         buffer[call_id]["arguments"] += delta_call.function.arguments
+                
+                # Check if this tool call is complete (no more deltas expected)
+                tool_data = buffer[call_id]
+                if (not buffer[call_id]["complete"] and 
+                    tool_data["name"] and 
+                    tool_data["arguments"] and
+                    not (delta_call.function and delta_call.function.arguments)):
+                    
+                    # Mark as complete and try to parse
+                    buffer[call_id]["complete"] = True
+                    try:
+                        arguments = json.loads(tool_data["arguments"]) if tool_data["arguments"].strip() else {}
+                        completed_tools.append(ToolCall(
+                            id=tool_data["id"],
+                            name=tool_data["name"],
+                            arguments=arguments
+                        ))
+                    except json.JSONDecodeError as e:
+                        print(f"Warning: Failed to parse JSON for {tool_data['name']}: {tool_data['arguments']} - Error: {e}")
         
-        return None  # Don't yield partial tool calls during streaming
+        return completed_tools if completed_tools else None
     
     def _normalize_chunk(self, raw_chunk) -> StreamChunk:
         """Convert OpenAI chunk to unified format."""

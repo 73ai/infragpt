@@ -8,6 +8,7 @@ from typing import Callable, Dict, Any, Optional, List
 from functools import wraps
 from rich.console import Console
 from .shell import CommandExecutor
+from .llm.models import Tool, InputSchema, Parameter
 
 
 class ToolExecutionCancelled(Exception):
@@ -31,16 +32,14 @@ def tool(name: Optional[str] = None, description: Optional[str] = None):
         tool_name = name or func.__name__
         tool_description = description or func.__doc__ or f"Execute {tool_name}"
         
-        # Build parameters schema from function signature
-        parameters = {
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
+        # Build parameters from function signature
+        properties = {}
+        required = []
         
         for param_name, param in sig.parameters.items():
             param_type = "string"  # Default type
             param_description = f"Parameter {param_name}"
+            param_default = None if param.default == inspect.Parameter.empty else param.default
             
             # Try to infer type from annotation
             if param.annotation != inspect.Parameter.empty:
@@ -52,31 +51,48 @@ def tool(name: Optional[str] = None, description: Optional[str] = None):
                     param_type = "number"
                 elif param.annotation == bool:
                     param_type = "boolean"
+                
+                # Check if it's Optional (has default None)
+                if hasattr(param.annotation, '__args__') and type(None) in param.annotation.__args__:
+                    # It's Optional, extract the actual type
+                    actual_type = next(t for t in param.annotation.__args__ if t != type(None))
+                    if actual_type == str:
+                        param_type = "string"
+                    elif actual_type == int:
+                        param_type = "integer"
+                    elif actual_type == float:
+                        param_type = "number"
+                    elif actual_type == bool:
+                        param_type = "boolean"
+                    param_description = f"Optional parameter {param_name}"
             
-            parameters["properties"][param_name] = {
-                "type": param_type,
-                "description": param_description
-            }
+            # Create Parameter object
+            properties[param_name] = Parameter(
+                type=param_type,
+                description=param_description,
+                default=param_default
+            )
             
             # Mark as required if no default value
             if param.default == inspect.Parameter.empty:
-                parameters["required"].append(param_name)
+                required.append(param_name)
         
-        # Store tool metadata on function
-        func._tool_schema = {
-            "name": tool_name,
-            "description": tool_description,
-            "input_schema": parameters  # Anthropic format
-        }
+        # Create InputSchema
+        input_schema = InputSchema(
+            type="object",
+            properties=properties,
+            required=required,
+            additionalProperties=False
+        )
         
-        func._tool_schema_openai = {
-            "type": "function",
-            "function": {
-                "name": tool_name,
-                "description": tool_description,
-                "parameters": parameters  # OpenAI format
-            }
-        }
+        # Create Tool object and store on function
+        tool_obj = Tool(
+            name=tool_name,
+            description=tool_description,
+            input_schema=input_schema
+        )
+        
+        func._tool = tool_obj
         
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -149,24 +165,23 @@ def execute_shell_command(command: str, description: Optional[str] = None) -> st
         return error_msg
 
 
-def get_available_tools() -> List[Dict[str, Any]]:
-    """Get list of available tools in unified format."""
+def get_available_tools() -> List[Tool]:
+    """Get list of available Tool objects."""
     tools = []
     
     # Add the shell command tool
-    tools.append(execute_shell_command._tool_schema)
+    tools.append(execute_shell_command._tool)
     
     return tools
 
 
-def get_available_tools_openai() -> List[Dict[str, Any]]:
-    """Get list of available tools in OpenAI format."""
-    tools = []
-    
-    # Add the shell command tool
-    tools.append(execute_shell_command._tool_schema_openai)
-    
-    return tools
+def get_tool_by_name(tool_name: str) -> Optional[Tool]:
+    """Get a tool definition by name."""
+    tools = get_available_tools()
+    for tool in tools:
+        if tool.name == tool_name:
+            return tool
+    return None
 
 
 def execute_tool_call(tool_name: str, arguments: Dict[str, Any]) -> str:

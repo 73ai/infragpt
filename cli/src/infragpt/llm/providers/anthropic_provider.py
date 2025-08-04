@@ -91,17 +91,13 @@ class AnthropicProvider(BaseLLMProvider):
                             arguments = json.loads(json_str) if json_str else {}
                             # print(f"DEBUG: Parsed arguments for {tool_block['name']}: {arguments}")
                             
-                            # Validate required arguments
-                            if tool_block["name"] == "execute_shell_command" and "command" not in arguments:
-                                print(f"Warning: Tool call {tool_block['name']} missing required 'command' argument")
-                            else:
-                                # Yield valid tool call immediately
-                                tool_call = ToolCall(
-                                    id=tool_block["id"],
-                                    name=tool_block["name"],
-                                    arguments=arguments
-                                )
-                                yield StreamChunk(tool_calls=[tool_call])
+                            # Yield valid tool call immediately
+                            tool_call = ToolCall(
+                                id=tool_block["id"],
+                                name=tool_block["name"],
+                                arguments=arguments
+                            )
+                            yield StreamChunk(tool_calls=[tool_call])
                                 
                         except json.JSONDecodeError as e:
                             print(f"Warning: Failed to parse JSON for {tool_block['name']}: {json_str} - Error: {e}")
@@ -163,28 +159,34 @@ class AnthropicProvider(BaseLLMProvider):
             "system": system_message
         }
     
-    def _convert_tools(self, tools: List[Dict]) -> List[Dict]:
-        """Convert unified tool format to Anthropic format."""
+    def _convert_tools(self, tools: List['Tool']) -> List[Dict]:
+        """Convert Tool objects to Anthropic format."""
+        from ..models import Tool
+        
         anthropic_tools = []
         for tool in tools:
-            if "input_schema" in tool:
-                # Already in Anthropic format
-                anthropic_tools.append(tool)
-            elif "function" in tool:
-                # Convert from OpenAI format
-                func = tool["function"]
-                anthropic_tools.append({
-                    "name": func["name"],
-                    "description": func.get("description", ""),
-                    "input_schema": func.get("parameters", {})
-                })
-            else:
-                # Convert from unified format
-                anthropic_tools.append({
-                    "name": tool["name"],
-                    "description": tool.get("description", ""),
-                    "input_schema": tool.get("input_schema", tool.get("parameters", {}))
-                })
+            # Convert InputSchema to dict format
+            input_schema_dict = {
+                "type": tool.input_schema.type,
+                "properties": {
+                    name: {
+                        "type": param.type,
+                        "description": param.description,
+                        **({"enum": param.enum} if param.enum else {}),
+                        **({"default": param.default} if param.default is not None else {})
+                    }
+                    for name, param in tool.input_schema.properties.items()
+                },
+                "required": tool.input_schema.required,
+                "additionalProperties": tool.input_schema.additionalProperties
+            }
+            
+            anthropic_tools.append({
+                "name": tool.name,
+                "description": tool.description,
+                "input_schema": input_schema_dict
+            })
+        
         return anthropic_tools
     
     def _normalize_chunk(self, raw_chunk) -> StreamChunk:

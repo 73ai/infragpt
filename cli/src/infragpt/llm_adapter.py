@@ -7,7 +7,7 @@ from rich.console import Console
 
 from .llm import LLMRouter, StreamChunk, ToolCall
 from .llm.exceptions import AuthenticationError, ValidationError, LLMError
-from .tools import get_available_tools, get_available_tools_openai, execute_tool_call, ToolExecutionCancelled
+from .tools import get_available_tools, execute_tool_call, ToolExecutionCancelled
 
 
 console = Console()
@@ -54,13 +54,8 @@ class LLMAdapter:
             StreamChunk objects with content and/or tool calls
         """
         try:
-            # Get tools based on provider
-            provider_name, _ = LLMRouter.parse_model_string(self.model_string)
-            
-            if provider_name == "openai":
-                tools = get_available_tools_openai()
-            else:
-                tools = get_available_tools()
+            # Get tools (same for all providers now)
+            tools = get_available_tools()
             
             # Stream response
             tool_calls_buffer = []
@@ -203,11 +198,6 @@ class LLMAdapter:
             console.print(f"[dim]Continuing conversation after tool execution...[/dim]")
             
         try:
-            if provider_name == "openai":
-                tools = get_available_tools_openai()
-            else:
-                tools = get_available_tools()
-            
             # Use recursive streaming to handle multiple tool calls in sequence
             yield from self.stream_with_tools(updated_messages)
                     
