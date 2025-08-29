@@ -79,6 +79,28 @@ func (s *Slack) handleChannelMessage(ctx context.Context, teamID string, event *
 	// Extract text without the bot mention
 	text := strings.TrimSpace(strings.Replace(event.Text, fmt.Sprintf("<@%s>", botUserID), "", -1))
 
+	// Include attachment information if present
+	if len(event.Attachments) > 0 {
+		for _, attachment := range event.Attachments {
+			if attachment.Title != "" || attachment.Text != "" {
+				attachmentText := ""
+				if attachment.Title != "" {
+					attachmentText += attachment.Title
+				}
+				if attachment.Text != "" {
+					if attachmentText != "" {
+						attachmentText += ": "
+					}
+					attachmentText += attachment.Text
+				}
+				if text != "" {
+					text += "\n"
+				}
+				text += attachmentText
+			}
+		}
+	}
+
 	if err := teamClient.AddReaction("eyes", slack.NewRefToMessage(event.Channel, event.TimeStamp)); err != nil {
 		slog.Error("Error adding reaction to app mention", "error", err, "channelID", event.Channel, "timestamp", event.TimeStamp)
 	}
