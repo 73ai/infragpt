@@ -81,24 +81,41 @@ func (s *Slack) handleChannelMessage(ctx context.Context, teamID string, event *
 
 	// Include attachment information if present
 	if len(event.Attachments) > 0 {
+		var b strings.Builder
+		if text != "" {
+			b.WriteString(text)
+		}
 		for _, attachment := range event.Attachments {
-			if attachment.Title != "" || attachment.Text != "" {
-				attachmentText := ""
-				if attachment.Title != "" {
-					attachmentText += attachment.Title
+			title := strings.TrimSpace(attachment.Title)
+			body := strings.TrimSpace(attachment.Text)
+			if title == "" && body == "" {
+				continue
+			}
+			if b.Len() > 0 {
+				b.WriteByte('\n')
+			}
+			// Title + optional link
+			if title != "" {
+				b.WriteString(title)
+				if attachment.TitleLink != "" {
+					b.WriteString(" (")
+					b.WriteString(attachment.TitleLink)
+					b.WriteByte(')')
+				} else if attachment.FromURL != "" {
+					b.WriteString(" (")
+					b.WriteString(attachment.FromURL)
+					b.WriteByte(')')
 				}
-				if attachment.Text != "" {
-					if attachmentText != "" {
-						attachmentText += ": "
-					}
-					attachmentText += attachment.Text
+			}
+			// Separator + body
+			if body != "" {
+				if title != "" {
+					b.WriteString(": ")
 				}
-				if text != "" {
-					text += "\n"
-				}
-				text += attachmentText
+				b.WriteString(body)
 			}
 		}
+		text = strings.TrimSpace(b.String())
 	}
 
 	if err := teamClient.AddReaction("eyes", slack.NewRefToMessage(event.Channel, event.TimeStamp)); err != nil {
