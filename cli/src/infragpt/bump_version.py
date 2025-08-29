@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 
 def get_current_version():
-    init_file = Path("cli/__init__.py")
+    init_file = Path("src/infragpt/__init__.py")
     if not init_file.exists():
         raise FileNotFoundError(f"Could not find {init_file}")
 
@@ -15,13 +15,13 @@ def get_current_version():
 
     match = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', content)
     if not match:
-        raise ValueError("Could not find version string in cli/__init__.py")
+        raise ValueError("Could not find version string in src/infragpt/__init__.py")
 
     return match.group(1)
 
 def update_version(new_version):
     # Update version in __init__.py
-    init_file = Path("cli/__init__.py")
+    init_file = Path("src/infragpt/__init__.py")
     with open(init_file, "r") as f:
         content = f.read()
 
@@ -52,7 +52,7 @@ def update_version(new_version):
 
 def commit_and_tag(version):
     # Commit changes
-    subprocess.run(["git", "add", "cli/__init__.py", "pyproject.toml"], check=True)
+    subprocess.run(["git", "add", "src/infragpt/__init__.py", "pyproject.toml"], check=True)
     subprocess.run(["git", "commit", "-m", f"Bump version to {version}"], check=True)
 
     # Create tag

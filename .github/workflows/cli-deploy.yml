@@ -34,12 +34,10 @@ jobs:
 
       - name: Bump version
         run: |
-          # Make bump_version.py executable
-          chmod +x cli/bump_version.py
-
+          cd cli
           # Run the bump_version script with patch and commit flags
           # Use echo to automatically confirm the prompt
-          echo "y" | python cli/bump_version.py patch --commit
+          echo "y" | python src/infragpt/bump_version.py patch --commit
 
       - name: Push changes
         run: |
