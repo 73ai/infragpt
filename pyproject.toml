@@ -1,4 +1,4 @@
-[workspace]
+[tool.uv.workspace]
 members = [
     "cli",
     "services/agent",

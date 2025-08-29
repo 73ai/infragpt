@@ -54,4 +54,5 @@ jobs:
           cd cli
           uv build
           uv tool install twine
-          uv tool run twine check dist/*
+          # The build outputs to the root dist/ directory when using workspace
+          uv tool run twine check ../dist/*
