@@ -15,6 +15,11 @@ import (
 
 // transformMarkdownToSlack converts standard markdown to Slack's mrkdwn format
 func transformMarkdownToSlack(markdown string) string {
+	// Fast-path: if no markdown markers are present, return early
+	if !strings.ContainsAny(markdown, "#*`") {
+		return strings.TrimSpace(markdown)
+	}
+
 	// Compile regexes once outside the loop for performance
 	var (
 		headerRegex    = regexp.MustCompile(`^#{1,6}\s+(.+)$`)
@@ -46,7 +51,7 @@ func transformMarkdownToSlack(markdown string) string {
 		}
 
 		// Handle empty lines
-		if trimmedLeft == "" {
+		if strings.TrimSpace(line) == "" {
 			result = append(result, "")
 			continue
 		}
