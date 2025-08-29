@@ -36,7 +36,7 @@ packages = ["src"]
 
 
 [tool.uv.sources]
-backendapi = { workspace = true }
+backendapi = { path = "../backend/backendapi/client/python" }
 
 [dependency-groups]
 dev = [
