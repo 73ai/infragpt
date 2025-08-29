@@ -1,332 +1,223 @@
-#!/usr/bin/env python3
 """
-LLM utilities for InfraGPT CLI.
-
-This module provides adapter functions that maintain compatibility with
-the original code while using the new shared LLM module.
+New LLM adapter using direct SDKs instead of LangChain.
 """
 
-import os
-import sys
-import datetime
-from typing import Optional, Dict, Any
-
+import json
+from typing import Iterator, List, Dict, Any, Optional
 from rich.console import Console
-from rich.prompt import Prompt
 
-from infragpt.config import (
-    CONFIG_FILE, load_config, save_config
-)
-from infragpt.history import log_interaction
+from .llm import LLMRouter, StreamChunk, ToolCall
+from .llm.exceptions import AuthenticationError, ValidationError, LLMError
+from .tools import get_available_tools, execute_tool_call, ToolExecutionCancelled
 
-# Import from local LLM module
-from infragpt.llm import (
-    MODEL_TYPE,
-    validate_api_key as llm_validate_api_key,
-    get_llm_client,
-    generate_gcloud_command as llm_generate_command,
-    get_parameter_info as llm_get_parameter_info,
-)
 
-# Initialize console for rich output
 console = Console()
 
 
-def validate_api_key(model_type: MODEL_TYPE, api_key: str) -> bool:
-    """Validate if the API key is correct by making a minimal API call."""
-    try:
-        result = llm_validate_api_key(model_type, api_key)
-        return result
-    except Exception as e:
-        if "API key" in str(e) or "auth" in str(e).lower() or "key" in str(e).lower() or "token" in str(e).lower():
-            console.print(f"[bold red]Invalid API key:[/bold red] {e}")
+class LLMAdapter:
+    """New LLM adapter without LangChain dependencies."""
+    
+    def __init__(self, model_string: str, api_key: str, verbose: bool = False):
+        """
+        Initialize LLM adapter.
+        
+        Args:
+            model_string: Provider:model format (e.g., "openai:gpt-4o")
+            api_key: API key for the provider
+            verbose: Enable verbose logging
+        """
+        self.model_string = model_string
+        self.api_key = api_key
+        self.verbose = verbose
+        
+        try:
+            self.provider = LLMRouter.create_provider(model_string, api_key)
+        except Exception as e:
+            raise ValidationError(f"Failed to initialize LLM provider: {e}") from e
+    
+    def validate_api_key(self) -> bool:
+        """Validate API key."""
+        try:
+            return self.provider.validate_api_key()
+        except Exception as e:
+            if self.verbose:
+                console.print(f"[red]API key validation failed: {e}[/red]")
             return False
+    
+    def stream_with_tools(self, messages: List[Dict[str, Any]]) -> Iterator[StreamChunk]:
+        """
+        Stream chat with tool support.
+        
+        Args:
+            messages: List of messages in OpenAI format
+            
+        Yields:
+            StreamChunk objects with content and/or tool calls
+        """
+        try:
+            # Get tools (same for all providers now)
+            tools = get_available_tools()
+            
+            # Stream response
+            tool_calls_buffer = []
+            
+            try:
+                for chunk in self.provider.stream(messages, tools=tools):
+                    if chunk.content:
+                        yield chunk
+                    
+                    if chunk.tool_calls:
+                        if self.verbose:
+                            console.print(f"[dim]Tool calls: {[tc.name for tc in chunk.tool_calls]}[/dim]")
+                        tool_calls_buffer.extend(chunk.tool_calls)
+                        yield chunk
+                    
+                    if chunk.finish_reason:
+                        if self.verbose:
+                            console.print(f"[dim]Finish reason: {chunk.finish_reason}[/dim]")
+                        yield chunk
+            except KeyboardInterrupt:
+                # Handle interrupt during streaming
+                console.print("\n[yellow]Streaming cancelled by user.[/yellow]")
+                return
+            
+            # Execute tool calls if any
+            if tool_calls_buffer:
+                try:
+                    yield from self._execute_tool_calls(tool_calls_buffer, messages)
+                except KeyboardInterrupt:
+                    # Handle interrupt during tool execution
+                    console.print("\n[yellow]Tool execution cancelled by user.[/yellow]")
+                    return
+                
+        except ToolExecutionCancelled:
+            # User cancelled - propagate without wrapping
+            raise
+        except Exception as e:
+            error_msg = f"Streaming failed: {e}"
+            if self.verbose:
+                console.print(f"[red]{error_msg}[/red]")
+            raise LLMError(error_msg) from e
+    
+    def _execute_tool_calls(self, tool_calls: List[ToolCall], original_messages: List[Dict[str, Any]]) -> Iterator[StreamChunk]:
+        """Execute tool calls and continue conversation."""
+        provider_name, _ = LLMRouter.parse_model_string(self.model_string)
+        
+        # Execute each tool call
+        tool_results = []
+        for tool_call in tool_calls:
+            try:
+                if self.verbose:
+                    console.print(f"[dim]Executing tool: {tool_call.name} with args: {tool_call.arguments}[/dim]")
+                
+                # Execute tool
+                result = execute_tool_call(tool_call.name, tool_call.arguments)
+                tool_results.append({
+                    "tool_call_id": tool_call.id,
+                    "name": tool_call.name,
+                    "content": result
+                })
+                
+            except ToolExecutionCancelled:
+                # User cancelled - propagate to break the loop
+                raise
+            except Exception as e:
+                error_msg = f"Tool execution failed: {e}"
+                console.print(f"[red]{error_msg}[/red]")
+                if self.verbose:
+                    import traceback
+                    console.print(f"[dim]Traceback: {traceback.format_exc()}[/dim]")
+                tool_results.append({
+                    "tool_call_id": tool_call.id,
+                    "name": tool_call.name,
+                    "content": error_msg
+                })
+        
+        # Build updated messages based on provider
+        updated_messages = original_messages.copy()
+        
+        if provider_name == "anthropic":
+            # Anthropic format: add assistant message with tool calls, then user message with tool results
+            assistant_content = []
+            for tc in tool_calls:
+                assistant_content.append({
+                    "type": "tool_use",
+                    "id": tc.id,
+                    "name": tc.name,
+                    "input": tc.arguments
+                })
+            
+            updated_messages.append({
+                "role": "assistant",
+                "content": assistant_content
+            })
+            
+            # Add tool results as user message
+            user_content = []
+            for result in tool_results:
+                user_content.append({
+                    "type": "tool_result",
+                    "tool_use_id": result["tool_call_id"],
+                    "content": result["content"]
+                })
+            
+            updated_messages.append({
+                "role": "user",
+                "content": user_content
+            })
+            
         else:
-            # If the error is not related to authentication, re-raise it
-            console.print(f"[bold yellow]Warning:[/bold yellow] API connection error: {e}")
-            # For other errors, we still allow the key - it might be a temporary issue
-            return True
+            # OpenAI format: assistant message with tool_calls, then tool messages
+            tool_call_message = {
+                "role": "assistant",
+                "content": None,  # OpenAI allows null content when using tools
+                "tool_calls": [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.name,
+                            "arguments": tc.arguments if isinstance(tc.arguments, str) else json.dumps(tc.arguments)
+                        }
+                    }
+                    for tc in tool_calls
+                ]
+            }
+            updated_messages.append(tool_call_message)
+            
+            # Add tool result messages
+            for result in tool_results:
+                updated_messages.append({
+                    "role": "tool",
+                    "tool_call_id": result["tool_call_id"],
+                    "name": result["name"],
+                    "content": result["content"]
+                })
+        
+        # Continue conversation with tool results
+        if self.verbose:
+            console.print(f"[dim]Continuing conversation after tool execution...[/dim]")
+            
+        try:
+            # Use recursive streaming to handle multiple tool calls in sequence
+            yield from self.stream_with_tools(updated_messages)
+                    
+        except Exception as e:
+            error_msg = f"Follow-up conversation failed: {e}"
+            console.print(f"[red]{error_msg}[/red]")
+            yield StreamChunk(content=f"Error: {error_msg}", finish_reason="error")
 
 
-def get_credentials(model_type: Optional[MODEL_TYPE] = None, api_key: Optional[str] = None, verbose: bool = False):
+def get_llm_adapter(model_string: str, api_key: str, verbose: bool = False) -> LLMAdapter:
     """
-    Get API credentials based on priority:
-    1. Command line parameters
-    2. Stored config
-    3. Environment variables
-    4. Interactive prompt
+    Create LLM adapter instance.
+    
+    Args:
+        model_string: Provider:model format (e.g., "openai:gpt-4o")
+        api_key: API key for the provider
+        verbose: Enable verbose logging
+        
+    Returns:
+        Configured LLM adapter
     """
-    config = load_config()
-
-    # Priority 1: Command line parameters
-    if model_type and api_key and api_key.strip():  # Ensure API key is not empty
-        # Update config for future use
-        config["model"] = model_type
-        config["api_key"] = api_key
-        save_config(config)
-        return model_type, api_key
-
-    # Priority 2: Check stored config
-    if config.get("model") and config.get("api_key") and config.get("api_key").strip():  # Ensure API key is not empty
-        if verbose:
-            console.print(f"[dim]Using credentials from config file[/dim]")
-        return config["model"], config["api_key"]
-
-    # Priority 3: Check environment variables
-    openai_key = os.getenv("OPENAI_API_KEY")
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-    env_model = os.getenv("INFRAGPT_MODEL")
-
-    # Command line model takes precedence over env var model
-    resolved_model = model_type or env_model
-
-    # Validate environment credentials
-    if anthropic_key and openai_key:
-        # If both keys are provided, use the model to decide
-        if resolved_model == "claude":
-            if verbose:
-                console.print(f"[dim]Using Anthropic API key from environment[/dim]")
-            # Save to config for future use
-            config["model"] = "claude"
-            config["api_key"] = anthropic_key
-            save_config(config)
-            return "claude", anthropic_key
-        elif resolved_model == "gpt4o":
-            if verbose:
-                console.print(f"[dim]Using OpenAI API key from environment[/dim]")
-            # Save to config for future use
-            config["model"] = "gpt4o"
-            config["api_key"] = openai_key
-            save_config(config)
-            return "gpt4o", openai_key
-        elif not resolved_model:
-            # Default to OpenAI if model not specified
-            if verbose:
-                console.print(f"[dim]Multiple API keys found, defaulting to OpenAI[/dim]")
-            # Save to config for future use
-            config["model"] = "gpt4o"
-            config["api_key"] = openai_key
-            save_config(config)
-            return "gpt4o", openai_key
-    elif anthropic_key:
-        if resolved_model and resolved_model != "claude":
-            console.print("[bold red]Error:[/bold red] Anthropic API key is set but model is not claude.")
-            sys.exit(1)
-        if verbose:
-            console.print(f"[dim]Using Anthropic API key from environment[/dim]")
-        # Save to config for future use
-        config["model"] = "claude"
-        config["api_key"] = anthropic_key
-        save_config(config)
-        return "claude", anthropic_key
-    elif openai_key:
-        if resolved_model and resolved_model != "gpt4o":
-            console.print("[bold red]Error:[/bold red] OpenAI API key is set but model is not gpt4o.")
-            sys.exit(1)
-        if verbose:
-            console.print(f"[dim]Using OpenAI API key from environment[/dim]")
-        # Save to config for future use
-        config["model"] = "gpt4o"
-        config["api_key"] = openai_key
-        save_config(config)
-        return "gpt4o", openai_key
-
-    # Priority 4: Prompt user interactively
-    console.print("\n[bold yellow]API credentials required[/bold yellow]")
-
-    # If model is provided, use that, otherwise prompt for model choice
-    if not model_type:
-        model_options = ["gpt4o", "claude"]
-        model_type = Prompt.ask(
-            "[bold cyan]Select model[/bold cyan]",
-            choices=model_options,
-            default="gpt4o"
-        )
-
-    # Prompt for API key based on model
-    provider = "OpenAI" if model_type == "gpt4o" else "Anthropic"
-    api_key = Prompt.ask(
-        f"[bold cyan]Enter your {provider} API key[/bold cyan] [dim](will be saved in {CONFIG_FILE})[/dim]",
-        password=True
-    )
-
-    # Save credentials for future use
-    config["model"] = model_type
-    config["api_key"] = api_key
-    save_config(config)
-
-    return model_type, api_key
-
-
-def prompt_credentials(existing_model: Optional[MODEL_TYPE] = None):
-    """Prompt user for model and API key before starting."""
-    if existing_model:
-        console.print("\n[bold yellow]API key required. Please enter your credentials:[/bold yellow]")
-        model_type = existing_model
-    else:
-        console.print("\n[bold yellow]No model configured. Please set up your credentials:[/bold yellow]")
-
-        # Prompt for model choice
-        model_options = ["gpt4o", "claude"]
-        model_type = Prompt.ask(
-            "[bold cyan]Select model[/bold cyan]",
-            choices=model_options,
-            default="gpt4o"
-        )
-
-    # Prompt for API key based on model
-    provider = "OpenAI" if model_type == "gpt4o" else "Anthropic"
-
-    valid_key = False
-    while not valid_key:
-        # Keep prompting until we get a non-empty API key
-        api_key = ""
-        while not api_key.strip():
-            api_key = Prompt.ask(
-                f"[bold cyan]Enter your {provider} API key[/bold cyan] [dim](will be saved in {CONFIG_FILE})[/dim]",
-                password=True
-            )
-
-            if not api_key.strip():
-                console.print("[bold red]API key cannot be empty. Please try again.[/bold red]")
-
-        # Validate the API key
-        with console.status(f"[bold blue]Validating {provider} API key...[/bold blue]", spinner="dots"):
-            valid_key = validate_api_key(model_type, api_key)
-
-        if not valid_key:
-            console.print("[bold red]Invalid API key. Please try again.[/bold red]")
-
-    # Save credentials for future use
-    config = load_config()
-    config["model"] = model_type
-    config["api_key"] = api_key
-    save_config(config)
-
-    console.print(f"[green]Credentials validated and saved successfully for {model_type}![/green]\n")
-    return model_type, api_key
-
-
-def validate_env_api_keys():
-    """Validate API keys from environment variables and prompt if invalid."""
-    openai_key = os.getenv("OPENAI_API_KEY")
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-    env_model = os.getenv("INFRAGPT_MODEL")
-
-    # If we have specific model set in env but invalid key, prompt for it
-    if env_model == "gpt4o" and openai_key:
-        if not validate_api_key("gpt4o", openai_key):
-            console.print("[bold red]Invalid OpenAI API key in environment variable.[/bold red]")
-            model, api_key = prompt_credentials("gpt4o")
-            # Update environment for this session
-            os.environ["OPENAI_API_KEY"] = api_key
-            return "gpt4o", api_key
-    elif env_model == "claude" and anthropic_key:
-        if not validate_api_key("claude", anthropic_key):
-            console.print("[bold red]Invalid Anthropic API key in environment variable.[/bold red]")
-            model, api_key = prompt_credentials("claude")
-            # Update environment for this session
-            os.environ["ANTHROPIC_API_KEY"] = api_key
-            return "claude", api_key
-
-    # For default case or when no specific model set
-    if openai_key and (not env_model or env_model == "gpt4o"):
-        if not validate_api_key("gpt4o", openai_key):
-            console.print("[bold red]Invalid OpenAI API key in environment variable.[/bold red]")
-            model, api_key = prompt_credentials("gpt4o")
-            # Update environment for this session
-            os.environ["OPENAI_API_KEY"] = api_key
-            return "gpt4o", api_key
-    elif anthropic_key and (not env_model or env_model == "claude"):
-        if not validate_api_key("claude", anthropic_key):
-            console.print("[bold red]Invalid Anthropic API key in environment variable.[/bold red]")
-            model, api_key = prompt_credentials("claude")
-            # Update environment for this session
-            os.environ["ANTHROPIC_API_KEY"] = api_key
-            return "claude", api_key
-
-    return None, None
-
-
-def get_llm(model_type: Optional[MODEL_TYPE] = None, api_key: Optional[str] = None, verbose: bool = False, validate: bool = True):
-    """Initialize the appropriate LLM based on user selection."""
-    # Get credentials and actual model type
-    resolved_model, resolved_api_key = get_credentials(model_type, api_key, verbose)
-
-    # Validate API key if requested
-    if validate:
-        # If key is invalid, prompt for a new one
-        while not validate_api_key(resolved_model, resolved_api_key):
-            console.print("[bold red]API key validation failed.[/bold red]")
-            resolved_model, resolved_api_key = prompt_credentials(resolved_model)
-
-    # Use the shared LLM client
-    return get_llm_client(
-        model_type=resolved_model,
-        api_key=resolved_api_key,
-        validate_key=False  # Already validated above
-    )
-
-
-def generate_gcloud_command(prompt: str, model_type: Optional[MODEL_TYPE] = None, api_key: Optional[str] = None, verbose: bool = False) -> str:
-    """Generate a gcloud command based on the user's natural language prompt."""
-    # Get credentials and actual model type
-    resolved_model, resolved_api_key = get_credentials(model_type, api_key, verbose)
-
-    # Get the actual model being used from configuration or parameters
-    actual_model = resolved_model
-
-    if verbose and actual_model:
-        console.print(f"[dim]Generating command using {actual_model}...[/dim]")
-
-    # Use the shared LLM module for command generation
-    start_time = datetime.datetime.now()
-    result = llm_generate_command(
-        prompt=prompt,
-        model_type=resolved_model,
-        api_key=resolved_api_key
-    )
-    end_time = datetime.datetime.now()
-
-    # Log the interaction for future intelligence
-    try:
-        interaction_data = {
-            "model": actual_model,
-            "prompt": prompt,
-            "result": result.strip(),
-            "duration_ms": (end_time - start_time).total_seconds() * 1000,
-            "verbose": verbose
-        }
-        log_interaction("command_generation", interaction_data)
-    except Exception:
-        # Log failures should not interrupt the flow
-        pass
-
-    return result.strip()
-
-
-def get_parameter_info(command: str, model_type: MODEL_TYPE) -> Dict[str, Dict[str, Any]]:
-    """Get information about parameters from the LLM."""
-    import re
-
-    # Extract parameters that need filling in (those in square brackets)
-    bracket_params = re.findall(r'\[([A-Z_]+)\]', command)
-
-    if not bracket_params:
-        return {}
-
-    # Get credentials
-    resolved_model, resolved_api_key = get_credentials(model_type, None, False)
-
-    # Use the shared LLM module for parameter info
-    try:
-        with console.status("[bold blue]Analyzing command parameters...[/bold blue]", spinner="dots"):
-            parameter_info = llm_get_parameter_info(
-                command=command,
-                model_type=resolved_model,
-                api_key=resolved_api_key
-            )
-        return parameter_info
-    except Exception as e:
-        console.print(f"[bold yellow]Warning:[/bold yellow] Could not get parameter info: {e}")
-        return {}
+    return LLMAdapter(model_string, api_key, verbose)
