@@ -45,9 +45,17 @@ def sanitize_sensitive_data(data: Any) -> Any:
         # Look for patterns that might be API keys or tokens
         # Common patterns: long alphanumeric strings, sk-*, Bearer tokens, etc.
         patterns = [
-            (r'sk-[a-zA-Z0-9]{20,}', 'sk-***REDACTED***'),
-            (r'Bearer\s+[a-zA-Z0-9\-._~+/=]{20,}', 'Bearer ***REDACTED***'),
-            (r'\b[a-zA-Z0-9]{32,}\b', '***REDACTED***'),  # Long tokens
+            (r'sk-[A-Za-z0-9]{20,}', 'sk-***REDACTED***'),                           # OpenAI-style
+            (r'Bearer\s+[A-Za-z0-9\-._~+/=]{20,}', 'Bearer ***REDACTED***'),         # Bearer tokens
+            (r'\bAKIA[0-9A-Z]{16}\b', 'AKIA***REDACTED***'),                          # AWS Access Key ID
+            (r'\bASIA[0-9A-Z]{16}\b', 'ASIA***REDACTED***'),                          # AWS Temp Key ID
+            (r'\b[A-Za-z0-9/+=]{40}\b', '***REDACTED***'),                             # AWS Secret Access Key (heuristic)
+            (r'\bghp_[A-Za-z0-9]{36}\b', 'ghp_***REDACTED***'),                        # GitHub token
+            (r'\bgithub_pat_[A-Za-z0-9_]{82,}\b', 'github_pat_***REDACTED***'),       # GitHub fine-grained PAT
+            (r'\bxox[baprs]-[A-Za-z0-9-]{10,}\b', 'xox***REDACTED***'),               # Slack tokens
+            (r'-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----', '***REDACTED PEM KEY***'),
+            (r'\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b', '***REDACTED JWT***'),  # JWT
+            (r'\b[A-Za-z0-9]{32,}\b', '***REDACTED***'),                               # Fallback: long alphanum
         ]
         result = data
         for pattern, replacement in patterns:
@@ -61,6 +69,10 @@ def log_interaction(interaction_type: str, data: Dict[str, Any]):
     try:
         # Ensure history directory exists
         HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+        try:
+            HISTORY_DIR.chmod(0o700)
+        except Exception:
+            pass
         
         # Sanitize sensitive data before logging
         sanitized_data = sanitize_sensitive_data(data)
@@ -82,7 +94,7 @@ def log_interaction(interaction_type: str, data: Dict[str, Any]):
         
         # Append to history file
         # CodeQL: Data is sanitized and allow-listed before storage to prevent leaking sensitive information
-        with open(HISTORY_DB_FILE, "a") as f:
+        with open(HISTORY_DB_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")  # nosec B108 - Data sanitized above
         
         # Set restrictive permissions (user read/write only)
@@ -100,7 +112,7 @@ def get_interaction_history(limit: int = 100) -> List[Dict[str, Any]]:
         
     try:
         entries = []
-        with open(HISTORY_DB_FILE, "r") as f:
+        with open(HISTORY_DB_FILE, "r", encoding="utf-8") as f:
             for line in f:
                 if line.strip():
                     entries.append(json.loads(line))
@@ -114,6 +126,10 @@ def get_interaction_history(limit: int = 100) -> List[Dict[str, Any]]:
 def init_history_dir():
     """Initialize history directory if it doesn't exist."""
     HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        HISTORY_DIR.chmod(0o700)
+    except Exception:
+        pass
 
 def display_history_entry(i: int, entry: Dict[str, Any]):
     """Format and display a history entry."""
@@ -199,7 +215,7 @@ def history_command(limit: int = 10, type: Optional[str] = None, export: Optiona
     # Export if requested
     if export:
         try:
-            with open(export, 'w') as f:
+            with open(export, 'w', encoding='utf-8') as f:
                 for entry in entries:
                     f.write(json.dumps(entry) + '\n')
             console.print(f"[green]Exported {len(entries)} history entries to {export}[/green]")
