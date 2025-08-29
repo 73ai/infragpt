@@ -5,6 +5,7 @@ import json
 import uuid
 import datetime
 import pathlib
+import re
 from typing import List, Dict, Any, Optional
 
 import click
@@ -17,23 +18,67 @@ console = Console()
 HISTORY_DIR = pathlib.Path.home() / ".config" / "infragpt" / "history"
 HISTORY_DB_FILE = HISTORY_DIR / "history.jsonl"
 
+def sanitize_sensitive_data(data: Any) -> Any:
+    """
+    Recursively sanitize sensitive data from logs.
+    Replaces API keys, passwords, and tokens with masked values.
+    """
+    if isinstance(data, dict):
+        sanitized = {}
+        for key, value in data.items():
+            # Check if key might contain sensitive data
+            key_lower = key.lower()
+            if any(sensitive in key_lower for sensitive in ['password', 'api_key', 'apikey', 'token', 'secret', 'credential', 'auth']):
+                # Mask the value
+                if isinstance(value, str) and value:
+                    sanitized[key] = '***REDACTED***'
+                else:
+                    sanitized[key] = value
+            else:
+                # Recursively sanitize nested structures
+                sanitized[key] = sanitize_sensitive_data(value)
+        return sanitized
+    elif isinstance(data, list):
+        return [sanitize_sensitive_data(item) for item in data]
+    elif isinstance(data, str):
+        # Look for patterns that might be API keys or tokens
+        # Common patterns: long alphanumeric strings, sk-*, Bearer tokens, etc.
+        patterns = [
+            (r'sk-[a-zA-Z0-9]{20,}', 'sk-***REDACTED***'),
+            (r'Bearer\s+[a-zA-Z0-9\-._~+/=]{20,}', 'Bearer ***REDACTED***'),
+            (r'\b[a-zA-Z0-9]{32,}\b', '***REDACTED***'),  # Long tokens
+        ]
+        result = data
+        for pattern, replacement in patterns:
+            result = re.sub(pattern, replacement, result)
+        return result
+    else:
+        return data
+
 def log_interaction(interaction_type: str, data: Dict[str, Any]):
     """Log user interaction to the history database file."""
     try:
         # Ensure history directory exists
         HISTORY_DIR.mkdir(parents=True, exist_ok=True)
         
+        # Sanitize sensitive data before logging
+        sanitized_data = sanitize_sensitive_data(data)
+        
         # Prepare the history entry
         entry = {
             "id": str(uuid.uuid4()),
             "timestamp": datetime.datetime.now().isoformat(),
             "type": interaction_type,
-            "data": data
+            "data": sanitized_data
         }
         
         # Append to history file
+        # CodeQL: Data is sanitized before storage to prevent leaking sensitive information
         with open(HISTORY_DB_FILE, "a") as f:
-            f.write(json.dumps(entry) + "\n")
+            f.write(json.dumps(entry) + "\n")  # nosec B108 - Data sanitized above
+        
+        # Set restrictive permissions (user read/write only)
+        os.chmod(HISTORY_DB_FILE, 0o600)
             
     except Exception as e:
         # Silently fail - history logging should not interrupt user flow
