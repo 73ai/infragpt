@@ -130,10 +130,18 @@ class ModernShellAgent:
             # History file for command-line input
             history_file = history_dir / "history"
             
+            # WARNING: FileHistory writes clear-text inputs to disk.
+            # This is a security risk if users enter secrets at the prompt.
             # Create PromptSession with FileHistory
             self.prompt_session = PromptSession(
                 history=FileHistory(str(history_file))
             )
+            
+            # Best-effort: restrict file permissions to user-only
+            try:
+                history_file.chmod(0o600)
+            except Exception:
+                pass
             
             if self.verbose:
                 console.print(f"[dim]Command history: {history_file}[/dim]")
@@ -285,18 +293,23 @@ class ModernShellAgent:
                 console.print(traceback.format_exc())
     
     def _log_interaction(self, user_input: str, response: str):
-        """Log the interaction for history."""
+        """Log the interaction for history. Sensitive fields are excluded explicitly."""
         try:
+            # Only safe fields, do not include api_key or any secrets
             interaction_data = {
                 "user_input": user_input,
                 "assistant_response": response,
                 "model": self.model_string,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                # Not persisted: allow-list will drop this; used only for error reporting in history.py
+                "verbose": self.verbose,
             }
+            # Note: self.api_key is NOT logged ever
             log_interaction("agent_conversation_v2", interaction_data)
-        except Exception:
+        except Exception as e:
             # Don't let logging failures interrupt the session
-            pass
+            if self.verbose:
+                console.print(f"[dim]Warning: Could not log interaction: {e}[/dim]")
 
 
 def run_shell_agent(model_string: str, api_key: str, verbose: bool = False):
