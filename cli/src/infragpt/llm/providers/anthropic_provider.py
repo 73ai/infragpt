@@ -3,6 +3,7 @@ Anthropic provider implementation using direct SDK.
 """
 
 import json
+import logging
 from typing import List, Dict, Any, Iterator, Optional
 from anthropic import Anthropic
 import anthropic
@@ -13,14 +14,21 @@ from ..exceptions import (
     AuthenticationError,
     RateLimitError,
     APIError,
-    ToolCallError,
     ContextWindowError,
     ValidationError,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class AnthropicProvider(BaseLLMProvider):
-    """Anthropic provider using official Python SDK."""
+    """Anthropic provider using official Python SDK.
+    
+    Attributes:
+        api_key: The Anthropic API key for authentication.
+        model: The model identifier to use (e.g., 'claude-3-opus-20240229').
+        provider_name: The provider name (set to 'anthropic').
+    """
     
     def _initialize_client(self, **kwargs):
         """Initialize Anthropic client."""
@@ -29,14 +37,14 @@ class AnthropicProvider(BaseLLMProvider):
     def validate_api_key(self) -> bool:
         """Validate API key with a simple test call."""
         try:
-            response = self._client.messages.create(
+            self._client.messages.create(
                 model=self.model,
                 max_tokens=1,
                 messages=[{"role": "user", "content": "hi"}]
             )
             return True
         except Exception as e:
-            raise self._map_error(e)
+            raise self._map_error(e) from e
     
     def stream(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict]] = None, **kwargs) -> Iterator[StreamChunk]:
         """Stream response with unified tool calling support following Anthropic best practices."""
@@ -63,7 +71,6 @@ class AnthropicProvider(BaseLLMProvider):
                             "name": event.content_block.name,
                         }
                         tool_use_inputs[index] = ""
-                        # print(f"DEBUG: Started tool call {event.content_block.name} at index {index}")
                 
                 elif event.type == "content_block_delta":
                     if event.delta.type == "text_delta":
@@ -74,10 +81,6 @@ class AnthropicProvider(BaseLLMProvider):
                         index = event.index
                         if index in tool_use_inputs:
                             tool_use_inputs[index] += event.delta.partial_json
-                            # print(f"DEBUG: Added JSON to index {index}: '{event.delta.partial_json}'")
-                        else:
-                            # print(f"DEBUG: Received JSON for unknown index {index}: '{event.delta.partial_json}'")
-                            pass
                 
                 elif event.type == "content_block_stop":
                     # End of content block - parse complete JSON if it's a tool
@@ -85,11 +88,9 @@ class AnthropicProvider(BaseLLMProvider):
                     if index in tool_blocks and index in tool_use_inputs:
                         tool_block = tool_blocks[index]
                         json_str = tool_use_inputs[index]
-                        # print(f"DEBUG: Completed tool {tool_block['name']} with JSON: '{json_str}'")
                         
                         try:
                             arguments = json.loads(json_str) if json_str else {}
-                            # print(f"DEBUG: Parsed arguments for {tool_block['name']}: {arguments}")
                             
                             # Yield valid tool call immediately
                             tool_call = ToolCall(
@@ -100,21 +101,20 @@ class AnthropicProvider(BaseLLMProvider):
                             yield StreamChunk(tool_calls=[tool_call])
                                 
                         except json.JSONDecodeError as e:
-                            print(f"Warning: Failed to parse JSON for {tool_block['name']}: {json_str} - Error: {e}")
+                            logger.warning(f"Failed to parse JSON for {tool_block['name']}: {json_str} - Error: {e}")
                 
-                elif event.type == "message_delta":
-                    if hasattr(event.delta, 'stop_reason'):
-                        # Message finished
-                        chunk = StreamChunk(finish_reason=event.delta.stop_reason)
+                elif event.type == "message_delta" and hasattr(event.delta, 'stop_reason'):
+                    # Message finished
+                    chunk = StreamChunk(finish_reason=event.delta.stop_reason)
                 
                 # Yield chunk if we have one
                 if chunk:
                     yield chunk
                     
         except Exception as e:
-            raise self._map_error(e)
+            raise self._map_error(e) from e
     
-    def _build_request(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict]], **kwargs) -> Dict[str, Any]:
+    def _build_request(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict]] = None, **kwargs: Any) -> Dict[str, Any]:
         """Build Anthropic API request."""
         # Extract system message
         system_message = None
@@ -193,7 +193,7 @@ class AnthropicProvider(BaseLLMProvider):
         """Convert Anthropic chunk to unified format."""
         # This method is not used in the current implementation
         # as we handle normalization in the stream method
-        pass
+        raise NotImplementedError("This method is not used in the current implementation")
     
     def _map_error(self, error: Exception) -> Exception:
         """Map Anthropic errors to unified exceptions."""

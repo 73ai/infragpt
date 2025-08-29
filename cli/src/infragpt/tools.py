@@ -131,13 +131,12 @@ def execute_shell_command(command: str, description: Optional[str] = None) -> st
         console.print("\n[yellow]Command execution cancelled.[/yellow]")
         raise ToolExecutionCancelled("User cancelled command execution")
     
-    # Check for explicit denial
-    if user_input in ['n', 'no']:
+    # Only execute if user explicitly confirms with 'y' or 'yes'
+    if user_input not in ['y', 'yes', '']:  # Empty input defaults to yes for backward compatibility
         console.print("\n[yellow]Command execution cancelled.[/yellow]")
         raise ToolExecutionCancelled("User cancelled command execution")
-    # Empty input defaults to "Yes" (execute command)
     
-    # If we get here, user input is 'y', 'yes', or any other non-empty input - execute command
+    # If we get here, user input is 'y', 'yes', or empty (default yes) - execute command
     
     try:
         # Use the proper shell executor for streaming output

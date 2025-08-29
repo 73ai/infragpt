@@ -33,7 +33,7 @@ class LLMAdapter:
         try:
             self.provider = LLMRouter.create_provider(model_string, api_key)
         except Exception as e:
-            raise ValidationError(f"Failed to initialize LLM provider: {e}")
+            raise ValidationError(f"Failed to initialize LLM provider: {e}") from e
     
     def validate_api_key(self) -> bool:
         """Validate API key."""
@@ -97,7 +97,7 @@ class LLMAdapter:
             error_msg = f"Streaming failed: {e}"
             if self.verbose:
                 console.print(f"[red]{error_msg}[/red]")
-            raise LLMError(error_msg)
+            raise LLMError(error_msg) from e
     
     def _execute_tool_calls(self, tool_calls: List[ToolCall], original_messages: List[Dict[str, Any]]) -> Iterator[StreamChunk]:
         """Execute tool calls and continue conversation."""

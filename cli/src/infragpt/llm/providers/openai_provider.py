@@ -58,7 +58,7 @@ class OpenAIProvider(BaseLLMProvider):
             # Buffer for tool calls - persistent across chunks
             tool_call_buffer = {}
             accumulated_tool_calls = []
-            last_call_id = None  # Track the last call ID for continuations
+            call_id_by_index = {}  # Track call IDs per index for continuations
             
             for chunk in response:
                 if chunk.choices and len(chunk.choices) > 0:
@@ -72,12 +72,12 @@ class OpenAIProvider(BaseLLMProvider):
                     # Handle tool calls
                     tool_calls = None
                     if choice.delta.tool_calls:
-                        # Update last_call_id if we see a new ID
+                        # Update call IDs per index
                         for tc in choice.delta.tool_calls:
-                            if tc.id:
-                                last_call_id = tc.id
+                            if tc.id and hasattr(tc, 'index') and tc.index is not None:
+                                call_id_by_index[tc.index] = tc.id
                                 
-                        tool_calls = self._process_tool_calls(choice.delta.tool_calls, tool_call_buffer, last_call_id)
+                        tool_calls = self._process_tool_calls(choice.delta.tool_calls, tool_call_buffer, call_id_by_index)
                         if tool_calls:
                             accumulated_tool_calls.extend(tool_calls)
                     
@@ -170,16 +170,22 @@ class OpenAIProvider(BaseLLMProvider):
         
         return openai_tools
     
-    def _process_tool_calls(self, delta_tool_calls, buffer, last_known_id=None) -> Optional[List[ToolCall]]:
+    def _process_tool_calls(self, delta_tool_calls, buffer, call_id_by_index) -> Optional[List[ToolCall]]:
         """Process streaming tool calls."""
         completed_tools = []
-        current_call_id = None
         
         for i, delta_call in enumerate(delta_tool_calls):
-            # Get call ID - if None, use the last known call ID (continuation of previous)
+            # Get call ID - if None, use the ID for this index from our mapping
             call_id = delta_call.id
-            if call_id:
-                current_call_id = call_id
+            if not call_id:
+                # No ID in this delta - look up by index
+                index = getattr(delta_call, 'index', None)
+                if index is not None and index in call_id_by_index:
+                    call_id = call_id_by_index[index]
+                else:
+                    continue
+            else:
+                # New ID - initialize buffer entry
                 if call_id not in buffer:
                     buffer[call_id] = {
                         "id": call_id,
@@ -187,11 +193,6 @@ class OpenAIProvider(BaseLLMProvider):
                         "arguments": "",
                         "complete": False
                     }
-            else:
-                # No ID in this delta - use last known ID from parameter or current
-                call_id = last_known_id if last_known_id else current_call_id
-                if not call_id:
-                    continue
                 
             if delta_call.function:
                 if delta_call.function.name:

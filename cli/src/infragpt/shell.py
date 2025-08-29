@@ -98,8 +98,24 @@ class CommandExecutor:
             # Stream output
             output = self._stream_output(master_fd)
             
-            # Wait for process to complete
-            exit_code = self.current_process.wait()
+            # Wait for process to complete, but avoid indefinite blocking
+            exit_code = None
+            poll_interval = 0.1  # seconds
+            start_time = time.time()
+            while True:
+                ret = self.current_process.poll()
+                if ret is not None:
+                    exit_code = ret
+                    break
+                if self.cancelled:
+                    # Process should have been terminated by _timeout_handler or ESC
+                    exit_code = -1
+                    break
+                if (time.time() - start_time) > self.timeout:
+                    # Timeout exceeded, process should have been terminated by timer
+                    exit_code = -1
+                    break
+                time.sleep(poll_interval)
             
             # Cancel timer
             timer.cancel()
@@ -180,17 +196,21 @@ class CommandExecutor:
         """Terminate the current command."""
         if self.current_process:
             try:
+                # Check if process group exists
+                pgid = os.getpgid(self.current_process.pid)
+            except (OSError, ProcessLookupError):
+                # Process group does not exist, nothing to terminate
+                return
+            try:
                 # Send SIGTERM to the process group
-                os.killpg(os.getpgid(self.current_process.pid), signal.SIGTERM)
-                
+                os.killpg(pgid, signal.SIGTERM)
                 # Wait a bit for graceful shutdown
                 time.sleep(1)
-                
                 # Force kill if still running
                 if self.current_process.poll() is None:
-                    os.killpg(os.getpgid(self.current_process.pid), signal.SIGKILL)
+                    os.killpg(pgid, signal.SIGKILL)
             except (OSError, ProcessLookupError):
-                # Process already terminated
+                # Process group may have terminated between checks
                 pass
     
     def _esc_listener(self):

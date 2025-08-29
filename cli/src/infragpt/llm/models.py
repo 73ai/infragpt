@@ -4,7 +4,7 @@ Data models for unified LLM interface.
 
 from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, List, Union
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 
@@ -55,7 +55,7 @@ class Message:
     """Provider-agnostic message format."""
     role: str  # 'user', 'assistant', 'system', 'tool'
     content: Union[str, List[Dict[str, Any]]]
-    timestamp: datetime = field(default_factory=datetime.now)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Tool calling support
     tool_calls: Optional[List[ToolCall]] = None
