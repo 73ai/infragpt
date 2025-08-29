@@ -67,6 +67,6 @@ jobs:
         cd ${{ github.workspace }}
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@v3.24.9
       with:
         category: "/language:${{matrix.language}}"
