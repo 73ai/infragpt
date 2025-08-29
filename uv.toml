@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "cli",
+    "services/agent",
+    "services/backend/backendapi/client/python"
+]

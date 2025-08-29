@@ -75,7 +75,6 @@ func (g *githubConnector) Subscribe(ctx context.Context, handler func(ctx contex
 	return webhookConfig.startWebhookServer(ctx)
 }
 
-
 func (g *githubConnector) handleInstallationEvent(ctx context.Context, event WebhookEvent) error {
 	slog.Info("handling GitHub installation event",
 		"action", event.InstallationAction,
@@ -618,4 +617,3 @@ func timeValueFromPointer(t *time.Time) time.Time {
 	}
 	return *t
 }
-
