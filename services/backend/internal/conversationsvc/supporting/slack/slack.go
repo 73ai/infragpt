@@ -13,7 +13,21 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// transformMarkdownToSlack converts standard markdown to Slack's mrkdwn format
+// transformMarkdownToSlack converts standard markdown to Slack's mrkdwn format.
+//
+// This implementation is optimized for AI-generated markdown content with consistent
+// patterns. It handles the most common markdown constructs:
+// - Headers (## -> *bold*)
+// - Bold text (**text** -> *text*)
+// - Numbered lists with bold titles (1. **Title**: desc)
+// - Code blocks and inline code (preserved as-is)
+//
+// Known limitations (acceptable for our AI-generated content use case):
+// - Leading indentation before code fences is not preserved
+// - Complex nested markdown structures may not be fully supported
+// - Whitespace-only lines are preserved intentionally for formatting consistency
+//
+// For more complex markdown parsing needs, consider using a dedicated parser.
 func transformMarkdownToSlack(markdown string) string {
 	// Fast-path: if no markdown markers are present, return early
 	if !strings.ContainsAny(markdown, "#*`") {
@@ -58,7 +72,7 @@ func transformMarkdownToSlack(markdown string) string {
 
 		// Convert headers to bold text (Slack doesn't support headers natively)
 		if matches := headerRegex.FindStringSubmatch(trimmedLeft); matches != nil {
-			content := matches[1]
+			content := strings.TrimSpace(matches[1])
 			result = append(result, "*"+content+"*")
 			continue
 		}
