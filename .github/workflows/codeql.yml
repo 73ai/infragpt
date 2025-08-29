@@ -1,0 +1,72 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  schedule:
+    - cron: '0 0 * * 1'
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - language: go
+          build-mode: manual
+        - language: javascript-typescript
+          build-mode: none
+        - language: python
+          build-mode: none
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    # Setup Go environment for Go builds
+    - name: Setup Go
+      if: matrix.language == 'go'
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        cache: false
+
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
+
+    # Build Go modules
+    - if: matrix.language == 'go'
+      name: Build Go modules
+      run: |
+        # Build agent service Go client
+        echo "Building agent service Go client..."
+        cd services/agent/src/client/go
+        go mod download
+        go build ./...
+        cd ${{ github.workspace }}
+        
+        # Build backend service
+        echo "Building backend service..."
+        cd services/backend
+        go mod download
+        go build ./...
+        cd ${{ github.workspace }}
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
