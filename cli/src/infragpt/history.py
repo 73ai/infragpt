@@ -18,6 +18,16 @@ console = Console()
 HISTORY_DIR = pathlib.Path.home() / ".config" / "infragpt" / "history"
 HISTORY_DB_FILE = HISTORY_DIR / "history.jsonl"
 
+# Map of interaction types to allowed fields for history logging
+INTERACTION_FIELD_ALLOWLIST = {
+    "agent_conversation_v2": [
+        "user_input",
+        "assistant_response",
+        "model",
+        "timestamp"
+    ],
+    # Add other interaction types here with their safe fields as needed.
+}
 def sanitize_sensitive_data(data: Any) -> Any:
     """
     Recursively sanitize sensitive data from logs.
@@ -77,12 +87,14 @@ def log_interaction(interaction_type: str, data: Dict[str, Any]):
         # Sanitize sensitive data before logging
         sanitized_data = sanitize_sensitive_data(data)
         
-        # For agent conversation type, allow-list only safe fields
-        if interaction_type == "agent_conversation_v2" and isinstance(sanitized_data, dict):
-            allowed_fields = ["user_input", "assistant_response", "model", "timestamp"]
+        # Allow-list only safe fields for this interaction type
+        allowed_fields = INTERACTION_FIELD_ALLOWLIST.get(interaction_type, [])
+        if allowed_fields and isinstance(sanitized_data, dict):
+            # Only log explicit allowed fields
             safe_data = {k: sanitized_data[k] for k in allowed_fields if k in sanitized_data}
         else:
-            safe_data = sanitized_data
+            # If interaction type not in allow-list, do not log any potentially sensitive data
+            safe_data = {}
         
         # Prepare the history entry
         entry = {
