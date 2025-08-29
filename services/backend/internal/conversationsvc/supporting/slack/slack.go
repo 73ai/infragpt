@@ -15,65 +15,87 @@ import (
 
 // transformMarkdownToSlack converts standard markdown to Slack's mrkdwn format
 func transformMarkdownToSlack(markdown string) string {
+	// Compile regexes once outside the loop for performance
+	var (
+		headerRegex    = regexp.MustCompile(`^#{1,6}\s+(.+)$`)
+		bulletWithBold = regexp.MustCompile(`^(\d+)\.\s+\*\*([^*]+)\*\*:?\s*(.*)$`)
+		numberedList   = regexp.MustCompile(`^(\d+)\.\s+(.+)$`)
+		boldRegex      = regexp.MustCompile(`\*\*([^*]+)\*\*`)
+	)
+
 	lines := strings.Split(markdown, "\n")
 	var result []string
+	inCodeFence := false
 
 	for _, line := range lines {
-		line = strings.TrimSpace(line)
+		// Preserve indentation; trim only trailing whitespace
+		trimmedLeft := strings.TrimLeft(line, " \t")
+		line = strings.TrimRight(line, " \t")
 
-		// Skip empty lines
-		if line == "" {
+		// Toggle fence state and preserve fence lines as-is
+		if strings.HasPrefix(trimmedLeft, "```") {
+			inCodeFence = !inCodeFence
+			result = append(result, line)
+			continue
+		}
+
+		// Skip transformations inside code fences
+		if inCodeFence {
+			result = append(result, line)
+			continue
+		}
+
+		// Handle empty lines
+		if trimmedLeft == "" {
 			result = append(result, "")
 			continue
 		}
 
 		// Convert headers to bold text (Slack doesn't support headers natively)
-		if matched, _ := regexp.MatchString(`^#{1,6}\s+`, line); matched {
-			headerRegex := regexp.MustCompile(`^#{1,6}\s+(.+)$`)
-			content := headerRegex.ReplaceAllString(line, "$1")
+		if matches := headerRegex.FindStringSubmatch(trimmedLeft); matches != nil {
+			content := matches[1]
 			result = append(result, "*"+content+"*")
 			continue
 		}
 
-		// Convert numbered lists
-		if matched, _ := regexp.MatchString(`^(\d+)\.\s+`, line); matched {
-			numberedListRegex := regexp.MustCompile(`^(\d+)\.\s+(.+)$`)
-			formatted := numberedListRegex.ReplaceAllString(line, "$1. $2")
+		// Convert bullet points with ** formatting (must come before generic numbered lists)
+		if matches := bulletWithBold.FindStringSubmatch(trimmedLeft); matches != nil {
+			num := matches[1]
+			title := matches[2]
+			content := matches[3]
+			if content != "" {
+				result = append(result, num+". *"+title+"*: "+content)
+			} else {
+				result = append(result, num+". *"+title+"*")
+			}
+			continue
+		}
+
+		// Convert numbered lists (generic case)
+		if matches := numberedList.FindStringSubmatch(trimmedLeft); matches != nil {
+			formatted := matches[1] + ". " + matches[2]
 			result = append(result, formatted)
 			continue
 		}
 
-		// Convert bullet points with ** formatting
-		if matched, _ := regexp.MatchString(`^\d+\.\s+\*\*`, line); matched {
-			bulletRegex := regexp.MustCompile(`^(\d+)\.\s+\*\*([^*]+)\*\*:?\s*(.*)$`)
-			matches := bulletRegex.FindStringSubmatch(line)
-			if len(matches) >= 4 {
-				num := matches[1]
-				title := matches[2]
-				content := matches[3]
-				if content != "" {
-					result = append(result, num+". *"+title+"*: "+content)
-				} else {
-					result = append(result, num+". *"+title+"*")
-				}
-				continue
-			}
-		}
-
-		// Convert remaining ** bold ** to * bold *
-		line = regexp.MustCompile(`\*\*([^*]+)\*\*`).ReplaceAllString(line, "*$1*")
-
-		// Handle inline code (preserve as is)
-		line = regexp.MustCompile("`([^`]*)`").ReplaceAllString(line, "`$1`")
+		// Convert **bold** to *bold* only outside inline code spans
+		line = transformBoldOutsideCode(line, boldRegex)
 
 		result = append(result, line)
 	}
 
-	// Handle code blocks (preserve them as is) - process after line-by-line
-	finalText := strings.Join(result, "\n")
-	finalText = regexp.MustCompile("```([^`]*)```").ReplaceAllString(finalText, "```$1```")
+	return strings.TrimSpace(strings.Join(result, "\n"))
+}
 
-	return strings.TrimSpace(finalText)
+// transformBoldOutsideCode applies bold transformation only outside inline code spans
+func transformBoldOutsideCode(line string, boldRegex *regexp.Regexp) string {
+	parts := strings.Split(line, "`")
+	for i := 0; i < len(parts); i++ {
+		if i%2 == 0 { // outside code spans (even indices)
+			parts[i] = boldRegex.ReplaceAllString(parts[i], "*$1*")
+		}
+	}
+	return strings.Join(parts, "`")
 }
 
 type Slack struct {
