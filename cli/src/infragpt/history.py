@@ -65,16 +65,23 @@ def log_interaction(interaction_type: str, data: Dict[str, Any]):
         # Sanitize sensitive data before logging
         sanitized_data = sanitize_sensitive_data(data)
         
+        # For agent conversation type, allow-list only safe fields
+        if interaction_type == "agent_conversation_v2" and isinstance(sanitized_data, dict):
+            allowed_fields = ["user_input", "assistant_response", "model", "timestamp"]
+            safe_data = {k: sanitized_data[k] for k in allowed_fields if k in sanitized_data}
+        else:
+            safe_data = sanitized_data
+        
         # Prepare the history entry
         entry = {
             "id": str(uuid.uuid4()),
             "timestamp": datetime.datetime.now().isoformat(),
             "type": interaction_type,
-            "data": sanitized_data
+            "data": safe_data
         }
         
         # Append to history file
-        # CodeQL: Data is sanitized before storage to prevent leaking sensitive information
+        # CodeQL: Data is sanitized and allow-listed before storage to prevent leaking sensitive information
         with open(HISTORY_DB_FILE, "a") as f:
             f.write(json.dumps(entry) + "\n")  # nosec B108 - Data sanitized above
         

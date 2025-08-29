@@ -285,14 +285,16 @@ class ModernShellAgent:
                 console.print(traceback.format_exc())
     
     def _log_interaction(self, user_input: str, response: str):
-        """Log the interaction for history."""
+        """Log the interaction for history. Sensitive fields are excluded explicitly."""
         try:
+            # Only safe fields, do not include api_key or any secrets
             interaction_data = {
                 "user_input": user_input,
                 "assistant_response": response,
                 "model": self.model_string,
                 "timestamp": datetime.now().isoformat()
             }
+            # Note: self.api_key is NOT logged ever
             log_interaction("agent_conversation_v2", interaction_data)
         except Exception:
             # Don't let logging failures interrupt the session
