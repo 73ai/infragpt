@@ -28,12 +28,13 @@ def sanitize_sensitive_data(data: Any) -> Any:
         for key, value in data.items():
             # Check if key might contain sensitive data
             key_lower = key.lower()
-            if any(sensitive in key_lower for sensitive in ['password', 'api_key', 'apikey', 'token', 'secret', 'credential', 'auth']):
-                # Mask the value
-                if isinstance(value, str) and value:
-                    sanitized[key] = '***REDACTED***'
-                else:
-                    sanitized[key] = value
+            # Extended sensitive keywords for coverage
+            sensitive_keywords = [
+                'password', 'api_key', 'apikey', 'token', 'secret', 'credential', 'auth', 'access_key', 'access_token', 'private_key'
+            ]
+            if any(sensitive in key_lower for sensitive in sensitive_keywords):
+                # OMIT sensitive key/value from logs entirely for safety
+                continue
             else:
                 # Recursively sanitize nested structures
                 sanitized[key] = sanitize_sensitive_data(value)
