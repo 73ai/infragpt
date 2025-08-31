@@ -36,7 +36,7 @@ class OpenAIProvider(BaseLLMProvider):
             }
             
             # Newer models like o4-mini use max_completion_tokens
-            if self.model.startswith("o4") or self.model.startswith("o1"):
+            if self.model.startswith("o4") or self.model.startswith("o1") or self.model.startswith("gpt-5"):
                 params["max_completion_tokens"] = 10
             else:
                 params["max_tokens"] = 10
@@ -113,7 +113,7 @@ class OpenAIProvider(BaseLLMProvider):
         }
         
         # Handle temperature - o4 models only support default temperature of 1.0
-        if self.model.startswith("o4") or self.model.startswith("o1"):
+        if self.model.startswith("o4") or self.model.startswith("o1") or self.model.startswith("gpt-5"):
             # Don't set temperature for o4/o1 models (uses default 1.0)
             pass
         else:
@@ -121,7 +121,7 @@ class OpenAIProvider(BaseLLMProvider):
         
         if kwargs.get("max_tokens"):
             # Use appropriate parameter based on model
-            if self.model.startswith("o4") or self.model.startswith("o1"):
+            if self.model.startswith("o4") or self.model.startswith("o1") or self.model.startswith("gpt-5"):
                 request["max_completion_tokens"] = kwargs["max_tokens"]
             else:
                 request["max_tokens"] = kwargs["max_tokens"]

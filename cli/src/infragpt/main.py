@@ -82,11 +82,11 @@ def get_credentials_v2(model_string: Optional[str] = None, api_key: Optional[str
             anthropic_key = os.getenv("ANTHROPIC_API_KEY")
             
             if openai_key and not model_string:
-                model_string = "openai:gpt-4o"
+                model_string = "openai:gpt-5"
                 api_key = openai_key
                 provider_name = "openai"
             elif anthropic_key and not model_string:
-                model_string = "anthropic:claude-3-5-sonnet-20241022"
+                model_string = "anthropic:claude-sonnet-4-20250514"
                 api_key = anthropic_key
                 provider_name = "anthropic"
     
