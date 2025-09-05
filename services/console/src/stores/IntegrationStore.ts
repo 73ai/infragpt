@@ -261,7 +261,7 @@ class IntegrationStore {
       });
 
       try {
-        await integrationService.revokeIntegration(integrationId);
+        await integrationService.revokeIntegration(integrationId, integration.organizationId);
         
         runInAction(() => {
           this.integrations.delete(integrationId);
