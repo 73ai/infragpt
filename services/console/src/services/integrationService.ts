@@ -207,8 +207,11 @@ class IntegrationService {
   /**
    * Revoke/disconnect an integration
    */
-  async revokeIntegration(integrationId: string): Promise<void> {
-    const request: RevokeIntegrationRequest = { integration_id: integrationId };
+  async revokeIntegration(integrationId: string, organizationId: string): Promise<void> {
+    const request: RevokeIntegrationRequest = { 
+      integration_id: integrationId,
+      organization_id: organizationId
+    };
 
     await this.request<void>('/revoke/', {
       method: 'POST',

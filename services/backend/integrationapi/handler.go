@@ -25,7 +25,7 @@ func (h *httpHandler) init() {
 	h.HandleFunc("/integrations/list/", h.list())
 	h.HandleFunc("/integrations/revoke/", h.revoke())
 	h.HandleFunc("/integrations/status/", h.status())
-	h.HandleFunc("/integrations/gcp/validate", h.validateGCP())
+	h.HandleFunc("/integrations/validate", h.validateCredentials())
 }
 
 func NewHandler(integrationService backend.IntegrationService,
@@ -370,72 +370,42 @@ func (h *httpHandler) sync() func(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *httpHandler) validateGCP() func(w http.ResponseWriter, r *http.Request) {
+func (h *httpHandler) validateCredentials() func(w http.ResponseWriter, r *http.Request) {
 	type request struct {
-		ServiceAccountJSON string `json:"service_account_json"`
+		ConnectorType string                 `json:"connector_type"`
+		Credentials   map[string]interface{} `json:"credentials"`
 	}
 	type response struct {
-		Valid       bool     `json:"valid"`
-		ProjectID   string   `json:"project_id"`
-		ClientEmail string   `json:"client_email"`
-		HasViewer   bool     `json:"has_viewer_role"`
-		Errors      []string `json:"errors,omitempty"`
+		Valid   bool     `json:"valid"`
+		Details any      `json:"details,omitempty"`
+		Errors  []string `json:"errors,omitempty"`
 	}
 
 	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
-		if req.ServiceAccountJSON == "" {
+		if req.ConnectorType == "" {
 			return response{
 				Valid:  false,
-				Errors: []string{"Service account JSON is required"},
+				Errors: []string{"connector_type is required"},
 			}, nil
 		}
 
-		// Validate the service account credentials
-		// Note: This is a simplified validation. In production, you would use the GCP connector's validation
-		var sa struct {
-			Type        string `json:"type"`
-			ProjectID   string `json:"project_id"`
-			ClientEmail string `json:"client_email"`
-			PrivateKey  string `json:"private_key"`
-		}
-
-		if err := json.Unmarshal([]byte(req.ServiceAccountJSON), &sa); err != nil {
+		if req.Credentials == nil || len(req.Credentials) == 0 {
 			return response{
 				Valid:  false,
-				Errors: []string{fmt.Sprintf("Invalid JSON format: %v", err)},
+				Errors: []string{"credentials are required"},
 			}, nil
 		}
 
-		// Basic validation
-		errors := []string{}
-		if sa.Type != "service_account" {
-			errors = append(errors, fmt.Sprintf("Invalid type: expected 'service_account', got '%s'", sa.Type))
-		}
-		if sa.ProjectID == "" {
-			errors = append(errors, "project_id is required")
-		}
-		if sa.ClientEmail == "" {
-			errors = append(errors, "client_email is required")
-		}
-		if sa.PrivateKey == "" {
-			errors = append(errors, "private_key is required")
+		// Delegate validation to the integration service
+		validationResult, err := h.svc.ValidateCredentials(ctx, backend.ConnectorType(req.ConnectorType), req.Credentials)
+		if err != nil {
+			return response{}, fmt.Errorf("failed to validate credentials: %w", err)
 		}
 
-		if len(errors) > 0 {
-			return response{
-				Valid:  false,
-				Errors: errors,
-			}, nil
-		}
-
-		// TODO: In production, call the GCP connector's ValidateServiceAccountWithViewer function
-		// For now, we'll return a simplified response
 		return response{
-			Valid:       true,
-			ProjectID:   sa.ProjectID,
-			ClientEmail: sa.ClientEmail,
-			HasViewer:   true, // This should be checked via GCP IAM API
-			Errors:      []string{},
+			Valid:   validationResult.Valid,
+			Details: validationResult.Details,
+			Errors:  validationResult.Errors,
 		}, nil
 	})
 }

@@ -6,15 +6,11 @@ import (
 	"fmt"
 	"strings"
 
-	// Note: The following GCP imports are commented out to avoid dependency issues
-	// Uncomment and add to go.mod when implementing full GCP IAM validation
-	// "cloud.google.com/go/iam/admin/apiv1"
-	// "cloud.google.com/go/iam/admin/apiv1/adminpb"
 	"github.com/google/uuid"
 	"github.com/priyanshujain/infragpt/services/backend"
 	"github.com/priyanshujain/infragpt/services/backend/internal/integrationsvc/domain"
-	// "google.golang.org/api/cloudresourcemanager/v1"
-	// "google.golang.org/api/option"
+	"google.golang.org/api/cloudresourcemanager/v1"
+	"google.golang.org/api/option"
 )
 
 // ServiceAccountKey represents the structure of a GCP service account JSON key
@@ -176,23 +172,70 @@ func ValidateServiceAccountWithViewer(jsonData []byte) (*ValidationResult, error
 	result.ProjectID = sa.ProjectID
 	result.ClientEmail = sa.ClientEmail
 
-	// TODO: Implement full GCP IAM validation when dependencies are added
-	// For now, we do basic validation and assume the viewer role is granted
-	// In production, uncomment the GCP imports and implement the following:
-	// 1. Create a Resource Manager client with the service account credentials
-	// 2. Test access to the project
-	// 3. Check IAM policy bindings for Viewer/Editor/Owner roles
-	// 4. Return appropriate errors if permissions are missing
-	
-	// For development/testing, we'll assume valid credentials have the Viewer role
-	result.HasViewer = true
-	result.Valid = len(result.Errors) == 0
+	// Create a context for API calls
+	ctx := context.Background()
 
-	// Add a warning that this is simplified validation
-	if result.Valid {
-		// In production, remove this and implement actual GCP API validation
-		// The frontend will still show the validation as successful
+	// Test authentication by creating clients with service account credentials
+	option := option.WithCredentialsJSON(jsonData)
+
+	// Test Resource Manager API access
+	service, err := cloudresourcemanager.NewService(ctx, option)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("failed to create resource manager client: %v", err))
+		return result, nil
 	}
+
+	// Get project to verify access
+	project, err := service.Projects.Get(sa.ProjectID).Context(ctx).Do()
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("failed to access project %s: %v", sa.ProjectID, err))
+		return result, nil
+	}
+
+	if project == nil {
+		result.Errors = append(result.Errors, "project not found or no access")
+		return result, nil
+	}
+
+	// Get IAM policy for the project
+	policy, err := service.Projects.GetIamPolicy(sa.ProjectID, &cloudresourcemanager.GetIamPolicyRequest{}).Context(ctx).Do()
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("failed to get IAM policy: %v", err))
+		return result, nil
+	}
+
+	// Check if the service account has Viewer role or higher
+	hasViewer := false
+	viewerRoles := []string{"roles/viewer", "roles/owner", "roles/editor"}
+	memberIdentity := fmt.Sprintf("serviceAccount:%s", sa.ClientEmail)
+	
+	for _, binding := range policy.Bindings {
+		// Check if this binding grants a viewer role or higher
+		for _, role := range viewerRoles {
+			if binding.Role == role {
+				// Check if our service account is in the members list
+				for _, member := range binding.Members {
+					if member == memberIdentity {
+						hasViewer = true
+						break
+					}
+				}
+			}
+			if hasViewer {
+				break
+			}
+		}
+		if hasViewer {
+			break
+		}
+	}
+
+	if !hasViewer {
+		result.Errors = append(result.Errors, fmt.Sprintf("Service account %s does not have Viewer role. Please grant the Viewer role at https://console.cloud.google.com/iam-admin/roles/details/roles%%3Cviewer", sa.ClientEmail))
+	}
+
+	result.HasViewer = hasViewer
+	result.Valid = len(result.Errors) == 0
 
 	return result, nil
 }
