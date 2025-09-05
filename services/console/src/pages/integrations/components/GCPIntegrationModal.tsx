@@ -182,7 +182,7 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <img 
-              src="/integrations/gcp.svg" 
+              src="/icons/gcp.svg" 
               alt="Google Cloud Platform" 
               className="w-6 h-6"
             />
