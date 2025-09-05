@@ -13,7 +13,7 @@ import {
 import { Button } from '../../../components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
 import { Badge } from '../../../components/ui/badge';
-import { Textarea } from '../../../components/ui/textarea';
+import { JSONEditor } from '../../../components/JSONEditor';
 import { Loader2, AlertCircle, CheckCircle2, ExternalLink, Shield } from 'lucide-react';
 import { integrationStore } from '../../../stores/IntegrationStore';
 import { userStore } from '../../../stores/UserStore';
@@ -54,12 +54,10 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
   //   }
   // };
 
-  // Handle JSON input change
-  const handleJSONChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
+  // Handle JSON input change from CodeMirror
+  const handleJSONChange = useCallback((value: string) => {
     setServiceAccountJSON(value);
     setError(null);
-    setJsonError(null);
     setValidationResult(null);
     
     // Parse and validate JSON structure on change
@@ -90,13 +88,23 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
           setJsonError(null);
         }
       } catch (e) {
-        setJsonError('Invalid JSON format');
+        // JSON parsing errors are handled by the JSONEditor component
         setServiceAccountInfo(null);
       }
     } else {
       setServiceAccountInfo(null);
+      setJsonError(null);
     }
-  };
+  }, []);
+
+  // Handle JSON validation errors from CodeMirror
+  const handleJSONValidation = useCallback((errors: string[] | null) => {
+    if (errors && errors.length > 0) {
+      setJsonError(errors[0]);
+    } else {
+      setJsonError(null);
+    }
+  }, []);
 
   // Validate credentials using the generic API
   const validateCredentials = useCallback(async () => {
@@ -220,13 +228,11 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
           {/* JSON Editor */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Service Account JSON</label>
-            <Textarea
+            <JSONEditor
               value={serviceAccountJSON}
               onChange={handleJSONChange}
-              placeholder={`Paste your service account JSON here...
-
-Example:
-{
+              onValidation={handleJSONValidation}
+              placeholder={`{
   "type": "service_account",
   "project_id": "your-project-id",
   "private_key_id": "...",
@@ -234,8 +240,8 @@ Example:
   "client_email": "your-service-account@your-project.iam.gserviceaccount.com",
   ...
 }`}
-              className="font-mono text-xs h-64 resize-none"
-              spellCheck={false}
+              height="350px"
+              theme="dark"
             />
           </div>
 
