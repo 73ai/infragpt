@@ -35,8 +35,8 @@ export const CONNECTORS: Connector[] = [
     name: 'Google Cloud',
     description: 'Cloud platform and services',
     logo: '/icons/gcp.svg',
-    isImplemented: false,
-    authType: 'oauth2',
+    isImplemented: true,
+    authType: 'api_key',
     capabilities: CONNECTOR_CAPABILITIES.gcp
   },
   {

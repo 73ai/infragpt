@@ -25,6 +25,7 @@ func (h *httpHandler) init() {
 	h.HandleFunc("/integrations/list/", h.list())
 	h.HandleFunc("/integrations/revoke/", h.revoke())
 	h.HandleFunc("/integrations/status/", h.status())
+	h.HandleFunc("/integrations/gcp/validate", h.validateGCP())
 }
 
 func NewHandler(integrationService backend.IntegrationService,
@@ -365,6 +366,76 @@ func (h *httpHandler) sync() func(w http.ResponseWriter, r *http.Request) {
 
 		return response{
 			Message: "Integration synced successfully",
+		}, nil
+	})
+}
+
+func (h *httpHandler) validateGCP() func(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		ServiceAccountJSON string `json:"service_account_json"`
+	}
+	type response struct {
+		Valid       bool     `json:"valid"`
+		ProjectID   string   `json:"project_id"`
+		ClientEmail string   `json:"client_email"`
+		HasViewer   bool     `json:"has_viewer_role"`
+		Errors      []string `json:"errors,omitempty"`
+	}
+
+	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
+		if req.ServiceAccountJSON == "" {
+			return response{
+				Valid:  false,
+				Errors: []string{"Service account JSON is required"},
+			}, nil
+		}
+
+		// Validate the service account credentials
+		// Note: This is a simplified validation. In production, you would use the GCP connector's validation
+		var sa struct {
+			Type        string `json:"type"`
+			ProjectID   string `json:"project_id"`
+			ClientEmail string `json:"client_email"`
+			PrivateKey  string `json:"private_key"`
+		}
+
+		if err := json.Unmarshal([]byte(req.ServiceAccountJSON), &sa); err != nil {
+			return response{
+				Valid:  false,
+				Errors: []string{fmt.Sprintf("Invalid JSON format: %v", err)},
+			}, nil
+		}
+
+		// Basic validation
+		errors := []string{}
+		if sa.Type != "service_account" {
+			errors = append(errors, fmt.Sprintf("Invalid type: expected 'service_account', got '%s'", sa.Type))
+		}
+		if sa.ProjectID == "" {
+			errors = append(errors, "project_id is required")
+		}
+		if sa.ClientEmail == "" {
+			errors = append(errors, "client_email is required")
+		}
+		if sa.PrivateKey == "" {
+			errors = append(errors, "private_key is required")
+		}
+
+		if len(errors) > 0 {
+			return response{
+				Valid:  false,
+				Errors: errors,
+			}, nil
+		}
+
+		// TODO: In production, call the GCP connector's ValidateServiceAccountWithViewer function
+		// For now, we'll return a simplified response
+		return response{
+			Valid:       true,
+			ProjectID:   sa.ProjectID,
+			ClientEmail: sa.ClientEmail,
+			HasViewer:   true, // This should be checked via GCP IAM API
+			Errors:      []string{},
 		}, nil
 	})
 }

@@ -1,6 +1,6 @@
 // Integration Manager - Main List Page
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useUser } from '@clerk/clerk-react';
 import { integrationStore } from '../../stores/IntegrationStore';
@@ -11,10 +11,12 @@ import { Card } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useApiClient } from '../../lib/api';
+import { GCPIntegrationModal } from './components/GCPIntegrationModal';
 
 const IntegrationsPage = observer(() => {
   const { user } = useUser();
   const { getMe } = useApiClient();
+  const [showGCPModal, setShowGCPModal] = useState(false);
   
   const clerkUserId = user?.id;
   const clerkOrgId = user?.organizationMemberships?.[0]?.organization?.id;
@@ -37,6 +39,12 @@ const IntegrationsPage = observer(() => {
     if (!userStore.organizationId || !userStore.userId) return;
 
     if (action === 'connect') {
+      // Special handling for GCP integration
+      if (connectorType === 'gcp') {
+        setShowGCPModal(true);
+        return;
+      }
+
       try {
         const response = await integrationStore.initiateConnection(
           connectorType as any,
@@ -140,6 +148,11 @@ const IntegrationsPage = observer(() => {
           loadingConnectors={integrationStore.loadingConnectors}
         />
 
+        {/* GCP Integration Modal */}
+        <GCPIntegrationModal 
+          isOpen={showGCPModal} 
+          onClose={() => setShowGCPModal(false)}
+        />
       </div>
     </div>
   );

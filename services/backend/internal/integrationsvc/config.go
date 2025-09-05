@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/priyanshujain/infragpt/services/backend"
+	"github.com/priyanshujain/infragpt/services/backend/internal/integrationsvc/connectors/gcp"
 	"github.com/priyanshujain/infragpt/services/backend/internal/integrationsvc/connectors/github"
 	"github.com/priyanshujain/infragpt/services/backend/internal/integrationsvc/connectors/slack"
 	"github.com/priyanshujain/infragpt/services/backend/internal/integrationsvc/domain"
@@ -15,6 +16,7 @@ type Config struct {
 	Database *sql.DB       `mapstructure:"-"`
 	Slack    slack.Config  `mapstructure:"slack"`
 	GitHub   github.Config `mapstructure:"github"`
+	GCP      gcp.Config    `mapstructure:"gcp"`
 }
 
 func (c Config) New() (backend.IntegrationService, error) {
@@ -39,6 +41,11 @@ func (c Config) New() (backend.IntegrationService, error) {
 
 		connectors[backend.ConnectorTypeGithub] = c.GitHub.New()
 	}
+
+	// GCP connector is always available (no config needed for service account auth)
+	c.GCP.IntegrationRepository = integrationRepository
+	c.GCP.CredentialRepository = credentialRepository
+	connectors[backend.ConnectorTypeGCP] = c.GCP.New()
 
 	serviceConfig := ServiceConfig{
 		IntegrationRepository: integrationRepository,
