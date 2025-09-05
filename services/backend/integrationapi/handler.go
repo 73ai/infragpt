@@ -166,7 +166,6 @@ func (h *httpHandler) list() func(w http.ResponseWriter, r *http.Request) {
 
 		query := backend.IntegrationsQuery{
 			OrganizationID: organizationID,
-			Status:         backend.IntegrationStatusActive,
 		}
 
 		if req.ConnectorType != "" {

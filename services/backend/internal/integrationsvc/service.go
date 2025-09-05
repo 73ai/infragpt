@@ -34,12 +34,12 @@ func NewService(config ServiceConfig) backend.IntegrationService {
 }
 
 func (s *service) NewIntegration(ctx context.Context, cmd backend.NewIntegrationCommand) (backend.IntegrationAuthorizationIntent, error) {
-	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, cmd.OrganizationID, cmd.ConnectorType)
+	existingActiveIntegrations, err := s.integrationRepository.FindByOrganizationTypeAndStatus(ctx, cmd.OrganizationID, cmd.ConnectorType, backend.IntegrationStatusActive)
 	if err != nil {
-		return backend.IntegrationAuthorizationIntent{}, fmt.Errorf("failed to check existing integrations: %w", err)
+		return backend.IntegrationAuthorizationIntent{}, fmt.Errorf("failed to check existing active integrations: %w", err)
 	}
 
-	if len(existingIntegrations) > 0 {
+	if len(existingActiveIntegrations) > 0 {
 		return backend.IntegrationAuthorizationIntent{}, fmt.Errorf("integration already exists for connector type %s", cmd.ConnectorType)
 	}
 
@@ -74,12 +74,13 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd backend.Authoriz
 			return backend.Integration{}, fmt.Errorf("failed to parse state: %w", err)
 		}
 
-		existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, organizationID, cmd.ConnectorType)
+		// Look for active integrations only - inactive ones should be handled by ClaimInstallation
+		existingActiveIntegrations, err := s.integrationRepository.FindByOrganizationTypeAndStatus(ctx, organizationID, cmd.ConnectorType, backend.IntegrationStatusActive)
 		if err != nil {
 			return backend.Integration{}, fmt.Errorf("failed to find claimed integration: %w", err)
 		}
 
-		for _, integration := range existingIntegrations {
+		for _, integration := range existingActiveIntegrations {
 			if integration.BotID == cmd.InstallationID {
 				return integration, nil
 			}
@@ -93,12 +94,12 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd backend.Authoriz
 		return backend.Integration{}, fmt.Errorf("failed to parse state: %w", err)
 	}
 
-	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, organizationID, cmd.ConnectorType)
+	existingActiveIntegrations, err := s.integrationRepository.FindByOrganizationTypeAndStatus(ctx, organizationID, cmd.ConnectorType, backend.IntegrationStatusActive)
 	if err != nil {
-		return backend.Integration{}, fmt.Errorf("failed to check existing integrations: %w", err)
+		return backend.Integration{}, fmt.Errorf("failed to check existing active integrations: %w", err)
 	}
 
-	if len(existingIntegrations) > 0 {
+	if len(existingActiveIntegrations) > 0 {
 		return backend.Integration{}, fmt.Errorf("integration already exists for connector type %s in organization %s", cmd.ConnectorType, organizationID)
 	}
 
@@ -259,7 +260,7 @@ func (s *service) ValidateCredentials(ctx context.Context, connectorType backend
 
 	// Convert credentials map to backend.Credentials format
 	credData := make(map[string]string)
-	
+
 	// Handle different credential formats based on connector type
 	switch connectorType {
 	case backend.ConnectorTypeGCP:
@@ -320,7 +321,7 @@ func extractGCPDetails(serviceAccountJSON string) map[string]interface{} {
 		ProjectID   string `json:"project_id"`
 		ClientEmail string `json:"client_email"`
 	}
-	
+
 	if err := json.Unmarshal([]byte(serviceAccountJSON), &sa); err != nil {
 		return map[string]interface{}{
 			"error": "Failed to parse service account JSON",

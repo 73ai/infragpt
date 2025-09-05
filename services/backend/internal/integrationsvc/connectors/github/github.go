@@ -110,7 +110,6 @@ func (g *githubConnector) CompleteAuthorization(authData backend.AuthorizationDa
 		slog.Error("failed to claim GitHub installation",
 			"installation_id", authData.InstallationID,
 			"organization_id", organizationID,
-			"integration_id", integration.ID,
 			"error", err)
 		return backend.Credentials{}, fmt.Errorf("failed to claim GitHub installation: %w", err)
 	}
@@ -299,6 +298,59 @@ func (g *githubConnector) buildWebhookURL() string {
 }
 
 func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID string, organizationID, userID uuid.UUID) (*backend.Integration, error) {
+	// First check if there's already an integration for this installation_id
+	existingIntegrationByBotID, err := g.config.IntegrationRepository.FindByBotIDAndType(ctx, installationID, backend.ConnectorTypeGithub)
+	if err == nil {
+		// Integration exists with this installation_id - reactivate it if it's inactive
+		if existingIntegrationByBotID.Status != backend.IntegrationStatusActive {
+			existingIntegrationByBotID.Status = backend.IntegrationStatusActive
+			existingIntegrationByBotID.UpdatedAt = time.Now()
+			if err := g.config.IntegrationRepository.Update(ctx, existingIntegrationByBotID); err != nil {
+				return nil, fmt.Errorf("failed to reactivate existing integration: %w", err)
+			}
+		}
+		return &existingIntegrationByBotID, nil
+	}
+
+	// Check if there's already a GitHub integration for this organization (with different installation_id)
+	existingIntegrationsByType, err := g.config.IntegrationRepository.FindByOrganizationAndType(ctx, organizationID, backend.ConnectorTypeGithub)
+	if err == nil && len(existingIntegrationsByType) > 0 {
+		// Update the existing integration with the new installation_id
+		existingIntegration := existingIntegrationsByType[0] // Take the first one
+		existingIntegration.BotID = installationID
+		existingIntegration.Status = backend.IntegrationStatusActive
+		existingIntegration.UpdatedAt = time.Now()
+
+		// Update metadata with new installation info
+		jwt, err := g.generateJWT()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate JWT: %w", err)
+		}
+
+		installationDetails, err := g.getInstallationDetails(jwt, installationID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get installation details from GitHub: %w", err)
+		}
+
+		existingIntegration.ConnectorUserID = installationDetails.Account.Login
+		existingIntegration.ConnectorOrganizationID = strconv.FormatInt(installationDetails.Account.ID, 10)
+		existingIntegration.Metadata = map[string]string{
+			"github_installation_id": installationID,
+			"github_app_id":          g.config.AppID,
+			"github_account_id":      strconv.FormatInt(installationDetails.Account.ID, 10),
+			"github_account_login":   installationDetails.Account.Login,
+			"github_account_type":    installationDetails.Account.Type,
+			"target_type":            installationDetails.TargetType,
+		}
+
+		if err := g.config.IntegrationRepository.Update(ctx, existingIntegration); err != nil {
+			return nil, fmt.Errorf("failed to update existing integration with new installation: %w", err)
+		}
+
+		return &existingIntegration, nil
+	}
+
+	// No existing integration found, create a new one
 	jwt, err := g.generateJWT()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate JWT: %w", err)

@@ -47,7 +47,18 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
   const getStatusBadge = () => {
     if (!integration) return null;
     
-    const config = STATUS_CONFIG[integration.status];
+    const config = STATUS_CONFIG[integration.status as keyof typeof STATUS_CONFIG];
+    
+    // Fallback for unknown statuses
+    if (!config) {
+      return (
+        <Badge variant="secondary" className="text-gray-600 bg-gray-50 border-gray-200 border">
+          <span className="mr-1">❓</span>
+          {integration.status}
+        </Badge>
+      );
+    }
+    
     return (
       <Badge 
         variant="secondary"

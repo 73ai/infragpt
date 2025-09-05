@@ -208,7 +208,7 @@ func ValidateServiceAccountWithViewer(jsonData []byte) (*ValidationResult, error
 	hasViewer := false
 	viewerRoles := []string{"roles/viewer", "roles/owner", "roles/editor"}
 	memberIdentity := fmt.Sprintf("serviceAccount:%s", sa.ClientEmail)
-	
+
 	for _, binding := range policy.Bindings {
 		// Check if this binding grants a viewer role or higher
 		for _, role := range viewerRoles {
