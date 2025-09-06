@@ -247,7 +247,7 @@ func (s *service) SyncIntegration(ctx context.Context, cmd backend.SyncIntegrati
 	return nil
 }
 
-func (s *service) ValidateCredentials(ctx context.Context, connectorType backend.ConnectorType, credentials map[string]interface{}) (backend.CredentialValidationResult, error) {
+func (s *service) ValidateCredentials(ctx context.Context, connectorType backend.ConnectorType, credentials map[string]any) (backend.CredentialValidationResult, error) {
 	// Get the connector
 	connector, exists := s.connectors[connectorType]
 	if !exists {

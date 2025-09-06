@@ -83,7 +83,7 @@ func (c *Connector) CompleteAuthorization(authData backend.AuthorizationData) (b
 	}
 
 	// Basic validation - just ensure it's valid JSON
-	var jsonCheck map[string]interface{}
+	var jsonCheck map[string]any
 	if err := json.Unmarshal([]byte(authData.Code), &jsonCheck); err != nil {
 		return backend.Credentials{}, fmt.Errorf("invalid JSON format")
 	}

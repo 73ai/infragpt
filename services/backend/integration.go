@@ -100,7 +100,7 @@ type IntegrationService interface {
 	RevokeIntegration(ctx context.Context, cmd RevokeIntegrationCommand) error
 	Integrations(ctx context.Context, query IntegrationsQuery) ([]Integration, error)
 	Integration(ctx context.Context, query IntegrationQuery) (Integration, error)
-	ValidateCredentials(ctx context.Context, connectorType ConnectorType, credentials map[string]interface{}) (CredentialValidationResult, error)
+	ValidateCredentials(ctx context.Context, connectorType ConnectorType, credentials map[string]any) (CredentialValidationResult, error)
 	Subscribe(ctx context.Context) error
 }
 

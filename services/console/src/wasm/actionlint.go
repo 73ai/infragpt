@@ -17,8 +17,8 @@ func fail(err error, when string) {
 	window.Call("showError", err.Error()+" on "+when)
 }
 
-func encodeErrorAsMap(err *actionlint.Error) map[string]interface{} {
-	obj := make(map[string]interface{}, 4)
+func encodeErrorAsMap(err *actionlint.Error) map[string]any {
+	obj := make(map[string]any, 4)
 	obj["message"] = err.Message
 	obj["line"] = err.Line
 	obj["column"] = err.Column
