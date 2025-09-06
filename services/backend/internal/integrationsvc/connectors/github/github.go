@@ -55,7 +55,14 @@ func (g *githubConnector) InitiateAuthorization(organizationID string, userID st
 }
 
 func (g *githubConnector) ParseState(state string) (organizationID uuid.UUID, userID uuid.UUID, err error) {
-	stateJSON, err := base64.URLEncoding.DecodeString(state)
+	// URL decode the state first in case it comes from a browser
+	decodedState, err := url.QueryUnescape(state)
+	if err != nil {
+		// If URL decoding fails, try to use the original state
+		decodedState = state
+	}
+
+	stateJSON, err := base64.URLEncoding.DecodeString(decodedState)
 	if err != nil {
 		return uuid.Nil, uuid.Nil, fmt.Errorf("invalid state format, failed to decode base64: %w", err)
 	}
@@ -312,13 +319,14 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 		return &existingIntegrationByBotID, nil
 	}
 
-	// Check if there's already a GitHub integration for this organization (with different installation_id)
-	existingIntegrationsByType, err := g.config.IntegrationRepository.FindByOrganizationAndType(ctx, organizationID, backend.ConnectorTypeGithub)
-	if err == nil && len(existingIntegrationsByType) > 0 {
-		// Update the existing integration with the new installation_id
-		existingIntegration := existingIntegrationsByType[0] // Take the first one
+	// Check if there's already an ACTIVE GitHub integration for this organization (with different installation_id)
+	existingActiveIntegrations, err := g.config.IntegrationRepository.FindByOrganizationTypeAndStatus(ctx, organizationID, backend.ConnectorTypeGithub, backend.IntegrationStatusActive)
+	if err == nil && len(existingActiveIntegrations) > 0 {
+		// Update the existing ACTIVE integration with the new installation_id
+		// TODO: we are assuming there's only one active integration per organization, please first validate inactive integration if that is
+		// still installed and then decide whether to reuse or create a new one
+		existingIntegration := existingActiveIntegrations[0] // Take the first active one
 		existingIntegration.BotID = installationID
-		existingIntegration.Status = backend.IntegrationStatusActive
 		existingIntegration.UpdatedAt = time.Now()
 
 		// Update metadata with new installation info
@@ -348,6 +356,19 @@ func (g *githubConnector) ClaimInstallation(ctx context.Context, installationID 
 		}
 
 		return &existingIntegration, nil
+	}
+
+	// If there are inactive integrations, clean them up before creating a new one
+	existingInactiveIntegrations, err := g.config.IntegrationRepository.FindByOrganizationAndType(ctx, organizationID, backend.ConnectorTypeGithub)
+	if err == nil && len(existingInactiveIntegrations) > 0 {
+		// Delete inactive integrations to avoid constraint violations
+		for _, inactiveIntegration := range existingInactiveIntegrations {
+			if inactiveIntegration.Status != backend.IntegrationStatusActive {
+				if err := g.config.IntegrationRepository.Delete(ctx, inactiveIntegration.ID); err != nil {
+					return nil, fmt.Errorf("failed to delete inactive integration: %w", err)
+				}
+			}
+		}
 	}
 
 	// No existing integration found, create a new one
