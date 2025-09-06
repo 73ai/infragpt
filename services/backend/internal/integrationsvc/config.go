@@ -34,7 +34,6 @@ func (c Config) New() (backend.IntegrationService, error) {
 	}
 
 	if c.GitHub.AppID != "" {
-		// Inject repository dependencies into GitHub config
 		c.GitHub.GitHubRepositoryRepo = postgres.NewGitHubRepositoryRepository(c.Database)
 		c.GitHub.IntegrationRepository = integrationRepository
 		c.GitHub.CredentialRepository = credentialRepository
@@ -42,7 +41,6 @@ func (c Config) New() (backend.IntegrationService, error) {
 		connectors[backend.ConnectorTypeGithub] = c.GitHub.New()
 	}
 
-	// GCP connector is always available (no config needed for service account auth)
 	c.GCP.IntegrationRepository = integrationRepository
 	c.GCP.CredentialRepository = credentialRepository
 	connectors[backend.ConnectorTypeGCP] = c.GCP.New()

@@ -34,7 +34,6 @@ import (
 )
 
 func main() {
-	// Set default timezone to UTC for consistent timestamp handling
 	time.Local = time.UTC
 
 	ctx := context.Background()
@@ -72,8 +71,7 @@ func main() {
 		panic(err)
 	}
 
-	// NOTE: Using third-party masq library for sensitive data sanitization in logs.
-	// This is written by a security engineer but it's new
+	// NOTE: masq library sanitizes sensitive data in logs
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: level,
 		ReplaceAttr: masq.New(

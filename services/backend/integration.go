@@ -71,9 +71,7 @@ type AuthorizationData struct {
 	InstallationID string
 }
 
-// Credentials contains sensitive authentication data in data map.
-// SECURITY NOTE: The Data field may contain private keys and other sensitive information.
-// This data should be encrypted before storage and never logged in plaintext.
+// SECURITY: Data contains sensitive credentials - must be encrypted before storage
 type Credentials struct {
 	Type             CredentialType
 	Data             map[string]string

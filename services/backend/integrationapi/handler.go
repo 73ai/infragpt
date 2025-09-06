@@ -275,8 +275,6 @@ func (h *httpHandler) status() func(w http.ResponseWriter, r *http.Request) {
 			return response{}, err
 		}
 
-		// TODO: Implement health check logic
-		// This would involve calling connector.ValidateCredentials()
 		healthStatus := "unknown"
 
 		resp := response{
@@ -395,7 +393,6 @@ func (h *httpHandler) validateCredentials() func(w http.ResponseWriter, r *http.
 			}, nil
 		}
 
-		// Delegate validation to the integration service
 		validationResult, err := h.svc.ValidateCredentials(ctx, backend.ConnectorType(req.ConnectorType), req.Credentials)
 		if err != nil {
 			return response{}, fmt.Errorf("failed to validate credentials: %w", err)
