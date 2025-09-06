@@ -5,7 +5,6 @@ import { json } from '@codemirror/lang-json';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { ViewUpdate } from '@codemirror/view';
 import { linter, Diagnostic } from '@codemirror/lint';
-import { placeholder } from '@codemirror/view';
 import { cn } from '../lib/utils';
 
 interface JSONEditorProps {
@@ -44,7 +43,6 @@ export const JSONEditor: React.FC<JSONEditorProps> = ({
   value,
   onChange,
   onValidation,
-  placeholder: placeholderText = 'Enter JSON...',
   className,
   height = '300px',
   readOnly = false,
