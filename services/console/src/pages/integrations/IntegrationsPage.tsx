@@ -21,19 +21,20 @@ const IntegrationsPage = observer(() => {
   const clerkUserId = user?.id;
   const clerkOrgId = user?.organizationMemberships?.[0]?.organization?.id;
 
-  // Load user profile on mount
+  // Load user profile and then integrations
   useEffect(() => {
-    if (!userStore.userProfile && !userStore.loading && clerkUserId && clerkOrgId) {
-      userStore.loadUserProfile(getMe, clerkUserId, clerkOrgId);
-    }
-  }, [getMe, clerkUserId, clerkOrgId]);
+    const loadData = async () => {
+      if (!userStore.userProfile && !userStore.loading && clerkUserId && clerkOrgId) {
+        await userStore.loadUserProfile(getMe, clerkUserId, clerkOrgId);
+      }
+      
+      if (userStore.organizationId && !integrationStore.loading) {
+        integrationStore.loadIntegrations(userStore.organizationId);
+      }
+    };
 
-  // Load integrations once we have the user profile
-  useEffect(() => {
-    if (userStore.organizationId) {
-      integrationStore.loadIntegrations(userStore.organizationId);
-    }
-  }, [userStore.organizationId]);
+    loadData();
+  }, [getMe, clerkUserId, clerkOrgId, userStore.organizationId]);
 
   const handleConnectorAction = async (connectorType: string, action: 'connect' | 'details') => {
     if (!userStore.organizationId || !userStore.userId) return;
