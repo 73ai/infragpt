@@ -1,5 +1,3 @@
-// Integration Manager - Main List Page
-
 import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useUser } from '@clerk/clerk-react';
@@ -21,7 +19,6 @@ const IntegrationsPage = observer(() => {
   const clerkUserId = user?.id;
   const clerkOrgId = user?.organizationMemberships?.[0]?.organization?.id;
 
-  // Load user profile and then integrations
   useEffect(() => {
     const loadData = async () => {
       if (!userStore.userProfile && !userStore.loading && clerkUserId && clerkOrgId) {
@@ -40,7 +37,6 @@ const IntegrationsPage = observer(() => {
     if (!userStore.organizationId || !userStore.userId) return;
 
     if (action === 'connect') {
-      // Special handling for GCP integration
       if (connectorType === 'gcp') {
         setShowGCPModal(true);
         return;
@@ -54,20 +50,16 @@ const IntegrationsPage = observer(() => {
           `${window.location.origin}/integrations/${connectorType}/authorize`
         );
         
-        // Redirect to authorization URL
         if (response.type === 'redirect' || response.type === 'oauth2' || response.type === 'installation') {
-          // open in a new tab 
           window.open(response.url, '_blank');
 
         } else if (response.type === 'popup') {
-          // Handle popup flow (future enhancement)
           window.open(response.url, 'integration-auth', 'width=600,height=600');
         }
       } catch (error) {
         integrationStore.handleError(error, 'connecting integration');
       }
     } else if (action === 'details') {
-      // Navigate to details page
       window.location.href = `/integrations/${connectorType}`;
     }
   };

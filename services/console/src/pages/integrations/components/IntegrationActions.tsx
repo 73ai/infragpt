@@ -1,5 +1,3 @@
-// IntegrationActions Component - Action Buttons for Integration Management
-
 import React, { useState } from 'react';
 import { Integration, Connector } from '../../../types/integration';
 import { Button } from '../../../components/ui/button';
@@ -61,7 +59,6 @@ export const IntegrationActions: React.FC<IntegrationActionsProps> = ({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Test Connection */}
           <Button
             variant="outline"
             onClick={() => handleAction('test', onTestConnection)}
@@ -81,7 +78,6 @@ export const IntegrationActions: React.FC<IntegrationActionsProps> = ({
             )}
           </Button>
 
-          {/* Reconfigure */}
           <Button
             variant="outline"
             onClick={() => handleAction('reconfigure', onReconfigure)}
@@ -101,7 +97,6 @@ export const IntegrationActions: React.FC<IntegrationActionsProps> = ({
             )}
           </Button>
 
-          {/* Disconnect */}
           <Button
             variant="destructive"
             onClick={() => handleAction('disconnect', onDisconnect)}
@@ -122,7 +117,6 @@ export const IntegrationActions: React.FC<IntegrationActionsProps> = ({
           </Button>
         </div>
 
-        {/* Action Descriptions */}
         <div className="mt-6 space-y-3 text-sm text-muted-foreground">
           <div className="flex items-start space-x-2">
             <TestTube className="h-4 w-4 mt-0.5 flex-shrink-0" />
@@ -149,7 +143,6 @@ export const IntegrationActions: React.FC<IntegrationActionsProps> = ({
           </div>
         </div>
 
-        {/* Integration-specific Action Notes */}
         {connector.type === 'slack' && (
           <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
             <div className="flex items-start space-x-2">

@@ -31,7 +31,6 @@ jobs:
   
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Auto-validate YAML content when it changes
   useEffect(() => {
     if (yamlContent.trim()) {
       if (isReady) {
@@ -40,7 +39,6 @@ jobs:
     }
   }, [yamlContent, validateYaml, isReady]);
 
-  // Trigger validation when WASM becomes ready
   useEffect(() => {
     if (isReady && yamlContent.trim()) {
       validateYaml(yamlContent);
@@ -59,24 +57,19 @@ jobs:
     const lines = yamlContent.split('\n');
     let insertIndex = -1;
     
-    // The commandYaml from templates already has proper indentation, so use it as-is
     const commandLines = commandYaml.split('\n').filter(line => line.trim() !== '');
     
-    // Find the checkout step and insert immediately after it
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trim();
       
-      // Look for a step that contains "checkout" in the name
       if (trimmed.includes('- name:') && 
           (trimmed.includes('Checkout code') || trimmed.toLowerCase().includes('checkout'))) {
         
-        // Found the checkout step, now find where it ends
         for (let j = i + 1; j < lines.length; j++) {
           const nextLine = lines[j];
           const nextTrimmed = nextLine.trim();
           
-          // If we hit another step (starts with "- name:") or the end of the steps section
           if (nextTrimmed.includes('- name:') || 
               (!nextTrimmed && j + 1 < lines.length && !lines[j + 1].startsWith('  ')) ||
               j === lines.length - 1) {
@@ -88,7 +81,6 @@ jobs:
       }
     }
     
-    // If no checkout step found, insert after the "steps:" line
     if (insertIndex === -1) {
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -99,12 +91,10 @@ jobs:
       }
     }
     
-    // If still no insertion point found, append to the end
     if (insertIndex === -1) {
       insertIndex = lines.length;
     }
     
-    // Insert the new command steps after the checkout step
     const newLines = [
       ...lines.slice(0, insertIndex),
       ...commandLines,
@@ -116,14 +106,11 @@ jobs:
 
   const handleErrorClick = (error: ValidationError) => {
     if (yamlEditorRef.current) {
-      // Navigate to the error location in the editor
-      // Convert to 0-based column index for CodeMirror (error.column is 1-based)
       yamlEditorRef.current.setCursor(error.line, Math.max(0, error.column - 1));
       yamlEditorRef.current.focus();
     }
   };
 
-  // Convert ActionlintError to ValidationError for the ValidationPanel
   const convertedErrors: ValidationError[] = state.errors.map((error: ActionlintError) => ({
     line: error.line,
     column: error.column,

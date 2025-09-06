@@ -1,5 +1,3 @@
-// ConnectorGrid Component - Grid Layout for Connector Cards
-
 import React from 'react';
 import { Connector, Integration, ConnectorType } from '../../../types/integration';
 import { ConnectorCard } from './ConnectorCard';
@@ -17,13 +15,11 @@ export const ConnectorGrid: React.FC<ConnectorGridProps> = ({
   onConnectorAction,
   loadingConnectors
 }) => {
-  // Create a map for quick integration lookup
   const integrationMap = new Map<ConnectorType, Integration>();
   integrations.forEach(integration => {
     integrationMap.set(integration.connectorType, integration);
   });
 
-  // Group connectors by status for better organization
   const connectedConnectors = connectors.filter(connector => {
     const integration = integrationMap.get(connector.type);
     return integration && (integration.status === 'active' || integration.status === 'connected');
@@ -77,7 +73,6 @@ export const ConnectorGrid: React.FC<ConnectorGridProps> = ({
     );
   };
 
-  // If we have a mix of statuses, show sections
   const hasMultipleSections = connectedConnectors.length > 0 && 
     (availableConnectors.length > 0 || comingSoonConnectors.length > 0);
 
@@ -91,7 +86,6 @@ export const ConnectorGrid: React.FC<ConnectorGridProps> = ({
     );
   }
 
-  // Otherwise, show all connectors in a single vertical list
   return (
     <div className="space-y-4">
       <div className="space-y-4">
@@ -106,7 +100,6 @@ export const ConnectorGrid: React.FC<ConnectorGridProps> = ({
         ))}
       </div>
 
-      {/* Empty state */}
       {connectors.length === 0 && (
         <div className="text-center py-12">
           <div className="mx-auto h-12 w-12 text-gray-400 mb-4">

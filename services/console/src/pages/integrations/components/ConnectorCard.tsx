@@ -1,5 +1,3 @@
-// ConnectorCard Component - Individual Integration Card
-
 import React from 'react';
 import { Connector, Integration, ConnectorType } from '../../../types/integration';
 import { BUTTON_TEXT, STATUS_CONFIG } from '../../../lib/integration-constants';
@@ -49,7 +47,6 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
     
     const config = STATUS_CONFIG[integration.status as keyof typeof STATUS_CONFIG];
     
-    // Fallback for unknown statuses
     if (!config) {
       return (
         <Badge variant="secondary" className="text-gray-600 bg-gray-50 border-gray-200 border">
@@ -73,11 +70,9 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
   const getCreatedText = () => {
     if (!integration?.createdAt) return null;
     
-    // Determine if this is a new integration (created == updated) or modified one
     const isNewIntegration = integration.createdAt === integration.updatedAt;
     const actionText = isNewIntegration ? 'Added' : 'Updated';
     
-    // Use updatedAt for the time calculation as it's more recent
     const timestamp = integration.updatedAt || integration.createdAt;
     const timestampDate = new Date(timestamp);
     const now = new Date();

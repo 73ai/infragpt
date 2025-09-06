@@ -1,5 +1,3 @@
-// Integration Details Page - Configuration and Status View
-
 import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -28,21 +26,18 @@ const IntegrationDetailsPage = observer(() => {
   const connector = connectorType ? getConnectorByType(connectorType as any) : null;
   const integration = connectorType ? integrationStore.getIntegrationByConnectorType(connectorType as any) : null;
 
-  // Load user profile if not already loaded
   useEffect(() => {
     if (!userStore.userProfile && !userStore.loading && clerkUserId && clerkOrgId) {
       userStore.loadUserProfile(getMe, clerkUserId, clerkOrgId);
     }
   }, [getMe, clerkUserId, clerkOrgId]);
 
-  // Load integrations if not already loaded
   useEffect(() => {
     if (userStore.organizationId && integrationStore.integrations.size === 0 && !integrationStore.loading) {
       integrationStore.loadIntegrations(userStore.organizationId);
     }
   }, [userStore.organizationId]);
 
-  // Load activity log for the integration
   useEffect(() => {
     const loadData = async () => {
       if (!connector || !userStore.organizationId) {
@@ -50,11 +45,9 @@ const IntegrationDetailsPage = observer(() => {
         return;
       }
 
-      // No need to load activity since API doesn't exist yet
       setLoading(false);
     };
 
-    // Only start loading once we have the necessary data
     if (userStore.organizationId && !userStore.loading) {
       loadData();
     }
@@ -66,10 +59,8 @@ const IntegrationDetailsPage = observer(() => {
     try {
       const result = await integrationStore.testConnection(integration.id);
       if (result.success) {
-        // Show success message (you can use your toast system)
         console.log('Connection test successful');
       } else {
-        // Show error message
         console.error('Connection test failed:', result.message);
       }
     } catch (error) {
@@ -88,11 +79,9 @@ const IntegrationDetailsPage = observer(() => {
         `${window.location.origin}/integrations/${connectorType}/authorize`
       );
       
-      // Redirect to authorization URL
       if (response.type === 'redirect' || response.type === 'oauth2') {
         window.location.href = response.url;
       } else if (response.type === 'popup') {
-        // Handle popup flow (future enhancement)
         window.open(response.url, 'integration-auth', 'width=600,height=600');
       }
     } catch (error) {
@@ -103,7 +92,6 @@ const IntegrationDetailsPage = observer(() => {
   const handleDisconnect = async () => {
     if (!integration) return;
     
-    // Show confirmation dialog
     const confirmed = window.confirm(
       `Are you sure you want to disconnect ${connector?.name}? This will remove all associated configurations and data.`
     );
@@ -112,7 +100,6 @@ const IntegrationDetailsPage = observer(() => {
     
     try {
       await integrationStore.revokeIntegration(integration.id);
-      // Navigate back to integrations list
       navigate('/integrations');
     } catch (error) {
       integrationStore.handleError(error, 'disconnecting integration');
@@ -194,7 +181,6 @@ const IntegrationDetailsPage = observer(() => {
                 alt={connector.name}
                 className="h-8 w-8"
                 onError={(e) => {
-                  // Fallback for missing logos
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />

@@ -248,7 +248,6 @@ func (s *service) SyncIntegration(ctx context.Context, cmd backend.SyncIntegrati
 }
 
 func (s *service) ValidateCredentials(ctx context.Context, connectorType backend.ConnectorType, credentials map[string]any) (backend.CredentialValidationResult, error) {
-	// Get the connector
 	connector, exists := s.connectors[connectorType]
 	if !exists {
 		return backend.CredentialValidationResult{
@@ -257,13 +256,10 @@ func (s *service) ValidateCredentials(ctx context.Context, connectorType backend
 		}, nil
 	}
 
-	// Convert credentials map to backend.Credentials format
 	credData := make(map[string]string)
 
-	// Handle different credential formats based on connector type
 	switch connectorType {
 	case backend.ConnectorTypeGCP:
-		// For GCP, expect service_account_json field
 		if saJSON, ok := credentials["service_account_json"].(string); ok {
 			credData["service_account_json"] = saJSON
 		} else {
@@ -273,7 +269,6 @@ func (s *service) ValidateCredentials(ctx context.Context, connectorType backend
 			}, nil
 		}
 	default:
-		// For other connectors, convert all fields to strings
 		for k, v := range credentials {
 			if str, ok := v.(string); ok {
 				credData[k] = str
