@@ -73,18 +73,34 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
   const getCreatedText = () => {
     if (!integration?.createdAt) return null;
     
-    const created = new Date(integration.createdAt);
-    const now = new Date();
-    const diffMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
+    // Determine if this is a new integration (created == updated) or modified one
+    const isNewIntegration = integration.createdAt === integration.updatedAt;
+    const actionText = isNewIntegration ? 'Added' : 'Updated';
     
-    if (diffMinutes < 60) {
-      return `Added ${diffMinutes} min ago`;
+    // Use updatedAt for the time calculation as it's more recent
+    const timestamp = integration.updatedAt || integration.createdAt;
+    const timestampDate = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - timestampDate.getTime();
+    
+    // Handle negative differences (future timestamps) or very small differences
+    if (diffMs < 0) {
+      return `${actionText} just now`;
+    }
+    
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    
+    // Handle very recent updates
+    if (diffMinutes < 1) {
+      return `${actionText} just now`;
+    } else if (diffMinutes < 60) {
+      return `${actionText} ${diffMinutes} min ago`;
     } else if (diffMinutes < 1440) {
       const hours = Math.floor(diffMinutes / 60);
-      return `Added ${hours} hour${hours > 1 ? 's' : ''} ago`;
+      return `${actionText} ${hours} hour${hours > 1 ? 's' : ''} ago`;
     } else {
       const days = Math.floor(diffMinutes / 1440);
-      return `Added ${days} day${days > 1 ? 's' : ''} ago`;
+      return `${actionText} ${days} day${days > 1 ? 's' : ''} ago`;
     }
   };
 
