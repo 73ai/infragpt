@@ -1,5 +1,3 @@
-// IntegrationStatus Component - Display Integration Status and Info
-
 import React from 'react';
 import { Integration, Connector } from '../../../types/integration';
 import { STATUS_CONFIG } from '../../../lib/integration-constants';
@@ -171,7 +169,6 @@ export const IntegrationStatus: React.FC<IntegrationStatusProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Status Overview */}
         <div className="flex items-center space-x-4">
           <Badge 
             variant="secondary"
@@ -183,7 +180,6 @@ export const IntegrationStatus: React.FC<IntegrationStatusProps> = ({
           
         </div>
 
-        {/* Connector-specific Information */}
         {(() => {
           const connectorSpecificInfo = renderConnectorSpecificInfo();
           return connectorSpecificInfo && (
@@ -196,7 +192,6 @@ export const IntegrationStatus: React.FC<IntegrationStatusProps> = ({
           );
         })()}
 
-        {/* Permissions/Capabilities */}
         {integration.configuration?.permissions && integration.configuration.permissions.length > 0 && (
           <div>
             <h4 className="text-sm font-medium text-gray-900 mb-3">Permissions</h4>
@@ -210,7 +205,6 @@ export const IntegrationStatus: React.FC<IntegrationStatusProps> = ({
           </div>
         )}
 
-        {/* Connection Timeline */}
         <div className="border-t pt-4">
           <h4 className="text-sm font-medium text-gray-900 mb-3">Timeline</h4>
           <dl className="grid grid-cols-2 gap-4 text-sm">
@@ -225,7 +219,6 @@ export const IntegrationStatus: React.FC<IntegrationStatusProps> = ({
           </dl>
         </div>
 
-        {/* Error Details */}
         {integration.status === 'error' && integration.metadata?.errorMessage && (
           <div className="border-t pt-4">
             <h4 className="text-sm font-medium text-red-800 mb-2">Error Details</h4>

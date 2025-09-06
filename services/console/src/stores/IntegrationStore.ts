@@ -1,5 +1,3 @@
-// Integration Store - MobX State Management for Integration Manager
-
 import { makeAutoObservable, runInAction } from 'mobx';
 import { 
   Integration, 
@@ -21,7 +19,6 @@ import {
 } from '../services/integrationService';
 
 class IntegrationStore {
-  // Observable state
   integrations: Map<string, Integration> = new Map();
   connectors: Connector[] = CONNECTORS;
   loading = false;
@@ -29,7 +26,6 @@ class IntegrationStore {
   error: string | null = null;
   activities: Map<string, IntegrationActivity[]> = new Map();
   
-  // UI state
   selectedConnector: ConnectorType | null = null;
   showDetails = false;
 
@@ -37,7 +33,6 @@ class IntegrationStore {
     makeAutoObservable(this);
   }
 
-  // Helper to transform API response to frontend interface
   private transformAPIIntegration(apiIntegration: any): Integration {
     return {
       id: apiIntegration.id,
@@ -54,7 +49,6 @@ class IntegrationStore {
     };
   }
 
-  // Computed values
   get connectedIntegrations(): Integration[] {
     return Array.from(this.integrations.values()).filter(
       integration => integration.status === 'active' || integration.status === 'connected'
@@ -78,7 +72,6 @@ class IntegrationStore {
     }));
   }
 
-  // Status helpers
   getConnectorStatus(connectorType: ConnectorType): ConnectorStatus {
     const connector = getConnectorByType(connectorType);
     
@@ -107,7 +100,6 @@ class IntegrationStore {
     return this.loadingConnectors.has(connectorType);
   }
 
-  // Actions
   async loadIntegrations(organizationId: string): Promise<void> {
     await withErrorHandling(async () => {
       runInAction(() => {
@@ -228,7 +220,6 @@ class IntegrationStore {
       try {
         const result = await integrationService.testConnection(integrationId);
         
-        // Update integration with test result
         runInAction(() => {
           const updatedIntegration = {
             ...integration,
@@ -261,7 +252,7 @@ class IntegrationStore {
       });
 
       try {
-        await integrationService.revokeIntegration(integrationId);
+        await integrationService.revokeIntegration(integrationId, integration.organizationId);
         
         runInAction(() => {
           this.integrations.delete(integrationId);
@@ -307,7 +298,6 @@ class IntegrationStore {
     }, `refreshing status for ${integrationId}`);
   }
 
-  // UI Actions
   setSelectedConnector(connectorType: ConnectorType | null): void {
     this.selectedConnector = connectorType;
   }
@@ -320,7 +310,6 @@ class IntegrationStore {
     this.error = null;
   }
 
-  // Error handling
   handleError(error: any, context?: string): void {
     const errorMessage = getErrorMessage(error);
     
@@ -330,7 +319,6 @@ class IntegrationStore {
     });
   }
 
-  // Cleanup
   reset(): void {
     runInAction(() => {
       this.integrations.clear();
@@ -344,8 +332,6 @@ class IntegrationStore {
   }
 }
 
-// Export singleton instance
 export const integrationStore = new IntegrationStore();
 
-// Export class for testing
 export { IntegrationStore };

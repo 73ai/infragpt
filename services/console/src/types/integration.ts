@@ -112,6 +112,7 @@ export interface IntegrationStatusRequest {
 
 export interface RevokeIntegrationRequest {
   integration_id: string;
+  organization_id: string;
 }
 
 export interface TestConnectionRequest {

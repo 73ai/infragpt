@@ -1,5 +1,3 @@
-// UserStore - Global State Management for User Profile
-
 import { makeAutoObservable, runInAction } from 'mobx';
 
 export interface UserProfile {
@@ -27,7 +25,6 @@ class UserStore {
     makeAutoObservable(this);
   }
 
-  // Computed properties for easy access
   get organizationId(): string | null {
     return this.userProfile?.organization_id || null;
   }
@@ -49,7 +46,6 @@ class UserStore {
     );
   }
 
-  // Actions
   async loadUserProfile(
     getMeFunction: (clerkUserId: string, clerkOrgId: string) => Promise<UserProfile>,
     clerkUserId: string,

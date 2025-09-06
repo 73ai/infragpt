@@ -1,5 +1,3 @@
-// ConnectorCard Component - Individual Integration Card
-
 import React from 'react';
 import { Connector, Integration, ConnectorType } from '../../../types/integration';
 import { BUTTON_TEXT, STATUS_CONFIG } from '../../../lib/integration-constants';
@@ -47,7 +45,17 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
   const getStatusBadge = () => {
     if (!integration) return null;
     
-    const config = STATUS_CONFIG[integration.status];
+    const config = STATUS_CONFIG[integration.status as keyof typeof STATUS_CONFIG];
+    
+    if (!config) {
+      return (
+        <Badge variant="secondary" className="text-gray-600 bg-gray-50 border-gray-200 border">
+          <span className="mr-1">❓</span>
+          {integration.status}
+        </Badge>
+      );
+    }
+    
     return (
       <Badge 
         variant="secondary"
@@ -62,18 +70,32 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
   const getCreatedText = () => {
     if (!integration?.createdAt) return null;
     
-    const created = new Date(integration.createdAt);
-    const now = new Date();
-    const diffMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
+    const isNewIntegration = integration.createdAt === integration.updatedAt;
+    const actionText = isNewIntegration ? 'Added' : 'Updated';
     
-    if (diffMinutes < 60) {
-      return `Added ${diffMinutes} min ago`;
+    const timestamp = integration.updatedAt || integration.createdAt;
+    const timestampDate = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - timestampDate.getTime();
+    
+    // Handle negative differences (future timestamps) or very small differences
+    if (diffMs < 0) {
+      return `${actionText} just now`;
+    }
+    
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    
+    // Handle very recent updates
+    if (diffMinutes < 1) {
+      return `${actionText} just now`;
+    } else if (diffMinutes < 60) {
+      return `${actionText} ${diffMinutes} min ago`;
     } else if (diffMinutes < 1440) {
       const hours = Math.floor(diffMinutes / 60);
-      return `Added ${hours} hour${hours > 1 ? 's' : ''} ago`;
+      return `${actionText} ${hours} hour${hours > 1 ? 's' : ''} ago`;
     } else {
       const days = Math.floor(diffMinutes / 1440);
-      return `Added ${days} day${days > 1 ? 's' : ''} ago`;
+      return `${actionText} ${days} day${days > 1 ? 's' : ''} ago`;
     }
   };
 

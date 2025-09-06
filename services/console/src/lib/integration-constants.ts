@@ -35,8 +35,8 @@ export const CONNECTORS: Connector[] = [
     name: 'Google Cloud',
     description: 'Cloud platform and services',
     logo: '/icons/gcp.svg',
-    isImplemented: false,
-    authType: 'oauth2',
+    isImplemented: true,
+    authType: 'api_key',
     capabilities: CONNECTOR_CAPABILITIES.gcp
   },
   {
@@ -93,6 +93,41 @@ export const STATUS_CONFIG = {
     borderColor: 'border-green-200',
     icon: '✅',
     text: 'Connected'
+  },
+  inactive: {
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
+    icon: '⚫',
+    text: 'Inactive'
+  },
+  pending: {
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-50',
+    borderColor: 'border-yellow-200',
+    icon: '⏳',
+    text: 'Pending'
+  },
+  not_started: {
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
+    icon: '⏸️',
+    text: 'Not Started'
+  },
+  suspended: {
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+    borderColor: 'border-orange-200',
+    icon: '⏸️',
+    text: 'Suspended'
+  },
+  deleted: {
+    color: 'text-red-600',
+    bgColor: 'bg-red-50',
+    borderColor: 'border-red-200',
+    icon: '🗑️',
+    text: 'Deleted'
   },
   disconnected: {
     color: 'text-gray-600',

@@ -1,5 +1,3 @@
-// IntegrationConfiguration Component - Display Configuration Settings
-
 import React from 'react';
 import { Integration, Connector } from '../../../types/integration';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -67,7 +65,6 @@ export const IntegrationConfiguration: React.FC<IntegrationConfigurationProps> =
       case 'slack':
         return (
           <div className="space-y-4">
-            {/* Bot Configuration */}
             <div>
               <h4 className="text-sm font-medium text-gray-900 mb-3">Bot Configuration</h4>
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
@@ -84,7 +81,6 @@ export const IntegrationConfiguration: React.FC<IntegrationConfigurationProps> =
               </div>
             </div>
 
-            {/* Channel Settings */}
             {config.connectedChannels && (
               <div>
                 <h4 className="text-sm font-medium text-gray-900 mb-3">Channel Settings</h4>
@@ -116,7 +112,6 @@ export const IntegrationConfiguration: React.FC<IntegrationConfigurationProps> =
       case 'github':
         return (
           <div className="space-y-4">
-            {/* Installation Details */}
             <div>
               <h4 className="text-sm font-medium text-gray-900 mb-3">Installation Details</h4>
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
@@ -135,7 +130,6 @@ export const IntegrationConfiguration: React.FC<IntegrationConfigurationProps> =
               </div>
             </div>
 
-            {/* Repository Access */}
             {config.connectedRepos && (
               <div>
                 <h4 className="text-sm font-medium text-gray-900 mb-3">Repository Access</h4>
@@ -231,19 +225,15 @@ export const IntegrationConfiguration: React.FC<IntegrationConfigurationProps> =
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Authentication Type */}
         <div>
           <h4 className="text-sm font-medium text-gray-900 mb-3">Authentication</h4>
           {renderAuthTypeInfo()}
         </div>
 
-        {/* Capabilities */}
         {renderCapabilities()}
 
-        {/* Connector-specific Settings */}
         {renderConnectorSpecificSettings()}
 
-        {/* Security Notice */}
         <div className="border-t pt-4">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <div className="flex items-start space-x-2">

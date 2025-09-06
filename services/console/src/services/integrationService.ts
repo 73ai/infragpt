@@ -1,5 +1,3 @@
-// Integration Service - API Layer for Integration Management
-
 import { 
   Integration, 
   AuthorizeRequest, 
@@ -17,7 +15,6 @@ import {
   IntegrationActivity
 } from '../types/integration';
 
-// Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const INTEGRATION_API_PREFIX = '/integrations';
 
@@ -29,7 +26,6 @@ class IntegrationService {
     const url = `${API_BASE_URL}${INTEGRATION_API_PREFIX}${endpoint}`;
     
     try {
-      // Get auth token from your existing auth system (Clerk)
       const authToken = await this.getAuthToken();
       
       const response = await fetch(url, {
@@ -55,7 +51,6 @@ class IntegrationService {
         throw error;
       }
       
-      // Network or other errors
       throw new IntegrationError(
         0,
         error instanceof Error ? error.message : 'Unknown error occurred'
@@ -64,9 +59,6 @@ class IntegrationService {
   }
 
   private async getAuthToken(): Promise<string> {
-    // TODO: Integrate with your existing Clerk auth system
-    // This should get the current user's JWT token
-    // For now, return empty string - will be implemented when integrating with auth
     return '';
   }
 
@@ -135,7 +127,6 @@ class IntegrationService {
         throw error;
       }
       
-      // Network or other errors
       throw new IntegrationError(
         0,
         error instanceof Error ? error.message : 'Unknown error occurred'
@@ -207,8 +198,11 @@ class IntegrationService {
   /**
    * Revoke/disconnect an integration
    */
-  async revokeIntegration(integrationId: string): Promise<void> {
-    const request: RevokeIntegrationRequest = { integration_id: integrationId };
+  async revokeIntegration(integrationId: string, organizationId: string): Promise<void> {
+    const request: RevokeIntegrationRequest = { 
+      integration_id: integrationId,
+      organization_id: organizationId
+    };
 
     await this.request<void>('/revoke/', {
       method: 'POST',
@@ -261,13 +255,10 @@ class IntegrationService {
   }
 }
 
-// Export singleton instance
 export const integrationService = new IntegrationService();
 
-// Export class for testing
 export { IntegrationService };
 
-// Helper functions for error handling
 export const isIntegrationError = (error: any): error is IntegrationError => {
   return error instanceof IntegrationError;
 };
@@ -295,7 +286,6 @@ export const getErrorMessage = (error: any): string => {
   return error?.message || 'An unexpected error occurred.';
 };
 
-// Utility function to handle async operations with error handling
 export const withErrorHandling = async <T>(
   operation: () => Promise<T>,
   errorContext?: string
@@ -303,7 +293,6 @@ export const withErrorHandling = async <T>(
   try {
     return await operation();
   } catch (error) {
-    // Sanitize errorContext to prevent log injection attacks
     const sanitizedContext = errorContext 
       ? errorContext.replace(/[\r\n\t]/g, ' ').substring(0, 100)
       : '';

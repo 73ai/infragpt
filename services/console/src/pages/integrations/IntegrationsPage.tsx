@@ -1,6 +1,4 @@
-// Integration Manager - Main List Page
-
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useUser } from '@clerk/clerk-react';
 import { integrationStore } from '../../stores/IntegrationStore';
@@ -11,32 +9,39 @@ import { Card } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useApiClient } from '../../lib/api';
+import { GCPIntegrationModal } from './components/GCPIntegrationModal';
 
 const IntegrationsPage = observer(() => {
   const { user } = useUser();
   const { getMe } = useApiClient();
+  const [showGCPModal, setShowGCPModal] = useState(false);
   
   const clerkUserId = user?.id;
   const clerkOrgId = user?.organizationMemberships?.[0]?.organization?.id;
 
-  // Load user profile on mount
   useEffect(() => {
-    if (!userStore.userProfile && !userStore.loading && clerkUserId && clerkOrgId) {
-      userStore.loadUserProfile(getMe, clerkUserId, clerkOrgId);
-    }
-  }, [getMe, clerkUserId, clerkOrgId]);
+    const loadData = async () => {
+      if (!userStore.userProfile && !userStore.loading && clerkUserId && clerkOrgId) {
+        await userStore.loadUserProfile(getMe, clerkUserId, clerkOrgId);
+      }
+      
+      if (userStore.organizationId && !integrationStore.loading) {
+        integrationStore.loadIntegrations(userStore.organizationId);
+      }
+    };
 
-  // Load integrations once we have the user profile
-  useEffect(() => {
-    if (userStore.organizationId) {
-      integrationStore.loadIntegrations(userStore.organizationId);
-    }
-  }, [userStore.organizationId]);
+    loadData();
+  }, [getMe, clerkUserId, clerkOrgId, userStore.organizationId]);
 
   const handleConnectorAction = async (connectorType: string, action: 'connect' | 'details') => {
     if (!userStore.organizationId || !userStore.userId) return;
 
     if (action === 'connect') {
+      if (connectorType === 'gcp') {
+        setShowGCPModal(true);
+        return;
+      }
+
       try {
         const response = await integrationStore.initiateConnection(
           connectorType as any,
@@ -45,20 +50,16 @@ const IntegrationsPage = observer(() => {
           `${window.location.origin}/integrations/${connectorType}/authorize`
         );
         
-        // Redirect to authorization URL
         if (response.type === 'redirect' || response.type === 'oauth2' || response.type === 'installation') {
-          // open in a new tab 
           window.open(response.url, '_blank');
 
         } else if (response.type === 'popup') {
-          // Handle popup flow (future enhancement)
           window.open(response.url, 'integration-auth', 'width=600,height=600');
         }
       } catch (error) {
         integrationStore.handleError(error, 'connecting integration');
       }
     } else if (action === 'details') {
-      // Navigate to details page
       window.location.href = `/integrations/${connectorType}`;
     }
   };
@@ -140,6 +141,11 @@ const IntegrationsPage = observer(() => {
           loadingConnectors={integrationStore.loadingConnectors}
         />
 
+        {/* GCP Integration Modal */}
+        <GCPIntegrationModal 
+          isOpen={showGCPModal} 
+          onClose={() => setShowGCPModal(false)}
+        />
       </div>
     </div>
   );

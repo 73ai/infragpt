@@ -25,6 +25,7 @@ func (h *httpHandler) init() {
 	h.HandleFunc("/integrations/list/", h.list())
 	h.HandleFunc("/integrations/revoke/", h.revoke())
 	h.HandleFunc("/integrations/status/", h.status())
+	h.HandleFunc("/integrations/validate/", h.validateCredentials())
 }
 
 func NewHandler(integrationService backend.IntegrationService,
@@ -165,7 +166,6 @@ func (h *httpHandler) list() func(w http.ResponseWriter, r *http.Request) {
 
 		query := backend.IntegrationsQuery{
 			OrganizationID: organizationID,
-			Status:         backend.IntegrationStatusActive,
 		}
 
 		if req.ConnectorType != "" {
@@ -275,8 +275,6 @@ func (h *httpHandler) status() func(w http.ResponseWriter, r *http.Request) {
 			return response{}, err
 		}
 
-		// TODO: Implement health check logic
-		// This would involve calling connector.ValidateCredentials()
 		healthStatus := "unknown"
 
 		resp := response{
@@ -365,6 +363,45 @@ func (h *httpHandler) sync() func(w http.ResponseWriter, r *http.Request) {
 
 		return response{
 			Message: "Integration synced successfully",
+		}, nil
+	})
+}
+
+func (h *httpHandler) validateCredentials() func(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		ConnectorType string                 `json:"connector_type"`
+		Credentials   map[string]any `json:"credentials"`
+	}
+	type response struct {
+		Valid   bool     `json:"valid"`
+		Details any      `json:"details,omitempty"`
+		Errors  []string `json:"errors,omitempty"`
+	}
+
+	return ApiHandlerFunc(func(ctx context.Context, req request) (response, error) {
+		if req.ConnectorType == "" {
+			return response{
+				Valid:  false,
+				Errors: []string{"connector_type is required"},
+			}, nil
+		}
+
+		if req.Credentials == nil || len(req.Credentials) == 0 {
+			return response{
+				Valid:  false,
+				Errors: []string{"credentials are required"},
+			}, nil
+		}
+
+		validationResult, err := h.svc.ValidateCredentials(ctx, backend.ConnectorType(req.ConnectorType), req.Credentials)
+		if err != nil {
+			return response{}, fmt.Errorf("failed to validate credentials: %w", err)
+		}
+
+		return response{
+			Valid:   validationResult.Valid,
+			Details: validationResult.Details,
+			Errors:  validationResult.Errors,
 		}, nil
 	})
 }

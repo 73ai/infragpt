@@ -13,7 +13,6 @@ export default function OnboardingPage() {
     navigate('/');
   };
 
-  // Show loading while checking organization status
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -25,7 +24,6 @@ export default function OnboardingPage() {
     );
   }
 
-  // Show organization creation if user doesn't have one
   if (!hasOrganization || !organization) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -55,7 +53,6 @@ export default function OnboardingPage() {
     );
   }
 
-  // Show onboarding form if organization exists but metadata is incomplete
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-2xl mx-auto px-4">

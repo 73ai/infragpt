@@ -33,12 +33,12 @@ func NewService(config ServiceConfig) backend.IntegrationService {
 }
 
 func (s *service) NewIntegration(ctx context.Context, cmd backend.NewIntegrationCommand) (backend.IntegrationAuthorizationIntent, error) {
-	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, cmd.OrganizationID, cmd.ConnectorType)
+	existingActiveIntegrations, err := s.integrationRepository.FindByOrganizationTypeAndStatus(ctx, cmd.OrganizationID, cmd.ConnectorType, backend.IntegrationStatusActive)
 	if err != nil {
-		return backend.IntegrationAuthorizationIntent{}, fmt.Errorf("failed to check existing integrations: %w", err)
+		return backend.IntegrationAuthorizationIntent{}, fmt.Errorf("failed to check existing active integrations: %w", err)
 	}
 
-	if len(existingIntegrations) > 0 {
+	if len(existingActiveIntegrations) > 0 {
 		return backend.IntegrationAuthorizationIntent{}, fmt.Errorf("integration already exists for connector type %s", cmd.ConnectorType)
 	}
 
@@ -73,12 +73,13 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd backend.Authoriz
 			return backend.Integration{}, fmt.Errorf("failed to parse state: %w", err)
 		}
 
-		existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, organizationID, cmd.ConnectorType)
+		// Look for active integrations only - inactive ones should be handled by ClaimInstallation
+		existingActiveIntegrations, err := s.integrationRepository.FindByOrganizationTypeAndStatus(ctx, organizationID, cmd.ConnectorType, backend.IntegrationStatusActive)
 		if err != nil {
 			return backend.Integration{}, fmt.Errorf("failed to find claimed integration: %w", err)
 		}
 
-		for _, integration := range existingIntegrations {
+		for _, integration := range existingActiveIntegrations {
 			if integration.BotID == cmd.InstallationID {
 				return integration, nil
 			}
@@ -92,12 +93,12 @@ func (s *service) AuthorizeIntegration(ctx context.Context, cmd backend.Authoriz
 		return backend.Integration{}, fmt.Errorf("failed to parse state: %w", err)
 	}
 
-	existingIntegrations, err := s.integrationRepository.FindByOrganizationAndType(ctx, organizationID, cmd.ConnectorType)
+	existingActiveIntegrations, err := s.integrationRepository.FindByOrganizationTypeAndStatus(ctx, organizationID, cmd.ConnectorType, backend.IntegrationStatusActive)
 	if err != nil {
-		return backend.Integration{}, fmt.Errorf("failed to check existing integrations: %w", err)
+		return backend.Integration{}, fmt.Errorf("failed to check existing active integrations: %w", err)
 	}
 
-	if len(existingIntegrations) > 0 {
+	if len(existingActiveIntegrations) > 0 {
 		return backend.Integration{}, fmt.Errorf("integration already exists for connector type %s in organization %s", cmd.ConnectorType, organizationID)
 	}
 
@@ -244,6 +245,57 @@ func (s *service) SyncIntegration(ctx context.Context, cmd backend.SyncIntegrati
 	}
 
 	return nil
+}
+
+func (s *service) ValidateCredentials(ctx context.Context, connectorType backend.ConnectorType, credentials map[string]any) (backend.CredentialValidationResult, error) {
+	connector, exists := s.connectors[connectorType]
+	if !exists {
+		return backend.CredentialValidationResult{
+			Valid:  false,
+			Errors: []string{fmt.Sprintf("Unsupported connector type: %s", connectorType)},
+		}, nil
+	}
+
+	credData := make(map[string]string)
+
+	switch connectorType {
+	case backend.ConnectorTypeGCP:
+		if saJSON, ok := credentials["service_account_json"].(string); ok {
+			credData["service_account_json"] = saJSON
+		} else {
+			return backend.CredentialValidationResult{
+				Valid:  false,
+				Errors: []string{"service_account_json is required for GCP connector"},
+			}, nil
+		}
+	default:
+		for k, v := range credentials {
+			if str, ok := v.(string); ok {
+				credData[k] = str
+			} else {
+				credData[k] = fmt.Sprintf("%v", v)
+			}
+		}
+	}
+
+	creds := backend.Credentials{
+		Type: backend.CredentialTypeServiceAccount, // Default, connectors can override
+		Data: credData,
+	}
+
+	// Validate using the connector
+	err := connector.ValidateCredentials(creds)
+	if err != nil {
+		return backend.CredentialValidationResult{
+			Valid:  false,
+			Errors: []string{err.Error()},
+		}, nil
+	}
+
+	return backend.CredentialValidationResult{
+		Valid:   true,
+		Errors:  []string{},
+	}, nil
 }
 
 // Subscribe starts webhook subscriptions for all connectors
