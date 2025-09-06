@@ -33,6 +33,9 @@ import (
 )
 
 func main() {
+	// Set default timezone to UTC for consistent timestamp handling
+	time.Local = time.UTC
+
 	ctx := context.Background()
 	g, ctx := errgroup.WithContext(ctx)
 
