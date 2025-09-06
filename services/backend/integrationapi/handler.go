@@ -25,7 +25,7 @@ func (h *httpHandler) init() {
 	h.HandleFunc("/integrations/list/", h.list())
 	h.HandleFunc("/integrations/revoke/", h.revoke())
 	h.HandleFunc("/integrations/status/", h.status())
-	h.HandleFunc("/integrations/validate", h.validateCredentials())
+	h.HandleFunc("/integrations/validate/", h.validateCredentials())
 }
 
 func NewHandler(integrationService backend.IntegrationService,
