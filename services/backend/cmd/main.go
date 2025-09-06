@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/m-mizutani/masq"
 	agentclient "github.com/priyanshujain/infragpt/services/agent/src/client/go"
 	"github.com/priyanshujain/infragpt/services/backend/backendapi"
 	"github.com/priyanshujain/infragpt/services/backend/identityapi"
@@ -71,7 +72,20 @@ func main() {
 		panic(err)
 	}
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
+	// NOTE: Using third-party masq library for sensitive data sanitization in logs.
+	// This is written by a security engineer but it's new
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: level,
+		ReplaceAttr: masq.New(
+			masq.WithFieldName("password"),
+			masq.WithFieldName("token"),
+			masq.WithFieldName("secret"),
+			masq.WithFieldName("key"),
+			masq.WithFieldName("credential"),
+			masq.WithFieldName("auth"),
+			masq.WithTag("sensitive"),
+		),
+	}))
 	slog.SetDefault(logger)
 
 	slackConfig := c.Slack

@@ -33,6 +33,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/m-mizutani/masq v0.1.11 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0 // indirect
