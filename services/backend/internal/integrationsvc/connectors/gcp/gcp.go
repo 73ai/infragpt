@@ -28,6 +28,7 @@ type ServiceAccountKey struct {
 	UniverseDomain          string `json:"universe_domain,omitempty"`
 }
 
+
 // ValidationResult represents the result of service account validation
 type ValidationResult struct {
 	Valid       bool     `json:"valid"`
@@ -42,6 +43,7 @@ type Connector struct {
 	integrationRepository domain.IntegrationRepository
 	credentialRepository  domain.CredentialRepository
 }
+
 
 // InitiateAuthorization initiates the authorization process for GCP
 func (c *Connector) InitiateAuthorization(organizationID string, userID string) (backend.IntegrationAuthorizationIntent, error) {
@@ -80,31 +82,18 @@ func (c *Connector) CompleteAuthorization(authData backend.AuthorizationData) (b
 		return backend.Credentials{}, fmt.Errorf("service account JSON is required")
 	}
 
-	// Validate the service account JSON
-	var sa ServiceAccountKey
-	if err := json.Unmarshal([]byte(authData.Code), &sa); err != nil {
-		return backend.Credentials{}, fmt.Errorf("invalid service account JSON: %w", err)
+	// Basic validation - just ensure it's valid JSON
+	var jsonCheck map[string]interface{}
+	if err := json.Unmarshal([]byte(authData.Code), &jsonCheck); err != nil {
+		return backend.Credentials{}, fmt.Errorf("invalid JSON format")
 	}
 
-	if sa.Type != "service_account" {
-		return backend.Credentials{}, fmt.Errorf("invalid type: expected 'service_account', got '%s'", sa.Type)
-	}
-
-	// Store the credentials
+	// Store the credentials as a simple string - validation will happen in ValidateCredentials
+	// The credential repository will handle encryption
 	creds := backend.Credentials{
 		Type: backend.CredentialTypeServiceAccount,
 		Data: map[string]string{
-			"service_account_json": authData.Code,
-			"project_id":           sa.ProjectID,
-			"client_email":         sa.ClientEmail,
-		},
-		OrganizationInfo: &backend.OrganizationInfo{
-			ExternalID: sa.ProjectID,
-			Name:       sa.ProjectID,
-			Metadata: map[string]string{
-				"project_id":   sa.ProjectID,
-				"client_email": sa.ClientEmail,
-			},
+			"service_account_json": authData.Code, // This will be encrypted by the credential repository
 		},
 	}
 
@@ -120,15 +109,15 @@ func (c *Connector) ValidateCredentials(creds backend.Credentials) error {
 
 	validation, err := ValidateServiceAccountWithViewer([]byte(saJSON))
 	if err != nil {
-		return fmt.Errorf("credential validation failed: %w", err)
+		return fmt.Errorf("credential validation failed - please check your service account JSON format and permissions")
 	}
 
 	if !validation.Valid {
-		return fmt.Errorf("invalid service account: %v", validation.Errors)
+		return fmt.Errorf("invalid service account - please check your credentials")
 	}
 
 	if !validation.HasViewer {
-		return fmt.Errorf("service account does not have Viewer role")
+		return fmt.Errorf("service account does not have required Viewer permissions - please grant the Viewer role in the GCP Console")
 	}
 
 	return nil
@@ -144,13 +133,13 @@ func ValidateServiceAccountWithViewer(jsonData []byte) (*ValidationResult, error
 	// Parse the service account JSON
 	var sa ServiceAccountKey
 	if err := json.Unmarshal(jsonData, &sa); err != nil {
-		result.Errors = append(result.Errors, fmt.Sprintf("invalid JSON format: %v", err))
+		result.Errors = append(result.Errors, "invalid service account JSON format")
 		return result, nil
 	}
 
 	// Validate required fields
 	if sa.Type != "service_account" {
-		result.Errors = append(result.Errors, fmt.Sprintf("invalid type: expected 'service_account', got '%s'", sa.Type))
+		result.Errors = append(result.Errors, "invalid service account type")
 		return result, nil
 	}
 
@@ -181,14 +170,14 @@ func ValidateServiceAccountWithViewer(jsonData []byte) (*ValidationResult, error
 	// Test Resource Manager API access
 	service, err := cloudresourcemanager.NewService(ctx, option)
 	if err != nil {
-		result.Errors = append(result.Errors, fmt.Sprintf("failed to create resource manager client: %v", err))
+		result.Errors = append(result.Errors, "failed to authenticate with service account")
 		return result, nil
 	}
 
 	// Get project to verify access
 	project, err := service.Projects.Get(sa.ProjectID).Context(ctx).Do()
 	if err != nil {
-		result.Errors = append(result.Errors, fmt.Sprintf("failed to access project %s: %v", sa.ProjectID, err))
+		result.Errors = append(result.Errors, "failed to access project - please verify permissions")
 		return result, nil
 	}
 
@@ -200,7 +189,7 @@ func ValidateServiceAccountWithViewer(jsonData []byte) (*ValidationResult, error
 	// Get IAM policy for the project
 	policy, err := service.Projects.GetIamPolicy(sa.ProjectID, &cloudresourcemanager.GetIamPolicyRequest{}).Context(ctx).Do()
 	if err != nil {
-		result.Errors = append(result.Errors, fmt.Sprintf("failed to get IAM policy: %v", err))
+		result.Errors = append(result.Errors, "failed to retrieve IAM policy")
 		return result, nil
 	}
 
@@ -231,7 +220,7 @@ func ValidateServiceAccountWithViewer(jsonData []byte) (*ValidationResult, error
 	}
 
 	if !hasViewer {
-		result.Errors = append(result.Errors, fmt.Sprintf("Service account %s does not have Viewer role. Please grant the Viewer role at https://console.cloud.google.com/iam-admin/roles/details/roles%%3Cviewer", sa.ClientEmail))
+		result.Errors = append(result.Errors, "service account does not have Viewer role")
 	}
 
 	result.HasViewer = hasViewer

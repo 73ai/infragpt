@@ -2,7 +2,6 @@ package integrationsvc
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -298,41 +297,10 @@ func (s *service) ValidateCredentials(ctx context.Context, connectorType backend
 		}, nil
 	}
 
-	// For successful validation, extract details based on connector type
-	var details interface{}
-	switch connectorType {
-	case backend.ConnectorTypeGCP:
-		// Extract project ID and client email from service account JSON
-		if saJSON, exists := credData["service_account_json"]; exists {
-			details = extractGCPDetails(saJSON)
-		}
-	}
-
 	return backend.CredentialValidationResult{
 		Valid:   true,
-		Details: details,
 		Errors:  []string{},
 	}, nil
-}
-
-// extractGCPDetails extracts useful information from GCP service account JSON
-func extractGCPDetails(serviceAccountJSON string) map[string]interface{} {
-	var sa struct {
-		ProjectID   string `json:"project_id"`
-		ClientEmail string `json:"client_email"`
-	}
-
-	if err := json.Unmarshal([]byte(serviceAccountJSON), &sa); err != nil {
-		return map[string]interface{}{
-			"error": "Failed to parse service account JSON",
-		}
-	}
-
-	return map[string]interface{}{
-		"project_id":   sa.ProjectID,
-		"client_email": sa.ClientEmail,
-		"has_viewer":   true, // Assuming validation passed
-	}
 }
 
 // Subscribe starts webhook subscriptions for all connectors

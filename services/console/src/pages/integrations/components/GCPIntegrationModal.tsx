@@ -12,7 +12,6 @@ import {
 } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
-import { Badge } from '../../../components/ui/badge';
 import { JSONEditor } from '../../../components/JSONEditor';
 import { Loader2, AlertCircle, CheckCircle2, ExternalLink, Shield } from 'lucide-react';
 import { integrationStore } from '../../../stores/IntegrationStore';
@@ -24,12 +23,6 @@ interface GCPIntegrationModalProps {
   onClose: () => void;
 }
 
-interface ServiceAccountInfo {
-  type: string;
-  project_id: string;
-  client_email: string;
-  private_key: string;
-}
 
 export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(({ 
   isOpen, 
@@ -38,7 +31,7 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
   const [serviceAccountJSON, setServiceAccountJSON] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [serviceAccountInfo, setServiceAccountInfo] = useState<ServiceAccountInfo | null>(null);
+  const [isValidJSON, setIsValidJSON] = useState(false);
   const [validationResult, setValidationResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [jsonError, setJsonError] = useState<string | null>(null);
@@ -60,40 +53,16 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
     setError(null);
     setValidationResult(null);
     
-    // Parse and validate JSON structure on change
+    // Just check if it's valid JSON
     if (value.trim()) {
       try {
-        const parsed = JSON.parse(value) as ServiceAccountInfo;
-        
-        // Basic validation
-        const errors: string[] = [];
-        if (parsed.type !== 'service_account') {
-          errors.push(`Invalid type: expected 'service_account', got '${parsed.type}'`);
-        }
-        if (!parsed.project_id) {
-          errors.push('project_id is required');
-        }
-        if (!parsed.client_email) {
-          errors.push('client_email is required');
-        }
-        if (!parsed.private_key) {
-          errors.push('private_key is required');
-        }
-
-        if (errors.length > 0) {
-          setJsonError(errors.join(', '));
-          setServiceAccountInfo(null);
-        } else {
-          setServiceAccountInfo(parsed);
-          setJsonError(null);
-        }
+        JSON.parse(value);
+        setIsValidJSON(true);
       } catch (e) {
-        // JSON parsing errors are handled by the JSONEditor component
-        setServiceAccountInfo(null);
+        setIsValidJSON(false);
       }
     } else {
-      setServiceAccountInfo(null);
-      setJsonError(null);
+      setIsValidJSON(false);
     }
   }, []);
 
@@ -101,15 +70,25 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
   const handleJSONValidation = useCallback((errors: string[] | null) => {
     if (errors && errors.length > 0) {
       setJsonError(errors[0]);
+      setIsValidJSON(false);
     } else {
       setJsonError(null);
+      // Re-check if valid JSON when no syntax errors
+      if (serviceAccountJSON.trim()) {
+        try {
+          JSON.parse(serviceAccountJSON);
+          setIsValidJSON(true);
+        } catch {
+          setIsValidJSON(false);
+        }
+      }
     }
-  }, []);
+  }, [serviceAccountJSON]);
 
   // Validate credentials using the generic API
   const validateCredentials = useCallback(async () => {
-    if (!serviceAccountInfo || jsonError) {
-      setError('Please provide valid service account JSON');
+    if (!isValidJSON || jsonError) {
+      setError('Please provide valid JSON');
       return;
     }
 
@@ -126,8 +105,8 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
 
       setValidationResult(response);
       
-      if (!response.valid) {
-        const errorMessage = response.errors?.join(', ') || 'Validation failed';
+      if (!(response as any).valid) {
+        const errorMessage = (response as any).errors?.join(', ') || 'Validation failed';
         setError(errorMessage);
       }
     } catch (err: any) {
@@ -135,7 +114,7 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
     } finally {
       setIsValidating(false);
     }
-  }, [serviceAccountInfo, jsonError, serviceAccountJSON, apiPost]);
+  }, [isValidJSON, jsonError, serviceAccountJSON, apiPost]);
 
   // Connect the integration
   const handleConnect = useCallback(async () => {
@@ -175,7 +154,7 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
   // Reset modal state when closed
   const handleClose = () => {
     setServiceAccountJSON('');
-    setServiceAccountInfo(null);
+    setIsValidJSON(false);
     setValidationResult(null);
     setError(null);
     setJsonError(null);
@@ -251,27 +230,9 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertTitle className="text-green-800">Credentials Validated</AlertTitle>
               <AlertDescription>
-                <div className="mt-2 space-y-1 text-sm text-green-700">
-                  {validationResult.details && (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">Project ID:</span>
-                        <Badge variant="secondary">{validationResult.details.project_id}</Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">Service Account:</span>
-                        <span className="font-mono text-xs">{validationResult.details.client_email}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">Viewer Role:</span>
-                        {validationResult.details.has_viewer ? (
-                          <Badge className="bg-green-600">Granted</Badge>
-                        ) : (
-                          <Badge variant="destructive">Not Granted</Badge>
-                        )}
-                      </div>
-                    </>
-                  )}
+                <div className="mt-2 text-sm text-green-700">
+                  Your service account credentials have been validated successfully. 
+                  The service account has the necessary permissions to integrate with GCP.
                 </div>
               </AlertDescription>
             </Alert>
@@ -313,7 +274,7 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
           {!validationResult?.valid ? (
             <Button 
               onClick={validateCredentials}
-              disabled={isValidating || !serviceAccountInfo || jsonError}
+              disabled={isValidating || !isValidJSON || !!jsonError}
             >
               {isValidating ? (
                 <>
@@ -327,7 +288,7 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
           ) : (
             <Button 
               onClick={handleConnect}
-              disabled={isConnecting || (validationResult.details && !validationResult.details.has_viewer)}
+              disabled={isConnecting}
               className="bg-green-600 hover:bg-green-700"
             >
               {isConnecting ? (
