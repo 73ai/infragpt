@@ -3,9 +3,12 @@ OpenAI provider implementation using direct SDK.
 """
 
 import json
-from typing import List, Dict, Any, Iterator, Optional
+from typing import List, Dict, Any, Iterator, Optional, TYPE_CHECKING
 from openai import OpenAI
 import openai
+
+if TYPE_CHECKING:
+    from ..models import Tool
 
 from ..base import BaseLLMProvider
 from ..models import StreamChunk, ToolCall
@@ -13,7 +16,6 @@ from ..exceptions import (
     AuthenticationError,
     RateLimitError,
     APIError,
-    ToolCallError,
     ContextWindowError,
     ValidationError,
 )
@@ -45,7 +47,7 @@ class OpenAIProvider(BaseLLMProvider):
             else:
                 params["max_tokens"] = 10
 
-            response = self._client.chat.completions.create(**params)
+            self._client.chat.completions.create(**params)
             return True
         except Exception as e:
             raise self._map_error(e)
@@ -162,7 +164,6 @@ class OpenAIProvider(BaseLLMProvider):
 
     def _convert_tools(self, tools: List["Tool"]) -> List[Dict]:
         """Convert Tool objects to OpenAI format."""
-        from ..models import Tool
 
         openai_tools = []
         for tool in tools:

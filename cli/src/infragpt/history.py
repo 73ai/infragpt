@@ -8,7 +8,6 @@ import pathlib
 import re
 from typing import List, Dict, Any, Optional
 
-import click
 from rich.console import Console
 
 # Initialize console for rich output

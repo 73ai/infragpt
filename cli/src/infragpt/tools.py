@@ -3,7 +3,6 @@ Tool system without LangChain dependencies.
 """
 
 import inspect
-import json
 from typing import Callable, Dict, Any, Optional, List
 from functools import wraps
 from rich.console import Console
@@ -47,13 +46,13 @@ def tool(name: Optional[str] = None, description: Optional[str] = None):
 
             # Try to infer type from annotation
             if param.annotation != inspect.Parameter.empty:
-                if param.annotation == str:
+                if param.annotation is str:
                     param_type = "string"
-                elif param.annotation == int:
+                elif param.annotation is int:
                     param_type = "integer"
-                elif param.annotation == float:
+                elif param.annotation is float:
                     param_type = "number"
-                elif param.annotation == bool:
+                elif param.annotation is bool:
                     param_type = "boolean"
 
                 # Check if it's Optional (has default None)
@@ -63,15 +62,15 @@ def tool(name: Optional[str] = None, description: Optional[str] = None):
                 ):
                     # It's Optional, extract the actual type
                     actual_type = next(
-                        t for t in param.annotation.__args__ if t != type(None)
+                        t for t in param.annotation.__args__ if t is not type(None)
                     )
-                    if actual_type == str:
+                    if actual_type is str:
                         param_type = "string"
-                    elif actual_type == int:
+                    elif actual_type is int:
                         param_type = "integer"
-                    elif actual_type == float:
+                    elif actual_type is float:
                         param_type = "number"
-                    elif actual_type == bool:
+                    elif actual_type is bool:
                         param_type = "boolean"
                     param_description = f"Optional parameter {param_name}"
 
@@ -123,14 +122,14 @@ def execute_shell_command(command: str, description: Optional[str] = None) -> st
     Returns:
         The command output or error message
     """
-    console.print(f"\n[bold cyan]Tool Call: execute_shell_command[/bold cyan]")
+    console.print("\n[bold cyan]Tool Call: execute_shell_command[/bold cyan]")
     console.print(f"[dim]Command:[/dim] {command}")
     if description:
         console.print(f"[dim]Description:[/dim] {description}")
 
     # Ask for user confirmation with proper interrupt handling
     # Use standard input() for tool confirmation to ensure reliable Ctrl+C handling
-    console.print(f"\n[yellow]Execute this command? (Y/n):[/yellow] ", end="")
+    console.print("\n[yellow]Execute this command? (Y/n):[/yellow] ", end="")
     console.file.flush()
 
     try:
@@ -155,7 +154,7 @@ def execute_shell_command(command: str, description: Optional[str] = None) -> st
         # Pass our console instance to ensure consistent output
         executor = CommandExecutor(timeout=60)
 
-        console.print(f"\n[bold blue]Executing command...[/bold blue]")
+        console.print("\n[bold blue]Executing command...[/bold blue]")
         console.file.flush()  # Ensure prompt is displayed immediately
 
         # Execute the command - output should stream in real-time via shell.py console

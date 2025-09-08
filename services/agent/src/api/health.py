@@ -1,8 +1,7 @@
 """Health check endpoints for the Backend Agent Service."""
 
-import asyncio
 from datetime import datetime, UTC
-from typing import Dict, Any
+from typing import Dict
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
@@ -83,7 +82,7 @@ async def _check_grpc_server() -> bool:
     # TODO: Implement actual gRPC server health check
     # For now, assume it's healthy if we can import the modules
     try:
-        from src.grpc.server import GRPCServer
+        from src.grpc.server import GRPCServer  # noqa: F401
 
         return True
     except ImportError:
@@ -106,9 +105,9 @@ async def _check_dependencies() -> bool:
     """Check if critical dependencies are available."""
     try:
         # Check if we can import critical dependencies
-        import grpc
-        import fastapi
-        import pydantic
+        import grpc  # noqa: F401
+        import fastapi  # noqa: F401
+        import pydantic  # noqa: F401
 
         return True
     except ImportError:

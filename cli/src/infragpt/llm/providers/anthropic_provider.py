@@ -4,9 +4,12 @@ Anthropic provider implementation using direct SDK.
 
 import json
 import logging
-from typing import List, Dict, Any, Iterator, Optional
+from typing import List, Dict, Any, Iterator, Optional, TYPE_CHECKING
 from anthropic import Anthropic
 import anthropic
+
+if TYPE_CHECKING:
+    from ..models import Tool
 
 from ..base import BaseLLMProvider
 from ..models import StreamChunk, ToolCall
@@ -172,7 +175,6 @@ class AnthropicProvider(BaseLLMProvider):
 
     def _convert_tools(self, tools: List["Tool"]) -> List[Dict]:
         """Convert Tool objects to Anthropic format."""
-        from ..models import Tool
 
         anthropic_tools = []
         for tool in tools:

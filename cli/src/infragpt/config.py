@@ -3,12 +3,11 @@
 import os
 import yaml
 import pathlib
-from typing import Dict, Any
 
 from rich.console import Console
 
 try:
-    import pyperclip
+    import pyperclip  # noqa: F401
 
     CLIPBOARD_AVAILABLE = True
 except ImportError:

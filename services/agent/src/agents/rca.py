@@ -5,7 +5,7 @@ from src.agents.base import BaseAgent, AgentType
 from src.models.agent import AgentResponse
 from src.models.context import AgentContext
 from src.models.intent import Intent, IntentType
-from src.llm import LiteLLMClient, ConversationContext, Message
+from src.llm import LiteLLMClient, ConversationContext
 
 
 class RCAAgent(BaseAgent):

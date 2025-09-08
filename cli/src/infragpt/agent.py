@@ -2,25 +2,19 @@
 Modern InfraGPT Shell Agent using direct SDKs instead of LangChain.
 """
 
-import sys
-import signal
 from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
 from datetime import datetime
-from collections import deque
 
 from rich.console import Console
 from rich.panel import Panel
 
-from .llm.models import Message
 from .llm_adapter import get_llm_adapter
 from .history import log_interaction
 from .tools import ToolExecutionCancelled
 
 # Import prompt_toolkit for better input handling
 import pathlib
-from prompt_toolkit import prompt, PromptSession
-from prompt_toolkit.shortcuts import confirm
+from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 
 
@@ -166,7 +160,7 @@ class ModernShellAgent:
         """Run the main interactive agent session."""
         console.print(
             Panel.fit(
-                f"InfraGPT Shell Agent V2 - Direct SDK Integration",
+                "InfraGPT Shell Agent V2 - Direct SDK Integration",
                 border_style="blue",
                 title="[bold green]Shell Agent V2[/bold green]",
             )

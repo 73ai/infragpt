@@ -1,6 +1,5 @@
 """gRPC server implementation for the Backend Agent Service."""
 
-import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional

@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Optional
 import logging
 
-from src.models.agent import AgentRequest, AgentResponse
+from src.models.agent import AgentResponse
 from src.models.context import AgentContext
 
 

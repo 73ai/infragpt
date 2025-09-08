@@ -7,7 +7,7 @@ from litellm import acompletion
 import structlog
 from dotenv import load_dotenv
 
-from .models import ConversationContext, LLMResponse, Message
+from .models import ConversationContext, LLMResponse
 
 # Load environment variables
 load_dotenv()

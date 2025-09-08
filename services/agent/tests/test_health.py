@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 # Import the app without the lifespan context for testing
 from src.config.settings import Settings
-from src.config.logging import setup_logging, get_logger
+from src.config.logging import setup_logging
 from src.api.health import router as health_router
 from fastapi import FastAPI
 

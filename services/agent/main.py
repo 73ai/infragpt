@@ -5,8 +5,6 @@ This service provides AI-powered infrastructure management capabilities
 through both FastAPI (health checks) and gRPC (agent processing) interfaces.
 """
 
-import asyncio
-import signal
 import sys
 from contextlib import asynccontextmanager
 

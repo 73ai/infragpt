@@ -16,13 +16,11 @@ import signal
 import subprocess
 import threading
 import time
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Tuple
 import pty
 import select
 
 from rich.console import Console
-from rich.live import Live
-from rich.text import Text
 
 # Initialize console for rich output
 console = Console()
@@ -79,7 +77,7 @@ class CommandExecutor:
             if hasattr(os, "setsid"):
                 try:
                     popen_args["preexec_fn"] = os.setsid
-                except:
+                except Exception:
                     pass  # Skip if not supported
 
             self.current_process = subprocess.Popen(command, **popen_args)

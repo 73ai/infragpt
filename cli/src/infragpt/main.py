@@ -7,7 +7,7 @@ from typing import Optional
 import click
 from rich.panel import Panel
 
-from infragpt.config import CONFIG_FILE, load_config, init_config, console
+from infragpt.config import init_config, console
 from infragpt.llm.router import LLMRouter
 from infragpt.llm.exceptions import ValidationError, AuthenticationError
 from infragpt.history import history_command
@@ -71,12 +71,11 @@ def get_credentials_v2(
     # If model is provided, validate it
     if model_string:
         if not LLMRouter.validate_model_string(model_string):
-            raise ValidationError(f"Invalid model format. Use 'provider:model' format.")
+            raise ValidationError("Invalid model format. Use 'provider:model' format.")
 
         provider_name, model_name = LLMRouter.parse_model_string(model_string)
     else:
         provider_name = None
-        model_name = None
 
     # Try to get API key from various sources
     if not api_key:
@@ -138,7 +137,7 @@ def main(model, api_key, verbose):
 
         try:
             console.print(f"[dim]InfraGPT V2 version: {version('infragpt')}[/dim]")
-        except:
+        except Exception:
             console.print("[dim]InfraGPT V2: Version information not available[/dim]")
 
     # Get credentials

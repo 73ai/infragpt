@@ -2,7 +2,7 @@
 Router layer for provider selection and model configuration.
 """
 
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Tuple
 from .providers import OpenAIProvider, AnthropicProvider
 from .base import BaseLLMProvider
 from .exceptions import ValidationError

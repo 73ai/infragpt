@@ -3,8 +3,11 @@ Abstract base class for LLM providers.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Iterator, Optional
-from .models import StreamChunk, Message
+from typing import List, Dict, Any, Iterator, Optional, TYPE_CHECKING
+from .models import StreamChunk
+
+if TYPE_CHECKING:
+    from .models import Tool
 
 
 class BaseLLMProvider(ABC):

@@ -3,11 +3,11 @@ New LLM adapter using direct SDKs instead of LangChain.
 """
 
 import json
-from typing import Iterator, List, Dict, Any, Optional
+from typing import Iterator, List, Dict, Any
 from rich.console import Console
 
 from .llm import LLMRouter, StreamChunk, ToolCall
-from .llm.exceptions import AuthenticationError, ValidationError, LLMError
+from .llm.exceptions import ValidationError, LLMError
 from .tools import get_available_tools, execute_tool_call, ToolExecutionCancelled
 
 
@@ -215,7 +215,7 @@ class LLMAdapter:
 
         # Continue conversation with tool results
         if self.verbose:
-            console.print(f"[dim]Continuing conversation after tool execution...[/dim]")
+            console.print("[dim]Continuing conversation after tool execution...[/dim]")
 
         try:
             # Use recursive streaming to handle multiple tool calls in sequence
