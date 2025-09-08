@@ -1,16 +1,22 @@
 ---
-import logo from "assets/logo.svg";
 import { Image } from "astro:assets";
+import logo from "assets/logo.svg";
 ---
 
 <footer class="pb-12 pt-28">
-	<div class="mx-auto max-w-6xl px-6 md:px-12 lg:px-6 xl:px-0">
-		<!-- DECOMMENT HERE IF YOU WANT YOUR LOGO IN THE FOOTER -->
-		<a href="/" aria-label="logo" class="group flex items-center justify-center space-x-2">
-            <Image src={logo} alt="logo" width={262} height={50} />
-		</a>
-		<div class="mt-4 text-center">
-			<span class="text-sm tracking-wide text-gray-500">Copyright © 2025 InfraGPT Labs. All rights reserved.</span>
-		</div>
-	</div>
+  <div class="mx-auto max-w-6xl px-6 md:px-12 lg:px-6 xl:px-0">
+    <!-- DECOMMENT HERE IF YOU WANT YOUR LOGO IN THE FOOTER -->
+    <a
+      href="/"
+      aria-label="logo"
+      class="group flex items-center justify-center space-x-2"
+    >
+      <Image src={logo} alt="logo" width={262} height={50} />
+    </a>
+    <div class="mt-4 text-center">
+      <span class="text-sm tracking-wide text-gray-500"
+        >Copyright © 2025 InfraGPT Labs. All rights reserved.</span
+      >
+    </div>
+  </div>
 </footer>

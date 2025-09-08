@@ -1,7 +1,7 @@
 ---
+import { Image } from "astro:assets";
 import Button from "@components/ui/button.astro";
 import Link from "@components/ui/link.astro";
-import { Image } from "astro:assets";
 import logo from "assets/logo.svg";
 ---
 
@@ -14,7 +14,7 @@ import logo from "assets/logo.svg";
       href="/"
       class="flex gap-3 items-center text-lg font-semibold tracking-widest text-gray-900 uppercase rounded-lg focus:outline-none focus:shadow-outline"
     >
-      <Image src={logo} alt="logo" width={160}  />
+      <Image src={logo} alt="logo" width={160} />
     </a>
     <button
       class="md:hidden text-gray-500 w-10 h-10 relative focus:outline-none"

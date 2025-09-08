@@ -1,73 +1,73 @@
 ---
 import { ViewTransitions } from "astro:transitions";
 import { pwaInfo } from "virtual:pwa-info";
-import Navbar from "@components/navbar/navbar.astro";
 import Footer from "@components/footer.astro";
+import Navbar from "@components/navbar/navbar.astro";
 import "@fontsource-variable/inter";
 import "@fontsource/young-serif";
 import { SEO } from "astro-seo";
 
 export interface Props {
-	title?: string;
-	lang?: string;
+  title?: string;
+  lang?: string;
 }
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site).toString();
 
 const resolvedImageWithDomain = new URL(
-	"/meta/opengraph.png",
-	Astro.site,
+  "/meta/opengraph.png",
+  Astro.site,
 ).toString();
 
 const { title, lang = null } = Astro.props;
 
 const makeTitle = title
-	? `${title} | InfraGPT`
-	: "InfraGPT - Composable, OpenSource AI DevOps Copilot";
+  ? `${title} | InfraGPT`
+  : "InfraGPT - Composable, OpenSource AI DevOps Copilot";
 ---
 
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.ico" />
-		<meta name="generator" content={Astro.generator} />
-		<meta name="theme-color" content="#ffffff" />
-		<ViewTransitions />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#ffffff" />
+    <ViewTransitions />
 
-		<!-- Global CSS -->
-		<link rel="stylesheet" href="/index.css" />
+    <!-- Global CSS -->
+    <link rel="stylesheet" href="/index.css" />
 
-		<SEO
-			title={makeTitle}
-			description="InfraGPT automates infrastructure monitoring, cost optimization, and cloud troubleshooting so your team can focus on shipping great software."
-			canonical={canonicalURL}
-			openGraph={{
-				basic: {
-					url: canonicalURL,
-					type: "website",
-					title: `InfraGPT - Composable, OpenSource AI DevOps Copilot`,
-					image: resolvedImageWithDomain,
-				},
-				image: {
-					alt: "InfraGPT Homepage Screenshot",
-				},
-			}}
-		/>
-		{pwaInfo && <Fragment set:html={pwaInfo.webManifest.linkTag} />}
-		<script src="/src/pwa.ts"></script>
-	</head>
-	<body>
-		<Navbar />
-		<slot />
-		<Footer />
-		<style is:global>
-			/* Improve Page speed */
-			/* https://css-tricks.com/almanac/properties/c/content-visibility/ */
-			img {
-				content-visibility: auto;
-			}
-		</style>
-	</body>
+    <SEO
+      title={makeTitle}
+      description="InfraGPT automates infrastructure monitoring, cost optimization, and cloud troubleshooting so your team can focus on shipping great software."
+      canonical={canonicalURL}
+      openGraph={{
+        basic: {
+          url: canonicalURL,
+          type: "website",
+          title: `InfraGPT - Composable, OpenSource AI DevOps Copilot`,
+          image: resolvedImageWithDomain,
+        },
+        image: {
+          alt: "InfraGPT Homepage Screenshot",
+        },
+      }}
+    />
+    {pwaInfo && <Fragment set:html={pwaInfo.webManifest.linkTag} />}
+    <script src="/src/pwa.ts"></script>
+  </head>
+  <body>
+    <Navbar />
+    <slot />
+    <Footer />
+    <style is:global>
+      /* Improve Page speed */
+      /* https://css-tricks.com/almanac/properties/c/content-visibility/ */
+      img {
+        content-visibility: auto;
+      }
+    </style>
+  </body>
 </html>

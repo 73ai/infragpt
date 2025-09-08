@@ -1,49 +1,50 @@
 ---
 interface Props {
-	href: string;
-	size?: "xs" | "sm" | "md" | "lg";
-	block?: boolean;
-	style?: "outline" | "primary" | "hover" | "muted";
-	class?: string;
-	[x: string]: any;
+  href: string;
+  size?: "xs" | "sm" | "md" | "lg";
+  block?: boolean;
+  style?: "outline" | "primary" | "hover" | "muted";
+  class?: string;
+  [x: string]: any;
 }
 
 const {
-	href,
-	block,
-	size = "md",
-	style = "primary",
-	class: className,
-	...rest
+  href,
+  block,
+  size = "md",
+  style = "primary",
+  class: className,
+  ...rest
 } = Astro.props;
 
 const sizes = {
-	xs: "",
-	sm: "px-3 py-1.5",
-	md: "px-4 py-2.5",
-	lg: "px-5 py-2.5",
+  xs: "",
+  sm: "px-3 py-1.5",
+  md: "px-4 py-2.5",
+  lg: "px-5 py-2.5",
 };
 
 const styles = {
-	outline:
-		"text-center border outline-2 transition-colors border-gray-300 text-gray-700 hover:border-gray-400 active:outline",
-	primary:
-		"text-center bg-primary outline-2 hover:bg-blue-900 focus-visible:bg-blue-500 text-white border-transparent active:outline shadow-sm",
-	muted: "text-sm leading-6 text-gray-800",
-	hover:
-		"text-center text-stone-950 hover:text-gray-900 focus:text-gray-900 focus:bg-blue-200 focus:outline-none focus:shadow-outline hover:bg-blue-200",
+  outline:
+    "text-center border outline-2 transition-colors border-gray-300 text-gray-700 hover:border-gray-400 active:outline",
+  primary:
+    "text-center bg-primary outline-2 hover:bg-blue-900 focus-visible:bg-blue-500 text-white border-transparent active:outline shadow-sm",
+  muted: "text-sm leading-6 text-gray-800",
+  hover:
+    "text-center text-stone-950 hover:text-gray-900 focus:text-gray-900 focus:bg-blue-200 focus:outline-none focus:shadow-outline hover:bg-blue-200",
 };
 ---
 
 <a
-	href={href}
-	{...rest}
-	class:list={[
-		"rounded-md text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
-		block && "w-full",
-		sizes[size],
-		styles[style],
-		className,
-	]}>
-	<slot />
+  href={href}
+  {...rest}
+  class:list={[
+    "rounded-md text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
+    block && "w-full",
+    sizes[size],
+    styles[style],
+    className,
+  ]}
+>
+  <slot />
 </a>

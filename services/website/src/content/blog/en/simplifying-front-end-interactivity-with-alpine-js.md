@@ -13,6 +13,7 @@ snippet: Alpine.js is a lightweight JavaScript framework for building
 publishDate: 2023-07-01 23:08
 category: Frameworks
 ---
+
 Alpine.js is a lightweight JavaScript framework used to build interactive front-end components. It's lean, easy-to-use, and harnesses the power of Vue's or React's interactivity, with the simplicity of using Tailwind CSS classes.
 
 ## What is Alpine.js?
@@ -38,18 +39,19 @@ You can use Alpine.js on its own or in combination with other libraries or frame
 To get started, include the script tag in your HTML file:
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js" defer></script>
+<script
+  src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js"
+  defer
+></script>
 ```
 
 Alpine.js provides you with a set of directives that you can use within your HTML like so:
 
 ```html
 <div x-data="{ open: false }">
-    <button @click="open = !open">Toggle</button>
+  <button @click="open = !open">Toggle</button>
 
-    <div x-show="open">
-        This content will toggle.
-    </div>
+  <div x-show="open">This content will toggle.</div>
 </div>
 ```
 
