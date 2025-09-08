@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 
 export default function LoginPage() {
   const [searchParams] = useSearchParams();
-  const redirectUrl = searchParams.get('redirect_url') || '/dashboard';
+  const redirectUrl = searchParams.get("redirect_url") || "/dashboard";
 
   // Safely decode the redirect URL to handle malformed encoding
   const getDecodedRedirectUrl = (url: string): string => {
@@ -17,9 +17,9 @@ export default function LoginPage() {
 
   return (
     <div className="flex items-center justify-center h-screen">
-      <SignIn 
-        signUpUrl="/signup" 
-        forceRedirectUrl={getDecodedRedirectUrl(redirectUrl)} 
+      <SignIn
+        signUpUrl="/signup"
+        forceRedirectUrl={getDecodedRedirectUrl(redirectUrl)}
       />
     </div>
   );

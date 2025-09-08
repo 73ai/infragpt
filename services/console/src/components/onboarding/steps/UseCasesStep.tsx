@@ -1,8 +1,15 @@
-import { UseFormReturn } from 'react-hook-form';
-import { FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { Checkbox } from '@/components/ui/checkbox';
-import { USE_CASES } from '@/lib/onboarding-constants';
-import type { OnboardingFormData } from '@/lib/onboarding-constants';
+import { UseFormReturn } from "react-hook-form";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { USE_CASES } from "@/lib/onboarding-constants";
+import type { OnboardingFormData } from "@/lib/onboarding-constants";
 
 interface UseCasesStepProps {
   form: UseFormReturn<OnboardingFormData>;
@@ -39,12 +46,15 @@ export function UseCasesStep({ form }: UseCasesStepProps) {
                             checked={field.value?.includes(useCase.value)}
                             onCheckedChange={(checked) => {
                               return checked
-                                ? field.onChange([...field.value, useCase.value])
+                                ? field.onChange([
+                                    ...field.value,
+                                    useCase.value,
+                                  ])
                                 : field.onChange(
                                     field.value?.filter(
-                                      (value) => value !== useCase.value
-                                    )
-                                  )
+                                      (value) => value !== useCase.value,
+                                    ),
+                                  );
                             }}
                           />
                         </FormControl>
@@ -52,7 +62,7 @@ export function UseCasesStep({ form }: UseCasesStepProps) {
                           {useCase.label}
                         </FormLabel>
                       </FormItem>
-                    )
+                    );
                   }}
                 />
               ))}

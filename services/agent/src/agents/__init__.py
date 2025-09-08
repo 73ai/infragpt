@@ -8,9 +8,9 @@ from .registry import AgentSystem
 
 __all__ = [
     "BaseAgent",
-    "AgentType", 
+    "AgentType",
     "MainAgent",
     "ConversationAgent",
     "RCAAgent",
-    "AgentSystem"
+    "AgentSystem",
 ]

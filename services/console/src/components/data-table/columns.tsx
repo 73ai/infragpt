@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { ColumnDef } from "@tanstack/react-table";
+import { ArrowUpDown, MoreHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,15 +11,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
 // This type is used to define the shape of our data.
 export type Payment = {
-  id: string
-  amount: number
-  status: "pending" | "processing" | "success" | "failed"
-  email: string
-}
+  id: string;
+  amount: number;
+  status: "pending" | "processing" | "success" | "failed";
+  email: string;
+};
 
 export const columns: ColumnDef<Payment>[] = [
   {
@@ -60,15 +60,17 @@ export const columns: ColumnDef<Payment>[] = [
           Status
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
-      )
+      );
     },
     cell: ({ row }) => {
-      const status = row.getValue("status") as string
+      const status = row.getValue("status") as string;
       return (
         <div className="px-1">
-          <span className={`capitalize ${getStatusColor(status)}`}>{status}</span>
+          <span className={`capitalize ${getStatusColor(status)}`}>
+            {status}
+          </span>
         </div>
-      )
+      );
     },
   },
   {
@@ -83,7 +85,7 @@ export const columns: ColumnDef<Payment>[] = [
           Email
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
-      )
+      );
     },
     cell: ({ row }) => (
       <div className="px-1 font-medium">{row.getValue("email")}</div>
@@ -101,15 +103,15 @@ export const columns: ColumnDef<Payment>[] = [
           Amount
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
-      )
+      );
     },
     cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("amount"))
+      const amount = parseFloat(row.getValue("amount"));
       const formatted = new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: "USD",
-      }).format(amount)
-      return <div className="text-right px-1 font-medium">{formatted}</div>
+      }).format(amount);
+      return <div className="text-right px-1 font-medium">{formatted}</div>;
     },
   },
   {
@@ -117,7 +119,7 @@ export const columns: ColumnDef<Payment>[] = [
     enableHiding: false,
     header: () => <div className="px-1 text-right">Actions</div>,
     cell: ({ row }) => {
-      const payment = row.original
+      const payment = row.original;
 
       return (
         <div className="text-right px-1">
@@ -141,23 +143,23 @@ export const columns: ColumnDef<Payment>[] = [
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      )
+      );
     },
   },
-]
+];
 
 // Helper function for status colors
 function getStatusColor(status: string) {
   switch (status) {
     case "pending":
-      return "text-yellow-600"
+      return "text-yellow-600";
     case "processing":
-      return "text-blue-600"
+      return "text-blue-600";
     case "success":
-      return "text-green-600"
+      return "text-green-600";
     case "failed":
-      return "text-red-600"
+      return "text-red-600";
     default:
-      return ""
+      return "";
   }
-} 
+}

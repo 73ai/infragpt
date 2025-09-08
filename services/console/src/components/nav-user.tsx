@@ -1,17 +1,9 @@
-"use client"
+"use client";
 
-import {
-  BadgeCheck,
-  ChevronsUpDown,
-  LogOut,
-} from "lucide-react"
-import { observer } from "mobx-react-lite"
+import { BadgeCheck, ChevronsUpDown, LogOut } from "lucide-react";
+import { observer } from "mobx-react-lite";
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,25 +12,24 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
-import { useUser, useAuth, useClerk } from "@clerk/clerk-react"
+import { useUser, useAuth, useClerk } from "@clerk/clerk-react";
 
 export const NavUser = observer(() => {
+  const { user } = useUser();
+  const { signOut } = useAuth();
+  const { openUserProfile, openOrganizationProfile } = useClerk();
 
-  const { user } = useUser()
-  const { signOut } = useAuth()
-  const { openUserProfile, openOrganizationProfile } = useClerk()
+  const { isMobile } = useSidebar();
 
-  const { isMobile } = useSidebar()
-
-  const email = user?.emailAddresses[0]?.emailAddress
+  const email = user?.emailAddresses[0]?.emailAddress;
 
   return (
     <SidebarMenu>
@@ -73,14 +64,15 @@ export const NavUser = observer(() => {
                   <AvatarFallback className="rounded-lg">CN</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{user?.fullName}</span>
+                  <span className="truncate font-semibold">
+                    {user?.fullName}
+                  </span>
                   <span className="truncate text-xs">{email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-            </DropdownMenuGroup>
+            <DropdownMenuGroup></DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={() => openOrganizationProfile()}>
@@ -93,7 +85,9 @@ export const NavUser = observer(() => {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut({ redirectUrl: '/login' })}>
+            <DropdownMenuItem
+              onClick={() => signOut({ redirectUrl: "/login" })}
+            >
               <LogOut />
               Log out
             </DropdownMenuItem>
@@ -101,5 +95,5 @@ export const NavUser = observer(() => {
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  )
-})
+  );
+});

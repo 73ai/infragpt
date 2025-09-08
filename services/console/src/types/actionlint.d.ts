@@ -9,24 +9,24 @@ declare global {
      * @param src - YAML source code to validate
      */
     runActionlint?: (src: string) => void;
-    
+
     /**
      * Callback function called when validation is completed
      * @param errors - Array of validation errors found
      */
     onCheckCompleted?: (errors: ActionlintError[]) => void;
-    
+
     /**
      * Callback function called when an error occurs during validation
      * @param message - Error message
      */
     showError?: (message: string) => void;
-    
+
     /**
      * Callback function called to dismiss loading state
      */
     dismissLoading?: () => void;
-    
+
     /**
      * Go class for WASM runtime
      */

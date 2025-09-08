@@ -1,5 +1,5 @@
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { ConsoleSidebar } from "@/components/console-sidebar"
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { ConsoleSidebar } from "@/components/console-sidebar";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -9,13 +9,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <ConsoleSidebar />
         </div>
         <main className="flex-1 w-full min-w-0">
-          <div className="flex flex-col w-full min-h-screen">
-            {children}
-          </div>
+          <div className="flex flex-col w-full min-h-screen">{children}</div>
         </main>
       </div>
     </SidebarProvider>
-  )
+  );
 };
 
 export default Layout;

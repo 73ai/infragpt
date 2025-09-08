@@ -27,19 +27,19 @@ logger = None
 async def lifespan(app: FastAPI):
     """Manage the service lifecycle."""
     global grpc_server, logger
-    
+
     # Startup
     logger.info("Starting Agent Service...")
-    
+
     # Start gRPC server
     settings = Settings()
     grpc_server = GRPCServer(settings)
     await grpc_server.start()
-    
+
     logger.info("Service startup completed")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down Agent Service...")
     if grpc_server:
@@ -52,21 +52,21 @@ def create_app() -> FastAPI:
     # Load settings and setup logging
     settings = Settings()
     setup_logging(settings.log_level)
-    
+
     global logger
     logger = get_logger(__name__)
-    
+
     # Create FastAPI app
     app = FastAPI(
         title="Agent Service",
         description="AI-powered infrastructure management agent",
         version="0.1.0",
-        lifespan=lifespan
+        lifespan=lifespan,
     )
-    
+
     # Add routers
     app.include_router(health_router, prefix="/health", tags=["health"])
-    
+
     return app
 
 
@@ -78,7 +78,7 @@ def main():
     """Main service entry point."""
     try:
         settings = Settings()
-        
+
         # Run FastAPI with uvicorn
         uvicorn.run(
             "main:app",
@@ -86,7 +86,7 @@ def main():
             port=settings.http_port,
             log_level=settings.log_level.lower(),
             reload=settings.debug,
-            access_log=True
+            access_log=True,
         )
     except KeyboardInterrupt:
         logger.info("Service interrupted by user")

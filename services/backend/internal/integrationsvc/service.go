@@ -293,8 +293,8 @@ func (s *service) ValidateCredentials(ctx context.Context, connectorType backend
 	}
 
 	return backend.CredentialValidationResult{
-		Valid:   true,
-		Errors:  []string{},
+		Valid:  true,
+		Errors: []string{},
 	}, nil
 }
 

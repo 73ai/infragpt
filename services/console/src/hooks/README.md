@@ -16,24 +16,20 @@ A React hook for integrating WASM actionlint validation into your React componen
 ## Installation
 
 Ensure the WASM files are available in your public directory:
+
 - `/public/main.wasm` - The actionlint WASM module
 - `/public/wasm_exec.js` - Go WASM runtime support
 
 ## Basic Usage
 
 ```tsx
-import React, { useState } from 'react';
-import { useActionlint } from '../hooks/useActionlint';
+import React, { useState } from "react";
+import { useActionlint } from "../hooks/useActionlint";
 
 function YAMLValidator() {
-  const [yamlContent, setYamlContent] = useState('');
-  
-  const { 
-    state, 
-    validateYaml, 
-    isReady, 
-    hasErrors 
-  } = useActionlint();
+  const [yamlContent, setYamlContent] = useState("");
+
+  const { state, validateYaml, isReady, hasErrors } = useActionlint();
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
@@ -52,20 +48,23 @@ function YAMLValidator() {
         onChange={handleContentChange}
         placeholder="Enter your GitHub Actions YAML..."
       />
-      
+
       {state.isLoading && <div>Validating...</div>}
-      
+
       {hasErrors && (
         <div>
           <h3>Validation Errors:</h3>
           {state.errors.map((error, index) => (
             <div key={index}>
-              <strong>Line {error.line}, Col {error.column}:</strong> {error.message}
+              <strong>
+                Line {error.line}, Col {error.column}:
+              </strong>{" "}
+              {error.message}
             </div>
           ))}
         </div>
       )}
-      
+
       {!hasErrors && !state.isLoading && isReady && (
         <div>✅ No validation errors!</div>
       )}
@@ -77,29 +76,29 @@ function YAMLValidator() {
 ## Advanced Usage
 
 ```tsx
-import React, { useState } from 'react';
-import { useActionlint } from '../hooks/useActionlint';
+import React, { useState } from "react";
+import { useActionlint } from "../hooks/useActionlint";
 
 function AdvancedYAMLValidator() {
-  const [yamlContent, setYamlContent] = useState('');
-  
-  const { 
-    state, 
-    validateYaml, 
+  const [yamlContent, setYamlContent] = useState("");
+
+  const {
+    state,
+    validateYaml,
     validateImmediate,
     reset,
     clearCache,
     reinitialize,
-    isReady, 
+    isReady,
     hasErrors,
     hasSystemError,
-    cacheStats
+    cacheStats,
   } = useActionlint({
-    debounceMs: 500,              // 500ms debounce
-    enableCache: true,            // Enable result caching
-    cacheTtl: 60000,             // Cache for 1 minute
-    maxCacheSize: 20,            // Keep up to 20 cached results
-    wasmPath: '/custom/path.wasm' // Custom WASM path
+    debounceMs: 500, // 500ms debounce
+    enableCache: true, // Enable result caching
+    cacheTtl: 60000, // Cache for 1 minute
+    maxCacheSize: 20, // Keep up to 20 cached results
+    wasmPath: "/custom/path.wasm", // Custom WASM path
   });
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -128,8 +127,10 @@ function AdvancedYAMLValidator() {
     <div>
       {/* Status indicators */}
       <div>
-        <span>Status: {isReady ? 'Ready' : 'Initializing...'}</span>
-        <span>Cache: {cacheStats.size}/{cacheStats.maxSize}</span>
+        <span>Status: {isReady ? "Ready" : "Initializing..."}</span>
+        <span>
+          Cache: {cacheStats.size}/{cacheStats.maxSize}
+        </span>
       </div>
 
       {/* Controls */}
@@ -159,7 +160,7 @@ function AdvancedYAMLValidator() {
 
       {/* Validation state */}
       {state.isLoading && <div>🔄 Validating...</div>}
-      
+
       {/* Validation results */}
       {hasErrors && (
         <div>
@@ -167,7 +168,9 @@ function AdvancedYAMLValidator() {
           {state.errors.map((error, index) => (
             <div key={index}>
               <div>
-                <span>Line {error.line}, Col {error.column}</span>
+                <span>
+                  Line {error.line}, Col {error.column}
+                </span>
                 <span>{error.kind}</span>
               </div>
               <p>{error.message}</p>
@@ -175,7 +178,7 @@ function AdvancedYAMLValidator() {
           ))}
         </div>
       )}
-      
+
       {!hasErrors && !state.isLoading && isReady && (
         <div>✅ No validation errors found!</div>
       )}
@@ -196,13 +199,13 @@ function AdvancedYAMLValidator() {
 
 ```tsx
 interface UseActionlintOptions {
-  debounceMs?: number;        // Debounce delay (default: 300ms)
-  autoValidate?: boolean;     // Auto-validate on change (default: true)
-  wasmPath?: string;          // WASM file path (default: '/main.wasm')
-  wasmExecPath?: string;      // wasm_exec.js path (default: '/wasm_exec.js')
-  enableCache?: boolean;      // Enable caching (default: true)
-  cacheTtl?: number;          // Cache TTL (default: 60000ms)
-  maxCacheSize?: number;      // Max cache entries (default: 10)
+  debounceMs?: number; // Debounce delay (default: 300ms)
+  autoValidate?: boolean; // Auto-validate on change (default: true)
+  wasmPath?: string; // WASM file path (default: '/main.wasm')
+  wasmExecPath?: string; // wasm_exec.js path (default: '/wasm_exec.js')
+  enableCache?: boolean; // Enable caching (default: true)
+  cacheTtl?: number; // Cache TTL (default: 60000ms)
+  maxCacheSize?: number; // Max cache entries (default: 10)
 }
 ```
 
@@ -243,10 +246,10 @@ interface ActionlintState {
 
 ```tsx
 interface ActionlintError {
-  kind: string;      // Error category
-  message: string;   // Error description
-  line: number;      // Line number (1-based)
-  column: number;    // Column number (1-based)
+  kind: string; // Error category
+  message: string; // Error description
+  line: number; // Line number (1-based)
+  column: number; // Column number (1-based)
 }
 ```
 
@@ -289,12 +292,12 @@ The hook distinguishes between two types of errors:
 ```tsx
 // Check for system errors
 if (hasSystemError) {
-  console.error('System error:', state.error);
+  console.error("System error:", state.error);
 }
 
 // Check for validation errors
 if (hasErrors) {
-  console.log('Validation errors:', state.errors);
+  console.log("Validation errors:", state.errors);
 }
 ```
 

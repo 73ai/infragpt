@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useOrganization, useAuth, useUser } from '@clerk/clerk-react';
-import { useApiClient } from '@/lib/api';
-import { userStore } from '@/stores/UserStore';
+import { useEffect, useState } from "react";
+import { useOrganization, useAuth, useUser } from "@clerk/clerk-react";
+import { useApiClient } from "@/lib/api";
+import { userStore } from "@/stores/UserStore";
 
 export interface OnboardingStatus {
   isLoading: boolean;
@@ -22,7 +22,7 @@ export const useOnboardingGuard = (): OnboardingStatus => {
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const { user } = useUser();
   const { getMe } = useApiClient();
-  
+
   const clerkUserId = user?.id;
   const clerkOrgId = organization?.id;
 
@@ -63,16 +63,21 @@ export const useOnboardingGuard = (): OnboardingStatus => {
       // Load user profile and check onboarding completion
       try {
         // Load user profile if not already loaded
-        if (!userStore.userProfile && !userStore.loading && clerkUserId && clerkOrgId) {
+        if (
+          !userStore.userProfile &&
+          !userStore.loading &&
+          clerkUserId &&
+          clerkOrgId
+        ) {
           await userStore.loadUserProfile(getMe, clerkUserId, clerkOrgId);
         }
-        
+
         // Check if metadata exists and has required fields
         const isComplete = Boolean(
           userStore.userProfile?.metadata?.company_size &&
-          userStore.userProfile?.metadata?.team_size &&
-          userStore.userProfile?.metadata?.use_cases?.length > 0 &&
-          userStore.userProfile?.metadata?.observability_stack?.length > 0
+            userStore.userProfile?.metadata?.team_size &&
+            userStore.userProfile?.metadata?.use_cases?.length > 0 &&
+            userStore.userProfile?.metadata?.observability_stack?.length > 0,
         );
 
         setStatus({
@@ -93,7 +98,15 @@ export const useOnboardingGuard = (): OnboardingStatus => {
     };
 
     checkOnboardingStatus();
-  }, [organization?.id, isSignedIn, authLoaded, orgLoaded, getMe, clerkUserId, clerkOrgId]);
+  }, [
+    organization?.id,
+    isSignedIn,
+    authLoaded,
+    orgLoaded,
+    getMe,
+    clerkUserId,
+    clerkOrgId,
+  ]);
 
   return status;
 };

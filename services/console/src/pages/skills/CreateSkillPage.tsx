@@ -1,20 +1,21 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Button } from '@/components/ui/button';
-import ValidationPanel, { ValidationError } from '@/components/ValidationPanel';
-import YamlEditor, { YamlEditorRef } from '@/components/YamlEditor';
-import AddCommandModal from '@/components/AddCommandModal';
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useActionlint, ActionlintError } from '@/hooks/useActionlint';
+import { Button } from "@/components/ui/button";
+import ValidationPanel, { ValidationError } from "@/components/ValidationPanel";
+import YamlEditor, { YamlEditorRef } from "@/components/YamlEditor";
+import AddCommandModal from "@/components/AddCommandModal";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useActionlint, ActionlintError } from "@/hooks/useActionlint";
 
 const CreateSkillPage = () => {
   const { validateYaml, state, isReady } = useActionlint({
     debounceMs: 500,
     autoValidate: true,
-    wasmPath: '/main.wasm',
-    wasmExecPath: '/wasm_exec.js'
+    wasmPath: "/main.wasm",
+    wasmExecPath: "/wasm_exec.js",
   });
   const yamlEditorRef = useRef<YamlEditorRef>(null);
-  const [yamlContent, setYamlContent] = useState(`# GitHub Actions Workflow Template
+  const [yamlContent, setYamlContent] =
+    useState(`# GitHub Actions Workflow Template
 name: CI/CD Pipeline
 on:
   push:
@@ -28,7 +29,7 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4`);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -54,25 +55,33 @@ jobs:
   };
 
   const handleCommandInsert = (commandYaml: string) => {
-    const lines = yamlContent.split('\n');
+    const lines = yamlContent.split("\n");
     let insertIndex = -1;
-    
-    const commandLines = commandYaml.split('\n').filter(line => line.trim() !== '');
-    
+
+    const commandLines = commandYaml
+      .split("\n")
+      .filter((line) => line.trim() !== "");
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trim();
-      
-      if (trimmed.includes('- name:') && 
-          (trimmed.includes('Checkout code') || trimmed.toLowerCase().includes('checkout'))) {
-        
+
+      if (
+        trimmed.includes("- name:") &&
+        (trimmed.includes("Checkout code") ||
+          trimmed.toLowerCase().includes("checkout"))
+      ) {
         for (let j = i + 1; j < lines.length; j++) {
           const nextLine = lines[j];
           const nextTrimmed = nextLine.trim();
-          
-          if (nextTrimmed.includes('- name:') || 
-              (!nextTrimmed && j + 1 < lines.length && !lines[j + 1].startsWith('  ')) ||
-              j === lines.length - 1) {
+
+          if (
+            nextTrimmed.includes("- name:") ||
+            (!nextTrimmed &&
+              j + 1 < lines.length &&
+              !lines[j + 1].startsWith("  ")) ||
+            j === lines.length - 1
+          ) {
             insertIndex = j === lines.length - 1 ? lines.length : j;
             break;
           }
@@ -80,43 +89,48 @@ jobs:
         break;
       }
     }
-    
+
     if (insertIndex === -1) {
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        if (line.trim().startsWith('steps:')) {
+        if (line.trim().startsWith("steps:")) {
           insertIndex = i + 1;
           break;
         }
       }
     }
-    
+
     if (insertIndex === -1) {
       insertIndex = lines.length;
     }
-    
+
     const newLines = [
       ...lines.slice(0, insertIndex),
       ...commandLines,
-      ...lines.slice(insertIndex)
+      ...lines.slice(insertIndex),
     ];
-    
-    setYamlContent(newLines.join('\n'));
+
+    setYamlContent(newLines.join("\n"));
   };
 
   const handleErrorClick = (error: ValidationError) => {
     if (yamlEditorRef.current) {
-      yamlEditorRef.current.setCursor(error.line, Math.max(0, error.column - 1));
+      yamlEditorRef.current.setCursor(
+        error.line,
+        Math.max(0, error.column - 1),
+      );
       yamlEditorRef.current.focus();
     }
   };
 
-  const convertedErrors: ValidationError[] = state.errors.map((error: ActionlintError) => ({
-    line: error.line,
-    column: error.column,
-    message: error.message,
-    kind: error.kind
-  }));
+  const convertedErrors: ValidationError[] = state.errors.map(
+    (error: ActionlintError) => ({
+      line: error.line,
+      column: error.column,
+      message: error.message,
+      kind: error.kind,
+    }),
+  );
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -128,9 +142,7 @@ jobs:
             <h1 className="text-xl font-semibold">Create a New Skill</h1>
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleAddCommand}>
-              Add Command
-            </Button>
+            <Button onClick={handleAddCommand}>Add Command</Button>
             {!isReady && (
               <div className="flex items-center text-sm text-muted-foreground">
                 <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
@@ -142,21 +154,24 @@ jobs:
       </div>
 
       {/* Main Content - True 60/40 Split Layout */}
-      <div className="flex-1 flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 64px)' }}>
+      <div
+        className="flex-1 flex flex-col lg:flex-row"
+        style={{ height: "calc(100vh - 64px)" }}
+      >
         {/* Left Panel - YAML Editor (60%) */}
         <div className="w-full lg:w-[60%] border-r-0 lg:border-r border-b lg:border-b-0 flex flex-col">
           <div className="flex-1 overflow-hidden">
-                <YamlEditor
-                  ref={yamlEditorRef}
-                  value={yamlContent}
-                  onChange={handleYamlChange}
-                  errors={convertedErrors.map(error => ({
-                    line: error.line,
-                    message: error.message
-                  }))}
-                  placeholder="Enter your GitHub Actions workflow YAML here..."
-                  className="h-full"
-                />
+            <YamlEditor
+              ref={yamlEditorRef}
+              value={yamlContent}
+              onChange={handleYamlChange}
+              errors={convertedErrors.map((error) => ({
+                line: error.line,
+                message: error.message,
+              }))}
+              placeholder="Enter your GitHub Actions workflow YAML here..."
+              className="h-full"
+            />
           </div>
         </div>
 
@@ -170,7 +185,9 @@ jobs:
             />
             {state.error && (
               <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <p className="text-sm text-destructive font-medium">System Error:</p>
+                <p className="text-sm text-destructive font-medium">
+                  System Error:
+                </p>
                 <p className="text-sm text-destructive mt-1">{state.error}</p>
               </div>
             )}

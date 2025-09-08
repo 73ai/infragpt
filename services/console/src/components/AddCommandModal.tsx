@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -6,18 +6,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Form,
   FormControl,
@@ -26,17 +26,18 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
 // Command templates for common GitHub Actions patterns
 // These templates provide only steps to be inserted into existing jobs
 const COMMAND_TEMPLATES = {
-  'deploy-application': {
-    name: 'deploy-application',
-    description: 'Complete application deployment with GCP, database, and notifications',
+  "deploy-application": {
+    name: "deploy-application",
+    description:
+      "Complete application deployment with GCP, database, and notifications",
     steps: `      - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -106,11 +107,11 @@ const COMMAND_TEMPLATES = {
           curl -X POST \\
             -H "Content-Type: application/json" \\
             -d "{\\"text\\": \\"Deployment $STATUS for \${{ vars.APP_NAME }} in \${{ vars.ENVIRONMENT }}\\"}" \\
-            \${{ secrets.SLACK_WEBHOOK_URL }} || echo "Notification failed"`
+            \${{ secrets.SLACK_WEBHOOK_URL }} || echo "Notification failed"`,
   },
-  'gcloud-operations': {
-    name: 'gcloud-operations',
-    description: 'Google Cloud Platform resource management and operations',
+  "gcloud-operations": {
+    name: "gcloud-operations",
+    description: "Google Cloud Platform resource management and operations",
     steps: `      - name: Setup Google Cloud CLI
         uses: google-github-actions/setup-gcloud@v2
         with:
@@ -139,11 +140,11 @@ const COMMAND_TEMPLATES = {
           echo "=== Compute Instances ==="
           gcloud compute instances list
           echo "=== Storage Buckets ==="
-          gsutil ls`
+          gsutil ls`,
   },
-  'kubectl-deployment': {
-    name: 'kubectl-deployment',
-    description: 'Kubernetes cluster deployment and management',
+  "kubectl-deployment": {
+    name: "kubectl-deployment",
+    description: "Kubernetes cluster deployment and management",
     steps: `      - name: Setup kubectl
         uses: azure/setup-kubectl@v3
         with:
@@ -172,11 +173,11 @@ const COMMAND_TEMPLATES = {
       - name: Get deployment status
         run: |
           kubectl get pods -n \${{ vars.NAMESPACE }}
-          kubectl get services -n \${{ vars.NAMESPACE }}`
+          kubectl get services -n \${{ vars.NAMESPACE }}`,
   },
-  'python-script': {
-    name: 'python-script',
-    description: 'Execute Python scripts with environment setup',
+  "python-script": {
+    name: "python-script",
+    description: "Execute Python scripts with environment setup",
     steps: `      - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -201,11 +202,11 @@ const COMMAND_TEMPLATES = {
           source venv/bin/activate
           if [ -d tests ]; then
             python -m pytest tests/ -v
-          fi`
+          fi`,
   },
-  'git-operations': {
-    name: 'git-operations',
-    description: 'Git repository operations and management',
+  "git-operations": {
+    name: "git-operations",
+    description: "Git repository operations and management",
     steps: `      - name: Checkout with full history
         uses: actions/checkout@v4
         with:
@@ -227,11 +228,11 @@ const COMMAND_TEMPLATES = {
           TAG_NAME="v$(date +%Y%m%d-%H%M%S)"
           git tag -a $TAG_NAME -m "Release $TAG_NAME"
           git push origin $TAG_NAME
-          echo "Created tag: $TAG_NAME"`
+          echo "Created tag: $TAG_NAME"`,
   },
-  'ssh-deployment': {
-    name: 'ssh-deployment',
-    description: 'Deploy application to remote servers via SSH',
+  "ssh-deployment": {
+    name: "ssh-deployment",
+    description: "Deploy application to remote servers via SSH",
     steps: `      - name: Build application
         run: |
           if [ -f package.json ]; then
@@ -275,11 +276,11 @@ const COMMAND_TEMPLATES = {
             fi
           EOF
           
-          rm -f ssh_key`
+          rm -f ssh_key`,
   },
-  'api-webhook': {
-    name: 'api-webhook',
-    description: 'Call external APIs and webhooks',
+  "api-webhook": {
+    name: "api-webhook",
+    description: "Call external APIs and webhooks",
     steps: `      - name: Call API endpoint
         run: |
           curl -X POST \\
@@ -301,11 +302,11 @@ const COMMAND_TEMPLATES = {
                 {"title": "Timestamp", "value": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'", "short": true}
               ]
             }' \\
-            \${{ secrets.SLACK_WEBHOOK_URL }} || echo "Slack notification failed"`
+            \${{ secrets.SLACK_WEBHOOK_URL }} || echo "Slack notification failed"`,
   },
-  'database-operations': {
-    name: 'database-operations',
-    description: 'PostgreSQL database operations and migrations',
+  "database-operations": {
+    name: "database-operations",
+    description: "PostgreSQL database operations and migrations",
     steps: `      - name: Setup PostgreSQL client
         run: |
           sudo apt-get update
@@ -331,11 +332,11 @@ const COMMAND_TEMPLATES = {
       - name: Execute database query
         run: |
           psql "\${{ secrets.DATABASE_URL }}" -c "SELECT version();"
-          psql "\${{ secrets.DATABASE_URL }}" -c "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = 'public';"`
+          psql "\${{ secrets.DATABASE_URL }}" -c "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = 'public';"`,
   },
-  'custom': {
-    name: 'custom-command',
-    description: 'Create a custom command from scratch',
+  custom: {
+    name: "custom-command",
+    description: "Create a custom command from scratch",
     steps: `      - name: Custom step
         run: |
           echo "Add your custom commands here"
@@ -347,14 +348,20 @@ const COMMAND_TEMPLATES = {
           # ./scripts/custom-script.sh
           
           # Example: Set environment variables
-          # echo "CUSTOM_VAR=value" >> $GITHUB_ENV`
-  }
+          # echo "CUSTOM_VAR=value" >> $GITHUB_ENV`,
+  },
 };
 
 const formSchema = z.object({
-  template: z.string().min(1, 'Please select a template'),
-  name: z.string().min(1, 'Command name is required').max(50, 'Name must be 50 characters or less'),
-  description: z.string().min(1, 'Description is required').max(200, 'Description must be 200 characters or less'),
+  template: z.string().min(1, "Please select a template"),
+  name: z
+    .string()
+    .min(1, "Command name is required")
+    .max(50, "Name must be 50 characters or less"),
+  description: z
+    .string()
+    .min(1, "Description is required")
+    .max(200, "Description must be 200 characters or less"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -370,45 +377,47 @@ const AddCommandModal: React.FC<AddCommandModalProps> = ({
   onOpenChange,
   onAddCommand,
 }) => {
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      template: '',
-      name: '',
-      description: '',
+      template: "",
+      name: "",
+      description: "",
     },
   });
 
   const handleTemplateChange = (templateKey: string) => {
     setSelectedTemplate(templateKey);
-    const template = COMMAND_TEMPLATES[templateKey as keyof typeof COMMAND_TEMPLATES];
+    const template =
+      COMMAND_TEMPLATES[templateKey as keyof typeof COMMAND_TEMPLATES];
     if (template) {
-      form.setValue('template', templateKey);
-      form.setValue('name', template.name);
-      form.setValue('description', template.description);
+      form.setValue("template", templateKey);
+      form.setValue("name", template.name);
+      form.setValue("description", template.description);
     }
   };
 
   const onSubmit = (data: FormData) => {
-    const template = COMMAND_TEMPLATES[data.template as keyof typeof COMMAND_TEMPLATES];
+    const template =
+      COMMAND_TEMPLATES[data.template as keyof typeof COMMAND_TEMPLATES];
     if (template) {
       // Since we now provide only steps, pass them directly
       const commandSteps = template.steps;
-      
+
       onAddCommand(commandSteps);
-      
+
       // Reset form and close modal
       form.reset();
-      setSelectedTemplate('');
+      setSelectedTemplate("");
       onOpenChange(false);
     }
   };
 
   const handleClose = () => {
     form.reset();
-    setSelectedTemplate('');
+    setSelectedTemplate("");
     onOpenChange(false);
   };
 
@@ -418,7 +427,8 @@ const AddCommandModal: React.FC<AddCommandModalProps> = ({
         <DialogHeader>
           <DialogTitle>Add Command</DialogTitle>
           <DialogDescription>
-            Choose a template and customize the command for your skill configuration.
+            Choose a template and customize the command for your skill
+            configuration.
           </DialogDescription>
         </DialogHeader>
 
@@ -430,8 +440,8 @@ const AddCommandModal: React.FC<AddCommandModalProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Command Template</FormLabel>
-                  <Select 
-                    onValueChange={handleTemplateChange} 
+                  <Select
+                    onValueChange={handleTemplateChange}
                     value={field.value}
                   >
                     <FormControl>
@@ -442,56 +452,81 @@ const AddCommandModal: React.FC<AddCommandModalProps> = ({
                     <SelectContent>
                       <SelectItem value="deploy-application">
                         <div className="flex flex-col items-start">
-                          <span className="font-medium">Deploy Application</span>
-                          <span className="text-xs text-muted-foreground">Complete deployment with GCP, database, and notifications</span>
+                          <span className="font-medium">
+                            Deploy Application
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Complete deployment with GCP, database, and
+                            notifications
+                          </span>
                         </div>
                       </SelectItem>
                       <SelectItem value="gcloud-operations">
                         <div className="flex flex-col items-start">
                           <span className="font-medium">GCloud Operations</span>
-                          <span className="text-xs text-muted-foreground">Google Cloud Platform resource management</span>
+                          <span className="text-xs text-muted-foreground">
+                            Google Cloud Platform resource management
+                          </span>
                         </div>
                       </SelectItem>
                       <SelectItem value="kubectl-deployment">
                         <div className="flex flex-col items-start">
-                          <span className="font-medium">Kubernetes Deployment</span>
-                          <span className="text-xs text-muted-foreground">Deploy and manage Kubernetes clusters</span>
+                          <span className="font-medium">
+                            Kubernetes Deployment
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Deploy and manage Kubernetes clusters
+                          </span>
                         </div>
                       </SelectItem>
                       <SelectItem value="python-script">
                         <div className="flex flex-col items-start">
                           <span className="font-medium">Python Script</span>
-                          <span className="text-xs text-muted-foreground">Execute Python scripts with environment setup</span>
+                          <span className="text-xs text-muted-foreground">
+                            Execute Python scripts with environment setup
+                          </span>
                         </div>
                       </SelectItem>
                       <SelectItem value="git-operations">
                         <div className="flex flex-col items-start">
                           <span className="font-medium">Git Operations</span>
-                          <span className="text-xs text-muted-foreground">Repository operations and management</span>
+                          <span className="text-xs text-muted-foreground">
+                            Repository operations and management
+                          </span>
                         </div>
                       </SelectItem>
                       <SelectItem value="ssh-deployment">
                         <div className="flex flex-col items-start">
                           <span className="font-medium">SSH Deployment</span>
-                          <span className="text-xs text-muted-foreground">Deploy to remote servers via SSH</span>
+                          <span className="text-xs text-muted-foreground">
+                            Deploy to remote servers via SSH
+                          </span>
                         </div>
                       </SelectItem>
                       <SelectItem value="api-webhook">
                         <div className="flex flex-col items-start">
                           <span className="font-medium">API & Webhooks</span>
-                          <span className="text-xs text-muted-foreground">Call external APIs and webhooks</span>
+                          <span className="text-xs text-muted-foreground">
+                            Call external APIs and webhooks
+                          </span>
                         </div>
                       </SelectItem>
                       <SelectItem value="database-operations">
                         <div className="flex flex-col items-start">
-                          <span className="font-medium">Database Operations</span>
-                          <span className="text-xs text-muted-foreground">PostgreSQL operations and migrations</span>
+                          <span className="font-medium">
+                            Database Operations
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            PostgreSQL operations and migrations
+                          </span>
                         </div>
                       </SelectItem>
                       <SelectItem value="custom">
                         <div className="flex flex-col items-start">
                           <span className="font-medium">Custom Command</span>
-                          <span className="text-xs text-muted-foreground">Start with a basic template</span>
+                          <span className="text-xs text-muted-foreground">
+                            Start with a basic template
+                          </span>
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -513,13 +548,11 @@ const AddCommandModal: React.FC<AddCommandModalProps> = ({
                     <FormItem>
                       <FormLabel>Command Name</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="e.g., deploy-app" 
-                          {...field} 
-                        />
+                        <Input placeholder="e.g., deploy-app" {...field} />
                       </FormControl>
                       <FormDescription>
-                        A unique identifier for this command (lowercase, hyphens allowed).
+                        A unique identifier for this command (lowercase, hyphens
+                        allowed).
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -533,10 +566,10 @@ const AddCommandModal: React.FC<AddCommandModalProps> = ({
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Describe what this command does..." 
+                        <Textarea
+                          placeholder="Describe what this command does..."
                           className="min-h-[80px]"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormDescription>
@@ -552,11 +585,17 @@ const AddCommandModal: React.FC<AddCommandModalProps> = ({
                   <Label>Steps Preview</Label>
                   <div className="bg-muted/50 p-4 rounded-md border">
                     <pre className="text-xs overflow-x-auto whitespace-pre-wrap text-muted-foreground">
-                      {COMMAND_TEMPLATES[selectedTemplate as keyof typeof COMMAND_TEMPLATES]?.steps}
+                      {
+                        COMMAND_TEMPLATES[
+                          selectedTemplate as keyof typeof COMMAND_TEMPLATES
+                        ]?.steps
+                      }
                     </pre>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    These steps will be inserted into your existing job. The base job already includes checkout@v4 and runs-on: ubuntu-latest.
+                    These steps will be inserted into your existing job. The
+                    base job already includes checkout@v4 and runs-on:
+                    ubuntu-latest.
                   </p>
                 </div>
               </>
@@ -566,8 +605,8 @@ const AddCommandModal: React.FC<AddCommandModalProps> = ({
               <Button type="button" variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={!selectedTemplate || form.formState.isSubmitting}
               >
                 Add Command

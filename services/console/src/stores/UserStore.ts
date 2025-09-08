@@ -1,4 +1,4 @@
-import { makeAutoObservable, runInAction } from 'mobx';
+import { makeAutoObservable, runInAction } from "mobx";
 
 export interface UserProfile {
   id: string;
@@ -40,16 +40,19 @@ class UserStore {
   get hasCompletedOnboarding(): boolean {
     return Boolean(
       this.userProfile?.metadata?.company_size &&
-      this.userProfile?.metadata?.team_size &&
-      this.userProfile?.metadata?.use_cases?.length > 0 &&
-      this.userProfile?.metadata?.observability_stack?.length > 0
+        this.userProfile?.metadata?.team_size &&
+        this.userProfile?.metadata?.use_cases?.length > 0 &&
+        this.userProfile?.metadata?.observability_stack?.length > 0,
     );
   }
 
   async loadUserProfile(
-    getMeFunction: (clerkUserId: string, clerkOrgId: string) => Promise<UserProfile>,
+    getMeFunction: (
+      clerkUserId: string,
+      clerkOrgId: string,
+    ) => Promise<UserProfile>,
     clerkUserId: string,
-    clerkOrgId: string
+    clerkOrgId: string,
   ): Promise<void> {
     if (this.loading) return; // Prevent duplicate requests
 
@@ -60,27 +63,30 @@ class UserStore {
 
     try {
       const userProfile = await getMeFunction(clerkUserId, clerkOrgId);
-      
+
       runInAction(() => {
         this.userProfile = userProfile;
         this.loading = false;
       });
     } catch (error) {
       runInAction(() => {
-        this.error = error instanceof Error ? error.message : 'Failed to load user profile';
+        this.error =
+          error instanceof Error
+            ? error.message
+            : "Failed to load user profile";
         this.loading = false;
       });
       throw error;
     }
   }
 
-  updateMetadata(metadata: Partial<UserProfile['metadata']>): void {
+  updateMetadata(metadata: Partial<UserProfile["metadata"]>): void {
     if (!this.userProfile) return;
 
     runInAction(() => {
       this.userProfile!.metadata = {
         ...this.userProfile!.metadata,
-        ...metadata
+        ...metadata,
       };
     });
   }

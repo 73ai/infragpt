@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useActionlint, ActionlintError } from '../hooks/useActionlint';
+import React, { useState } from "react";
+import { useActionlint, ActionlintError } from "../hooks/useActionlint";
 
 /**
  * Example component demonstrating how to use the useActionlint hook
@@ -16,22 +16,22 @@ jobs:
       - uses: actions/checkout@v4
       - run: echo "Hello World"`);
 
-  const { 
-    state, 
-    validateYaml, 
-    validateImmediate, 
-    reset, 
+  const {
+    state,
+    validateYaml,
+    validateImmediate,
+    reset,
     clearCache,
-    isReady, 
-    hasErrors, 
+    isReady,
+    hasErrors,
     hasSystemError,
-    cacheStats
+    cacheStats,
   } = useActionlint({
     debounceMs: 500,
     autoValidate: true,
     enableCache: true,
     cacheTtl: 30000, // 30 seconds for demo
-    maxCacheSize: 5
+    maxCacheSize: 5,
   });
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -53,7 +53,7 @@ jobs:
   };
 
   const renderError = (error: ActionlintError, index: number) => (
-    <div 
+    <div
       key={index}
       className="p-3 mb-2 bg-red-50 border border-red-200 rounded-md"
     >
@@ -71,18 +71,22 @@ jobs:
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Actionlint WASM Integration Example</h1>
-      
+      <h1 className="text-3xl font-bold mb-6">
+        Actionlint WASM Integration Example
+      </h1>
+
       {/* Status Indicators */}
       <div className="mb-4 flex gap-2">
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-          state.isInitialized 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-yellow-100 text-yellow-800'
-        }`}>
-          {state.isInitialized ? 'WASM Ready' : 'Initializing WASM...'}
+        <span
+          className={`px-3 py-1 rounded-full text-sm font-medium ${
+            state.isInitialized
+              ? "bg-green-100 text-green-800"
+              : "bg-yellow-100 text-yellow-800"
+          }`}
+        >
+          {state.isInitialized ? "WASM Ready" : "Initializing WASM..."}
         </span>
-        
+
         {state.isLoading && (
           <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
             Validating...
@@ -130,7 +134,9 @@ jobs:
       {/* System Error */}
       {hasSystemError && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">System Error</h3>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">
+            System Error
+          </h3>
           <p className="text-red-700">{state.error}</p>
         </div>
       )}
@@ -138,17 +144,20 @@ jobs:
       {/* Validation Results */}
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-3">Validation Results</h3>
-        
+
         {!hasErrors && !hasSystemError && !state.isLoading && isReady && (
           <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-            <p className="text-green-800 font-medium">✅ No validation errors found!</p>
+            <p className="text-green-800 font-medium">
+              ✅ No validation errors found!
+            </p>
           </div>
         )}
 
         {hasErrors && (
           <div>
             <p className="text-red-700 font-medium mb-3">
-              Found {state.errors.length} validation error{state.errors.length !== 1 ? 's' : ''}:
+              Found {state.errors.length} validation error
+              {state.errors.length !== 1 ? "s" : ""}:
             </p>
             {state.errors.map(renderError)}
           </div>
@@ -162,7 +171,9 @@ jobs:
 
         {!isReady && !state.isLoading && (
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-            <p className="text-yellow-800">⏳ Initializing validation engine...</p>
+            <p className="text-yellow-800">
+              ⏳ Initializing validation engine...
+            </p>
           </div>
         )}
       </div>
@@ -173,18 +184,24 @@ jobs:
           Debug: Hook State
         </summary>
         <pre className="mt-2 p-3 bg-gray-100 rounded text-xs overflow-auto">
-          {JSON.stringify({
-            isInitialized: state.isInitialized,
-            isLoading: state.isLoading,
-            isReady,
-            hasErrors,
-            hasSystemError,
-            errorCount: state.errors.length,
-            systemError: state.error,
-            lastValidated: state.lastValidated ? state.lastValidated.substring(0, 50) + '...' : null,
-            validatedAt: state.validatedAt?.toISOString(),
-            cacheStats
-          }, null, 2)}
+          {JSON.stringify(
+            {
+              isInitialized: state.isInitialized,
+              isLoading: state.isLoading,
+              isReady,
+              hasErrors,
+              hasSystemError,
+              errorCount: state.errors.length,
+              systemError: state.error,
+              lastValidated: state.lastValidated
+                ? state.lastValidated.substring(0, 50) + "..."
+                : null,
+              validatedAt: state.validatedAt?.toISOString(),
+              cacheStats,
+            },
+            null,
+            2,
+          )}
         </pre>
       </details>
     </div>

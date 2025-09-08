@@ -1,12 +1,8 @@
-"use client"
+"use client";
 
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
-import {
-  BookOpen,
-  Frame,
-  Map,
-} from "lucide-react";
+import { BookOpen, Frame, Map } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -39,43 +35,47 @@ const data = {
       icon: Frame,
     },
   ],
-}
+};
 
-const ConsoleSidebar = observer(({ ...props }: React.ComponentProps<typeof Sidebar>) => {
+const ConsoleSidebar = observer(
+  ({ ...props }: React.ComponentProps<typeof Sidebar>) => {
+    const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+    useEffect(() => {
+      const handleOnline = () => setIsOffline(false);
+      const handleOffline = () => setIsOffline(true);
 
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("offline", handleOffline);
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+      return () => {
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+      };
+    }, []);
 
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-      </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={data.navMain} />
-      </SidebarContent>
-      <SidebarFooter>
-        {isOffline && (
-          <span role="status" aria-live="polite" className="text-sm text-yellow-600 bg-yellow-100 px-2 py-1 rounded text-center">
-            Offline Mode
-          </span>
-        )}
-        <NavUser />
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
-  )
-})
+    return (
+      <Sidebar collapsible="icon" {...props}>
+        <SidebarHeader></SidebarHeader>
+        <SidebarContent>
+          <NavMain items={data.navMain} />
+        </SidebarContent>
+        <SidebarFooter>
+          {isOffline && (
+            <span
+              role="status"
+              aria-live="polite"
+              className="text-sm text-yellow-600 bg-yellow-100 px-2 py-1 rounded text-center"
+            >
+              Offline Mode
+            </span>
+          )}
+          <NavUser />
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+    );
+  },
+);
 
 export { ConsoleSidebar };
