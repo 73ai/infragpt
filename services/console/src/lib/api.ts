@@ -109,7 +109,7 @@ export const useApiClient = () => {
   );
 
   const apiPost = useCallback(
-    async <T>(endpoint: string, data?: any): Promise<T> => {
+    async <T>(endpoint: string, data?: unknown): Promise<T> => {
       return makeAuthenticatedRequest<T>(endpoint, {
         method: "POST",
         body: data ? JSON.stringify(data) : undefined,

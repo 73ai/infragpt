@@ -30,7 +30,17 @@ class IntegrationStore {
     makeAutoObservable(this);
   }
 
-  private transformAPIIntegration(apiIntegration: any): Integration {
+  private transformAPIIntegration(apiIntegration: {
+    id: string;
+    organization_id: string;
+    connector_type: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+    last_sync_at?: string;
+    metadata?: Record<string, unknown>;
+    configuration?: Record<string, unknown>;
+  }): Integration {
     return {
       id: apiIntegration.id,
       organizationId: apiIntegration.organization_id,
@@ -153,7 +163,7 @@ class IntegrationStore {
 
   async handleCallback(
     connectorType: ConnectorType,
-    callbackData: Record<string, any>,
+    callbackData: Record<string, unknown>,
   ): Promise<Integration> {
     return withErrorHandling(async () => {
       runInAction(() => {
@@ -317,7 +327,7 @@ class IntegrationStore {
     this.error = null;
   }
 
-  handleError(error: any, context?: string): void {
+  handleError(error: unknown, context?: string): void {
     const errorMessage = getErrorMessage(error);
 
     runInAction(() => {

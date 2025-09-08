@@ -41,11 +41,11 @@ describe("useActionlint", () => {
 
   afterEach(() => {
     // Clean up globals
-    (window as any).runActionlint = undefined;
-    (window as any).onCheckCompleted = undefined;
-    (window as any).showError = undefined;
-    (window as any).dismissLoading = undefined;
-    (window as any).Go = undefined;
+    (window as unknown as { runActionlint?: unknown }).runActionlint = undefined;
+    (window as unknown as { onCheckCompleted?: unknown }).onCheckCompleted = undefined;
+    (window as unknown as { showError?: unknown }).showError = undefined;
+    (window as unknown as { dismissLoading?: unknown }).dismissLoading = undefined;
+    (window as unknown as { Go?: unknown }).Go = undefined;
   });
 
   describe("initialization", () => {

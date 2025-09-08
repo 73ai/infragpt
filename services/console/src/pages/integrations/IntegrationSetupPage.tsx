@@ -8,6 +8,7 @@ import { getConnectorByType } from "../../lib/integration-constants";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import type { ConnectorType } from "../../types/integration";
 
 type SetupState = "processing" | "success" | "error";
 
@@ -20,7 +21,7 @@ const IntegrationSetupPage = observer(() => {
   const [message, setMessage] = useState("");
 
   const connector = connectorType
-    ? getConnectorByType(connectorType as any)
+    ? getConnectorByType(connectorType as ConnectorType)
     : null;
 
   useEffect(() => {
@@ -53,7 +54,7 @@ const IntegrationSetupPage = observer(() => {
         if (setupAction === "install") {
           // For new installations, use the existing callback flow
           await integrationStore.handleCallback(
-            connectorType as any,
+            connectorType as ConnectorType,
             setupData,
           );
           setState("success");
@@ -90,9 +91,8 @@ const IntegrationSetupPage = observer(() => {
 
   const extractGitHubSetupData = (
     searchParams: URLSearchParams,
-  ): Record<string, any> | null => {
+  ): Record<string, unknown> | null => {
     const installationId = searchParams.get("installation_id");
-    const setupAction = searchParams.get("setup_action");
     const state = searchParams.get("state");
 
     if (!installationId) {

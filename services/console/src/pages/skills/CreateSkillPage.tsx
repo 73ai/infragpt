@@ -44,7 +44,7 @@ jobs:
     if (isReady && yamlContent.trim()) {
       validateYaml(yamlContent);
     }
-  }, [isReady]);
+  }, [isReady, validateYaml, yamlContent]);
 
   const handleYamlChange = useCallback((newContent: string) => {
     setYamlContent(newContent);

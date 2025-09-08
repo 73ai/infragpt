@@ -39,7 +39,7 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
     const [isValidating, setIsValidating] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isValidJSON, setIsValidJSON] = useState(false);
-    const [validationResult, setValidationResult] = useState<any>(null);
+    const [validationResult, setValidationResult] = useState<{ valid: boolean; errors?: string[] } | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [jsonError, setJsonError] = useState<string | null>(null);
     const { apiPost } = useApiClient();
@@ -65,7 +65,7 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
         try {
           JSON.parse(value);
           setIsValidJSON(true);
-        } catch (e) {
+        } catch {
           setIsValidJSON(false);
         }
       } else {
@@ -115,13 +115,14 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
 
         setValidationResult(response);
 
-        if (!(response as any).valid) {
+        const validationResponse = response as { valid: boolean; errors?: string[] };
+        if (!validationResponse.valid) {
           const errorMessage =
-            (response as any).errors?.join(", ") || "Validation failed";
+            validationResponse.errors?.join(", ") || "Validation failed";
           setError(errorMessage);
         }
-      } catch (err: any) {
-        setError(err.message || "Failed to validate credentials");
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to validate credentials");
       } finally {
         setIsValidating(false);
       }
@@ -154,8 +155,8 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
 
         // Close modal on success
         onClose();
-      } catch (err: any) {
-        setError(err.message || "Failed to connect GCP integration");
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to connect GCP integration");
       } finally {
         setIsConnecting(false);
       }

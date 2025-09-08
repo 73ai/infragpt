@@ -10,6 +10,7 @@ import { Skeleton } from "../../components/ui/skeleton";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useApiClient } from "../../lib/api";
 import { GCPIntegrationModal } from "./components/GCPIntegrationModal";
+import type { ConnectorType } from "../../types/integration";
 
 const IntegrationsPage = observer(() => {
   const { user } = useUser();
@@ -52,7 +53,7 @@ const IntegrationsPage = observer(() => {
 
       try {
         const response = await integrationStore.initiateConnection(
-          connectorType as any,
+          connectorType as ConnectorType,
           userStore.organizationId,
           userStore.userId,
           `${window.location.origin}/integrations/${connectorType}/authorize`,

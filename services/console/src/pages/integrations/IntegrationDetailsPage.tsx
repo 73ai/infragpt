@@ -12,6 +12,7 @@ import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useApiClient } from "../../lib/api";
+import type { ConnectorType } from "../../types/integration";
 
 const IntegrationDetailsPage = observer(() => {
   const { connectorType } = useParams<{ connectorType: string }>();
@@ -24,10 +25,10 @@ const IntegrationDetailsPage = observer(() => {
   const clerkOrgId = user?.organizationMemberships?.[0]?.organization?.id;
 
   const connector = connectorType
-    ? getConnectorByType(connectorType as any)
+    ? getConnectorByType(connectorType as ConnectorType)
     : null;
   const integration = connectorType
-    ? integrationStore.getIntegrationByConnectorType(connectorType as any)
+    ? integrationStore.getIntegrationByConnectorType(connectorType as ConnectorType)
     : null;
 
   useEffect(() => {
@@ -87,7 +88,7 @@ const IntegrationDetailsPage = observer(() => {
 
     try {
       const response = await integrationStore.initiateConnection(
-        connectorType as any,
+        connectorType as ConnectorType,
         userStore.organizationId,
         userStore.userId,
         `${window.location.origin}/integrations/${connectorType}/authorize`,
@@ -317,20 +318,10 @@ const IntegrationDetailsPage = observer(() => {
           onTestConnection={handleTestConnection}
           onReconfigure={handleReconfigure}
           onDisconnect={handleDisconnect}
-          loading={integrationStore.isConnectorLoading(connector.type as any)}
+          loading={integrationStore.isConnectorLoading(connector.type as ConnectorType)}
         />
 
         {/* Activity Log - Disabled until API is implemented */}
-        {false && integration && (
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
-            <div className="space-y-3">
-              <p className="text-muted-foreground text-sm">
-                Activity log will be available soon
-              </p>
-            </div>
-          </Card>
-        )}
       </div>
     </div>
   );

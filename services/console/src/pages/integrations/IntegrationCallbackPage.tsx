@@ -8,6 +8,7 @@ import { getConnectorByType } from "../../lib/integration-constants";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import type { ConnectorType } from "../../types/integration";
 
 type CallbackState = "processing" | "success" | "error";
 
@@ -20,7 +21,7 @@ const IntegrationCallbackPage = observer(() => {
   const [message, setMessage] = useState("");
 
   const connector = connectorType
-    ? getConnectorByType(connectorType as any)
+    ? getConnectorByType(connectorType as ConnectorType)
     : null;
 
   useEffect(() => {
@@ -43,7 +44,7 @@ const IntegrationCallbackPage = observer(() => {
 
         // Handle the callback
         await integrationStore.handleCallback(
-          connectorType as any,
+          connectorType as ConnectorType,
           callbackData,
         );
 
@@ -70,9 +71,9 @@ const IntegrationCallbackPage = observer(() => {
   const extractCallbackData = (
     connectorType: string,
     searchParams: URLSearchParams,
-  ): Record<string, any> | null => {
+  ): Record<string, unknown> | null => {
     switch (connectorType) {
-      case "slack":
+      case "slack": {
         // Slack OAuth2 flow parameters
         const code = searchParams.get("code");
         const state = searchParams.get("state");
@@ -87,11 +88,11 @@ const IntegrationCallbackPage = observer(() => {
         }
 
         return { code, state };
+      }
 
-      case "github":
+      case "github": {
         // GitHub App installation flow parameters
         const installationId = searchParams.get("installation_id");
-        const setupAction = searchParams.get("setup_action");
         const githubCode = searchParams.get("code");
         const githubState = searchParams.get("state");
 
@@ -104,8 +105,9 @@ const IntegrationCallbackPage = observer(() => {
           code: githubCode,
           state: githubState,
         };
+      }
 
-      default:
+      default: {
         // Generic OAuth2 flow
         const genericCode = searchParams.get("code");
         const genericState = searchParams.get("state");
@@ -115,6 +117,7 @@ const IntegrationCallbackPage = observer(() => {
         }
 
         return { code: genericCode, state: genericState };
+      }
     }
   };
 

@@ -38,7 +38,7 @@ export interface Integration {
   createdAt: string;
   updatedAt: string;
   lastSyncAt?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   configuration?: IntegrationConfiguration;
 }
 
@@ -95,7 +95,7 @@ export interface CallbackRequest {
   code?: string;
   state?: string;
   installation_id?: string;
-  [key: string]: any; // Allow for connector-specific parameters
+  [key: string]: unknown; // Allow for connector-specific parameters
 }
 
 export interface IntegrationsListRequest {
@@ -142,7 +142,7 @@ export interface IntegrationActivity {
     | "config_updated";
   description: string;
   timestamp: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Error Types

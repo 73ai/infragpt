@@ -19,7 +19,6 @@
 import React, {
   useEffect,
   useRef,
-  useState,
   useMemo,
   useImperativeHandle,
   forwardRef,
@@ -92,7 +91,6 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(
   ) => {
     const editorRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
-    const isDark = true; // Always use dark theme
     const onChangeRef = useRef(onChange);
     const errorsRef = useRef(errors);
 
@@ -144,7 +142,7 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(
       return linter((view) => {
         const doc = view.state.doc;
         const text = doc.toString();
-        const diagnostics: any[] = [];
+        const diagnostics: { from: number; to: number; severity: string; message: string }[] = [];
 
         if (!text.trim()) {
           return diagnostics;
@@ -153,10 +151,11 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(
         // YAML syntax validation
         try {
           yamlParser.load(text);
-        } catch (error: any) {
-          if (error.mark) {
-            const line = error.mark.line + 1; // Convert to 1-based line numbers
-            const column = error.mark.column;
+        } catch (error: unknown) {
+          const yamlError = error as { mark?: { line: number; column: number }; reason?: string };
+          if (yamlError.mark) {
+            const line = yamlError.mark.line + 1; // Convert to 1-based line numbers
+            const column = yamlError.mark.column;
 
             if (line <= doc.lines) {
               const lineInfo = doc.line(line);
@@ -166,7 +165,7 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(
                 from: pos,
                 to: Math.min(pos + 1, lineInfo.to),
                 severity: "error",
-                message: error.reason || "YAML syntax error",
+                message: yamlError.reason || "YAML syntax error",
               });
             }
           } else {
@@ -320,7 +319,7 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(
           viewRef.current = null;
         }
       };
-    }, []); // Only create editor once
+    }, [value, yamlLinter]); // Only create editor once
 
     // No theme change handler needed - always dark theme
 
@@ -350,7 +349,7 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(
           effects: [],
         });
       }
-    }, [errors]);
+    }, [value, yamlLinter, errors]);
 
     return (
       <div className={`yaml-editor ${className} h-full flex flex-col`}>

@@ -143,7 +143,7 @@ class IntegrationService {
    */
   async handleCallback(
     connectorType: ConnectorType,
-    callbackData: Record<string, any>,
+    callbackData: Record<string, unknown>,
   ): Promise<Integration> {
     const request: CallbackRequest = {
       connector_type: connectorType,
@@ -272,11 +272,11 @@ export const integrationService = new IntegrationService();
 
 export { IntegrationService };
 
-export const isIntegrationError = (error: any): error is IntegrationError => {
+export const isIntegrationError = (error: unknown): error is IntegrationError => {
   return error instanceof IntegrationError;
 };
 
-export const getErrorMessage = (error: any): string => {
+export const getErrorMessage = (error: unknown): string => {
   if (isIntegrationError(error)) {
     switch (error.statusCode) {
       case 401:

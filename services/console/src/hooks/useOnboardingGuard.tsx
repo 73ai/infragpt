@@ -86,7 +86,7 @@ export const useOnboardingGuard = (): OnboardingStatus => {
           hasOrganization: true,
           error: null,
         });
-      } catch (error) {
+      } catch {
         // If user profile doesn't exist in our backend yet, onboarding is incomplete
         setStatus({
           isLoading: false,

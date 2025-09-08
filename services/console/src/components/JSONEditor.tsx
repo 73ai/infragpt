@@ -184,7 +184,7 @@ export const JSONEditor: React.FC<JSONEditorProps> = ({
       view.destroy();
       viewRef.current = null;
     };
-  }, [height, readOnly, theme]);
+  }, [height, readOnly, theme, value]);
 
   useEffect(() => {
     if (viewRef.current) {
