@@ -1,8 +1,20 @@
-import { UseFormReturn } from 'react-hook-form';
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { COMPANY_SIZES, TEAM_SIZES } from '@/lib/onboarding-constants';
-import type { OnboardingFormData } from '@/lib/onboarding-constants';
+import { UseFormReturn } from "react-hook-form";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { COMPANY_SIZES, TEAM_SIZES } from "@/lib/onboarding-constants";
+import type { OnboardingFormData } from "@/lib/onboarding-constants";
 
 interface CompanySizeStepProps {
   form: UseFormReturn<OnboardingFormData>;

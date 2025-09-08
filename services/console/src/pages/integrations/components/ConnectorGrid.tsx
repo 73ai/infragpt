@@ -1,11 +1,18 @@
-import React from 'react';
-import { Connector, Integration, ConnectorType } from '../../../types/integration';
-import { ConnectorCard } from './ConnectorCard';
+import React from "react";
+import {
+  Connector,
+  Integration,
+  ConnectorType,
+} from "../../../types/integration";
+import { ConnectorCard } from "./ConnectorCard";
 
 interface ConnectorGridProps {
   connectors: Connector[];
   integrations: Integration[];
-  onConnectorAction: (connectorType: ConnectorType, action: 'connect' | 'details') => void;
+  onConnectorAction: (
+    connectorType: ConnectorType,
+    action: "connect" | "details",
+  ) => void;
   loadingConnectors: Set<ConnectorType>;
 }
 
@@ -13,32 +20,38 @@ export const ConnectorGrid: React.FC<ConnectorGridProps> = ({
   connectors,
   integrations,
   onConnectorAction,
-  loadingConnectors
+  loadingConnectors,
 }) => {
   const integrationMap = new Map<ConnectorType, Integration>();
-  integrations.forEach(integration => {
+  integrations.forEach((integration) => {
     integrationMap.set(integration.connectorType, integration);
   });
 
-  const connectedConnectors = connectors.filter(connector => {
+  const connectedConnectors = connectors.filter((connector) => {
     const integration = integrationMap.get(connector.type);
-    return integration && (integration.status === 'active' || integration.status === 'connected');
+    return (
+      integration &&
+      (integration.status === "active" || integration.status === "connected")
+    );
   });
-  
-  const availableConnectors = connectors.filter(connector => {
+
+  const availableConnectors = connectors.filter((connector) => {
     const integration = integrationMap.get(connector.type);
-    return connector.isImplemented && 
-      (!integration || (integration.status !== 'active' && integration.status !== 'connected'));
+    return (
+      connector.isImplemented &&
+      (!integration ||
+        (integration.status !== "active" && integration.status !== "connected"))
+    );
   });
-  
-  const comingSoonConnectors = connectors.filter(connector => 
-    !connector.isImplemented
+
+  const comingSoonConnectors = connectors.filter(
+    (connector) => !connector.isImplemented,
   );
 
   const renderConnectorSection = (
     title: string,
     connectorList: Connector[],
-    showIfEmpty: boolean = false
+    showIfEmpty: boolean = false,
   ) => {
     if (connectorList.length === 0 && !showIfEmpty) {
       return null;
@@ -51,7 +64,7 @@ export const ConnectorGrid: React.FC<ConnectorGridProps> = ({
             {title} ({connectorList.length})
           </h2>
         </div>
-        
+
         {connectorList.length > 0 ? (
           <div className="space-y-4">
             {connectorList.map((connector) => (
@@ -73,7 +86,8 @@ export const ConnectorGrid: React.FC<ConnectorGridProps> = ({
     );
   };
 
-  const hasMultipleSections = connectedConnectors.length > 0 && 
+  const hasMultipleSections =
+    connectedConnectors.length > 0 &&
     (availableConnectors.length > 0 || comingSoonConnectors.length > 0);
 
   if (hasMultipleSections) {
@@ -104,10 +118,10 @@ export const ConnectorGrid: React.FC<ConnectorGridProps> = ({
         <div className="text-center py-12">
           <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={1.5} 
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
                 d="M19 11H5m14-7H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zM7 7h0m0 4h0m0 4h0m4-8h0m0 4h0m0 4h0m4-8h0m0 4h0m0 4h0"
               />
             </svg>

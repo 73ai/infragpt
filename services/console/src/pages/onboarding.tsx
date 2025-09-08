@@ -1,8 +1,14 @@
-import { useNavigate } from 'react-router-dom';
-import { CreateOrganization, useOrganization } from '@clerk/clerk-react';
-import { OnboardingForm } from '@/components/onboarding/OnboardingForm';
-import { useOnboardingGuard } from '@/hooks/useOnboardingGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate } from "react-router-dom";
+import { CreateOrganization, useOrganization } from "@clerk/clerk-react";
+import { OnboardingForm } from "@/components/onboarding/OnboardingForm";
+import { useOnboardingGuard } from "@/hooks/useOnboardingGuard";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
@@ -10,7 +16,7 @@ export default function OnboardingPage() {
   const { hasOrganization, isLoading } = useOnboardingGuard();
 
   const handleComplete = () => {
-    navigate('/');
+    navigate("/");
   };
 
   if (isLoading) {
@@ -36,13 +42,13 @@ export default function OnboardingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <CreateOrganization 
+              <CreateOrganization
                 afterCreateOrganizationUrl="/onboarding"
                 appearance={{
                   elements: {
                     rootBox: "w-full",
                     cardBox: "shadow-none border-0",
-                  }
+                  },
                 }}
                 hideSlug={true}
               />

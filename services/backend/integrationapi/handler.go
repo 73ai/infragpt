@@ -369,7 +369,7 @@ func (h *httpHandler) sync() func(w http.ResponseWriter, r *http.Request) {
 
 func (h *httpHandler) validateCredentials() func(w http.ResponseWriter, r *http.Request) {
 	type request struct {
-		ConnectorType string                 `json:"connector_type"`
+		ConnectorType string         `json:"connector_type"`
 		Credentials   map[string]any `json:"credentials"`
 	}
 	type response struct {

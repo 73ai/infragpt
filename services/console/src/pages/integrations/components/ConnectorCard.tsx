@@ -1,15 +1,22 @@
-import React from 'react';
-import { Connector, Integration, ConnectorType } from '../../../types/integration';
-import { BUTTON_TEXT, STATUS_CONFIG } from '../../../lib/integration-constants';
-import { Button } from '../../../components/ui/button';
-import { Card, CardContent } from '../../../components/ui/card';
-import { Badge } from '../../../components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import React from "react";
+import {
+  Connector,
+  Integration,
+  ConnectorType,
+} from "../../../types/integration";
+import { BUTTON_TEXT, STATUS_CONFIG } from "../../../lib/integration-constants";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent } from "../../../components/ui/card";
+import { Badge } from "../../../components/ui/badge";
+import { Loader2 } from "lucide-react";
 
 interface ConnectorCardProps {
   connector: Connector;
   integration?: Integration;
-  onAction: (connectorType: ConnectorType, action: 'connect' | 'details') => void;
+  onAction: (
+    connectorType: ConnectorType,
+    action: "connect" | "details",
+  ) => void;
   loading?: boolean;
 }
 
@@ -17,47 +24,55 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
   connector,
   integration,
   onAction,
-  loading = false
+  loading = false,
 }) => {
-  const getButtonState = (): 'connect' | 'show_details' | 'coming_soon' => {
+  const getButtonState = (): "connect" | "show_details" | "coming_soon" => {
     if (!connector.isImplemented) {
-      return 'coming_soon';
+      return "coming_soon";
     }
-    
-    if (integration?.status === 'active' || integration?.status === 'connected') {
-      return 'show_details';
+
+    if (
+      integration?.status === "active" ||
+      integration?.status === "connected"
+    ) {
+      return "show_details";
     }
-    
-    return 'connect';
+
+    return "connect";
   };
 
   const buttonState = getButtonState();
-  const isConnected = integration?.status === 'active' || integration?.status === 'connected';
-  const hasError = integration?.status === 'error';
+  const isConnected =
+    integration?.status === "active" || integration?.status === "connected";
+  const hasError = integration?.status === "error";
 
   const handleClick = () => {
-    if (buttonState === 'coming_soon' || loading) return;
-    
-    const action = buttonState === 'show_details' ? 'details' : 'connect';
+    if (buttonState === "coming_soon" || loading) return;
+
+    const action = buttonState === "show_details" ? "details" : "connect";
     onAction(connector.type, action);
   };
 
   const getStatusBadge = () => {
     if (!integration) return null;
-    
-    const config = STATUS_CONFIG[integration.status as keyof typeof STATUS_CONFIG];
-    
+
+    const config =
+      STATUS_CONFIG[integration.status as keyof typeof STATUS_CONFIG];
+
     if (!config) {
       return (
-        <Badge variant="secondary" className="text-gray-600 bg-gray-50 border-gray-200 border">
+        <Badge
+          variant="secondary"
+          className="text-gray-600 bg-gray-50 border-gray-200 border"
+        >
           <span className="mr-1">❓</span>
           {integration.status}
         </Badge>
       );
     }
-    
+
     return (
-      <Badge 
+      <Badge
         variant="secondary"
         className={`${config.color} ${config.bgColor} ${config.borderColor} border`}
       >
@@ -69,22 +84,22 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
 
   const getCreatedText = () => {
     if (!integration?.createdAt) return null;
-    
+
     const isNewIntegration = integration.createdAt === integration.updatedAt;
-    const actionText = isNewIntegration ? 'Added' : 'Updated';
-    
+    const actionText = isNewIntegration ? "Added" : "Updated";
+
     const timestamp = integration.updatedAt || integration.createdAt;
     const timestampDate = new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - timestampDate.getTime();
-    
+
     // Handle negative differences (future timestamps) or very small differences
     if (diffMs < 0) {
       return `${actionText} just now`;
     }
-    
+
     const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    
+
     // Handle very recent updates
     if (diffMinutes < 1) {
       return `${actionText} just now`;
@@ -92,32 +107,36 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
       return `${actionText} ${diffMinutes} min ago`;
     } else if (diffMinutes < 1440) {
       const hours = Math.floor(diffMinutes / 60);
-      return `${actionText} ${hours} hour${hours > 1 ? 's' : ''} ago`;
+      return `${actionText} ${hours} hour${hours > 1 ? "s" : ""} ago`;
     } else {
       const days = Math.floor(diffMinutes / 1440);
-      return `${actionText} ${days} day${days > 1 ? 's' : ''} ago`;
+      return `${actionText} ${days} day${days > 1 ? "s" : ""} ago`;
     }
   };
 
   return (
-    <Card className={`transition-all duration-200 hover:shadow-md ${
-      hasError ? 'border-red-200 bg-red-50' : 
-      isConnected ? 'border-green-200 bg-green-50' : 
-      'hover:border-gray-300'
-    }`}>
+    <Card
+      className={`transition-all duration-200 hover:shadow-md ${
+        hasError
+          ? "border-red-200 bg-red-50"
+          : isConnected
+            ? "border-green-200 bg-green-50"
+            : "hover:border-gray-300"
+      }`}
+    >
       <CardContent className="p-4">
         <div className="flex items-center space-x-4">
           {/* Logo */}
           <div className="h-10 w-10 rounded-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0">
-            <img 
-              src={connector.logo} 
+            <img
+              src={connector.logo}
               alt={`${connector.name} logo`}
               className="h-6 w-6"
               onError={(e) => {
                 // Fallback for missing logos
                 const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                target.nextElementSibling?.classList.remove('hidden');
+                target.style.display = "none";
+                target.nextElementSibling?.classList.remove("hidden");
               }}
             />
             <div className="hidden h-6 w-6 bg-gray-200 rounded text-xs flex items-center justify-center font-semibold text-gray-600">
@@ -138,12 +157,12 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
             {/* Capabilities */}
             <div className="flex flex-wrap gap-1 mt-2">
               {connector.capabilities.slice(0, 3).map((capability) => (
-                <Badge 
-                  key={capability} 
+                <Badge
+                  key={capability}
                   variant="outline"
                   className="text-xs px-2 py-0"
                 >
-                  {capability.replace('_', ' ')}
+                  {capability.replace("_", " ")}
                 </Badge>
               ))}
               {connector.capabilities.length > 3 && (
@@ -158,24 +177,23 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
               <div className="flex flex-wrap gap-4 mt-2 text-xs text-muted-foreground">
                 {integration.configuration?.workspaceName && (
                   <span>
-                    <span className="font-medium">Workspace:</span> {integration.configuration.workspaceName}
+                    <span className="font-medium">Workspace:</span>{" "}
+                    {integration.configuration.workspaceName}
                   </span>
                 )}
                 {integration.configuration?.repositoryCount && (
                   <span>
-                    <span className="font-medium">Repos:</span> {integration.configuration.repositoryCount}
+                    <span className="font-medium">Repos:</span>{" "}
+                    {integration.configuration.repositoryCount}
                   </span>
                 )}
                 {integration.configuration?.connectedChannels && (
                   <span>
-                    <span className="font-medium">Channels:</span> {integration.configuration.connectedChannels.length}
+                    <span className="font-medium">Channels:</span>{" "}
+                    {integration.configuration.connectedChannels.length}
                   </span>
                 )}
-                {getCreatedText() && (
-                  <span>
-                    {getCreatedText()}
-                  </span>
-                )}
+                {getCreatedText() && <span>{getCreatedText()}</span>}
               </div>
             )}
 
@@ -191,11 +209,13 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
           <div className="flex-shrink-0">
             <Button
               onClick={handleClick}
-              disabled={buttonState === 'coming_soon' || loading}
+              disabled={buttonState === "coming_soon" || loading}
               variant={
-                buttonState === 'show_details' ? 'outline' :
-                buttonState === 'coming_soon' ? 'secondary' : 
-                'default'
+                buttonState === "show_details"
+                  ? "outline"
+                  : buttonState === "coming_soon"
+                    ? "secondary"
+                    : "default"
               }
               size="sm"
             >

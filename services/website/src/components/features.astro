@@ -1,7 +1,6 @@
 ---
-import Link from "@components/ui/link.astro";
 import { Icon } from "astro-icon/components";
-// @ts-ignore
+// @ts-expect-error: Icon component from astro-icon requires additional configuration
 
 const features = [
   {
@@ -45,9 +44,7 @@ const features = [
 
 <div class="relative mx-auto max-w-5xl px-6 lg:px-8">
   <div class="mx-auto max-w-2xl lg:text-center">
-    <h2 class="text-base font-semibold leading-7 text-black">
-      Features
-    </h2>
+    <h2 class="text-base font-semibold leading-7 text-black">Features</h2>
     <p
       class="mt-2 text-3xl font-bold tracking-tight text-black"
       style="font-family: 'Young Serif';"
@@ -68,7 +65,7 @@ const features = [
           <div class="flex flex-col">
             <div class="mt-1 bg-blue-50 border shadow shadow-blue-100/50 border-blue-100 transition-colors rounded-lg grid place-items-center  p-2 w-10 h-10 shrink-0">
               <Icon class="text-primary" name={item.icon} />
-          </div>
+            </div>
             <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-black">
               {item.title}
             </dt>

@@ -189,3 +189,5 @@ services/wwwroot/*
 services/mcp/*
 
 
+
+.shoreman.pid

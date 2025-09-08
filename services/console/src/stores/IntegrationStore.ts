@@ -1,22 +1,19 @@
-import { makeAutoObservable, runInAction } from 'mobx';
-import { 
-  Integration, 
-  Connector, 
-  ConnectorType, 
+import { makeAutoObservable, runInAction } from "mobx";
+import {
+  Integration,
+  Connector,
+  ConnectorType,
   ConnectorStatus,
   AuthorizeResponse,
   TestConnectionResponse,
-  IntegrationActivity
-} from '../types/integration';
-import { 
-  CONNECTORS, 
-  getConnectorByType
-} from '../lib/integration-constants';
-import { 
-  integrationService, 
-  getErrorMessage, 
-  withErrorHandling 
-} from '../services/integrationService';
+  IntegrationActivity,
+} from "../types/integration";
+import { CONNECTORS, getConnectorByType } from "../lib/integration-constants";
+import {
+  integrationService,
+  getErrorMessage,
+  withErrorHandling,
+} from "../services/integrationService";
 
 class IntegrationStore {
   integrations: Map<string, Integration> = new Map();
@@ -25,7 +22,7 @@ class IntegrationStore {
   loadingConnectors: Set<ConnectorType> = new Set();
   error: string | null = null;
   activities: Map<string, IntegrationActivity[]> = new Map();
-  
+
   selectedConnector: ConnectorType | null = null;
   showDetails = false;
 
@@ -33,7 +30,17 @@ class IntegrationStore {
     makeAutoObservable(this);
   }
 
-  private transformAPIIntegration(apiIntegration: any): Integration {
+  private transformAPIIntegration(apiIntegration: {
+    id: string;
+    organization_id: string;
+    connector_type: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+    last_sync_at?: string;
+    metadata?: Record<string, unknown>;
+    configuration?: Record<string, unknown>;
+  }): Integration {
     return {
       id: apiIntegration.id,
       organizationId: apiIntegration.organization_id,
@@ -44,55 +51,59 @@ class IntegrationStore {
       lastSyncAt: apiIntegration.last_used_at,
       metadata: apiIntegration.metadata,
       configuration: {
-        workspaceName: apiIntegration.metadata?.connector_org_name
-      }
+        workspaceName: apiIntegration.metadata?.connector_org_name,
+      },
     };
   }
 
   get connectedIntegrations(): Integration[] {
     return Array.from(this.integrations.values()).filter(
-      integration => integration.status === 'active' || integration.status === 'connected'
+      (integration) =>
+        integration.status === "active" || integration.status === "connected",
     );
   }
 
   get availableConnectors(): Connector[] {
-    return this.connectors.filter(connector => 
-      connector.isImplemented && !this.isConnectorConnected(connector.type)
+    return this.connectors.filter(
+      (connector) =>
+        connector.isImplemented && !this.isConnectorConnected(connector.type),
     );
   }
 
   get comingSoonConnectors(): Connector[] {
-    return this.connectors.filter(connector => !connector.isImplemented);
+    return this.connectors.filter((connector) => !connector.isImplemented);
   }
 
   get connectorsWithStatus(): Connector[] {
-    return this.connectors.map(connector => ({
+    return this.connectors.map((connector) => ({
       ...connector,
-      status: this.getConnectorStatus(connector.type)
+      status: this.getConnectorStatus(connector.type),
     }));
   }
 
   getConnectorStatus(connectorType: ConnectorType): ConnectorStatus {
     const connector = getConnectorByType(connectorType);
-    
+
     if (!connector?.isImplemented) {
-      return 'coming_soon';
+      return "coming_soon";
     }
-    
-    return this.isConnectorConnected(connectorType) ? 'connected' : 'available';
+
+    return this.isConnectorConnected(connectorType) ? "connected" : "available";
   }
 
   isConnectorConnected(connectorType: ConnectorType): boolean {
     return Array.from(this.integrations.values()).some(
-      integration => 
-        integration.connectorType === connectorType && 
-        (integration.status === 'active' || integration.status === 'connected')
+      (integration) =>
+        integration.connectorType === connectorType &&
+        (integration.status === "active" || integration.status === "connected"),
     );
   }
 
-  getIntegrationByConnectorType(connectorType: ConnectorType): Integration | undefined {
+  getIntegrationByConnectorType(
+    connectorType: ConnectorType,
+  ): Integration | undefined {
     return Array.from(this.integrations.values()).find(
-      integration => integration.connectorType === connectorType
+      (integration) => integration.connectorType === connectorType,
     );
   }
 
@@ -107,24 +118,25 @@ class IntegrationStore {
         this.error = null;
       });
 
-      const apiResponse = await integrationService.getIntegrations(organizationId);
-      
+      const apiResponse =
+        await integrationService.getIntegrations(organizationId);
+
       runInAction(() => {
         this.integrations.clear();
-        apiResponse.forEach(apiIntegration => {
+        apiResponse.forEach((apiIntegration) => {
           const integration = this.transformAPIIntegration(apiIntegration);
           this.integrations.set(integration.id, integration);
         });
         this.loading = false;
       });
-    }, 'loading integrations');
+    }, "loading integrations");
   }
 
   async initiateConnection(
-    connectorType: ConnectorType, 
+    connectorType: ConnectorType,
     organizationId: string,
     userId: string,
-    redirectUrl?: string
+    redirectUrl?: string,
   ): Promise<AuthorizeResponse> {
     return withErrorHandling(async () => {
       runInAction(() => {
@@ -137,9 +149,9 @@ class IntegrationStore {
           organizationId,
           userId,
           connectorType,
-          redirectUrl
+          redirectUrl,
         );
-        
+
         return response;
       } finally {
         runInAction(() => {
@@ -150,8 +162,8 @@ class IntegrationStore {
   }
 
   async handleCallback(
-    connectorType: ConnectorType, 
-    callbackData: Record<string, any>
+    connectorType: ConnectorType,
+    callbackData: Record<string, unknown>,
   ): Promise<Integration> {
     return withErrorHandling(async () => {
       runInAction(() => {
@@ -161,14 +173,14 @@ class IntegrationStore {
 
       try {
         const integration = await integrationService.handleCallback(
-          connectorType, 
-          callbackData
+          connectorType,
+          callbackData,
         );
-        
+
         runInAction(() => {
           this.integrations.set(integration.id, integration);
         });
-        
+
         return integration;
       } finally {
         runInAction(() => {
@@ -180,7 +192,7 @@ class IntegrationStore {
 
   async getIntegrationDetails(
     organizationId: string,
-    connectorType: ConnectorType
+    connectorType: ConnectorType,
   ): Promise<Integration> {
     return withErrorHandling(async () => {
       runInAction(() => {
@@ -190,13 +202,13 @@ class IntegrationStore {
       try {
         const integration = await integrationService.getIntegrationDetails(
           organizationId,
-          connectorType
+          connectorType,
         );
-        
+
         runInAction(() => {
           this.integrations.set(integration.id, integration);
         });
-        
+
         return integration;
       } finally {
         runInAction(() => {
@@ -210,7 +222,7 @@ class IntegrationStore {
     return withErrorHandling(async () => {
       const integration = this.integrations.get(integrationId);
       if (!integration) {
-        throw new Error('Integration not found');
+        throw new Error("Integration not found");
       }
 
       runInAction(() => {
@@ -219,18 +231,18 @@ class IntegrationStore {
 
       try {
         const result = await integrationService.testConnection(integrationId);
-        
+
         runInAction(() => {
           const updatedIntegration = {
             ...integration,
             metadata: {
               ...integration.metadata,
-              lastTestedAt: result.last_tested_at
-            }
+              lastTestedAt: result.last_tested_at,
+            },
           };
           this.integrations.set(integrationId, updatedIntegration);
         });
-        
+
         return result;
       } finally {
         runInAction(() => {
@@ -244,7 +256,7 @@ class IntegrationStore {
     await withErrorHandling(async () => {
       const integration = this.integrations.get(integrationId);
       if (!integration) {
-        throw new Error('Integration not found');
+        throw new Error("Integration not found");
       }
 
       runInAction(() => {
@@ -252,8 +264,11 @@ class IntegrationStore {
       });
 
       try {
-        await integrationService.revokeIntegration(integrationId, integration.organizationId);
-        
+        await integrationService.revokeIntegration(
+          integrationId,
+          integration.organizationId,
+        );
+
         runInAction(() => {
           this.integrations.delete(integrationId);
         });
@@ -267,8 +282,9 @@ class IntegrationStore {
 
   async loadIntegrationActivity(integrationId: string): Promise<void> {
     await withErrorHandling(async () => {
-      const activities = await integrationService.getIntegrationActivity(integrationId);
-      
+      const activities =
+        await integrationService.getIntegrationActivity(integrationId);
+
       runInAction(() => {
         this.activities.set(integrationId, activities);
       });
@@ -285,8 +301,9 @@ class IntegrationStore {
       });
 
       try {
-        const updatedIntegration = await integrationService.getIntegrationStatus(integrationId);
-        
+        const updatedIntegration =
+          await integrationService.getIntegrationStatus(integrationId);
+
         runInAction(() => {
           this.integrations.set(integrationId, updatedIntegration);
         });
@@ -310,12 +327,15 @@ class IntegrationStore {
     this.error = null;
   }
 
-  handleError(error: any, context?: string): void {
+  handleError(error: unknown, context?: string): void {
     const errorMessage = getErrorMessage(error);
-    
+
     runInAction(() => {
       this.error = errorMessage;
-      console.error(`Integration store error${context ? ` (${context})` : ''}:`, error);
+      console.error(
+        `Integration store error${context ? ` (${context})` : ""}:`,
+        error,
+      );
     });
   }
 

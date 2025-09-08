@@ -5,6 +5,7 @@ import argparse
 import subprocess
 from pathlib import Path
 
+
 def get_current_version():
     init_file = Path("src/infragpt/__init__.py")
     if not init_file.exists():
@@ -19,6 +20,7 @@ def get_current_version():
 
     return match.group(1)
 
+
 def update_version(new_version):
     # Update version in __init__.py
     init_file = Path("src/infragpt/__init__.py")
@@ -28,7 +30,7 @@ def update_version(new_version):
     new_content = re.sub(
         r'__version__\s*=\s*["\']([^"\']+)["\']',
         f'__version__ = "{new_version}"',
-        content
+        content,
     )
 
     with open(init_file, "w") as f:
@@ -39,29 +41,31 @@ def update_version(new_version):
     with open(pyproject_file, "r") as f:
         content = f.read()
 
-    new_content = re.sub(
-        r'version = "[^"]+"',
-        f'version = "{new_version}"',
-        content
-    )
+    new_content = re.sub(r'version = "[^"]+"', f'version = "{new_version}"', content)
 
     with open(pyproject_file, "w") as f:
         f.write(new_content)
 
     print(f"Updated version to {new_version}")
 
+
 def commit_and_tag(version):
     # Commit changes
-    subprocess.run(["git", "add", "src/infragpt/__init__.py", "pyproject.toml"], check=True)
+    subprocess.run(
+        ["git", "add", "src/infragpt/__init__.py", "pyproject.toml"], check=True
+    )
     subprocess.run(["git", "commit", "-m", f"Bump version to {version}"], check=True)
 
     # Create tag
     tag_name = f"v{version}"
-    subprocess.run(["git", "tag", "-a", tag_name, "-m", f"Version {version}"], check=True)
+    subprocess.run(
+        ["git", "tag", "-a", tag_name, "-m", f"Version {version}"], check=True
+    )
 
     print(f"Created commit and tag {tag_name}")
     print("To push the changes:")
     print(f"  git push origin master && git push origin {tag_name}")
+
 
 def bump_version(part="patch"):
     current = get_current_version()
@@ -78,6 +82,7 @@ def bump_version(part="patch"):
 
     return new_version
 
+
 def main():
     parser = argparse.ArgumentParser(description="Bump InfraGPT version")
     parser.add_argument(
@@ -85,16 +90,13 @@ def main():
         nargs="?",
         choices=["major", "minor", "patch"],
         default="patch",
-        help="Part of the version to bump (default: patch)"
+        help="Part of the version to bump (default: patch)",
     )
     parser.add_argument(
-        "--version", "-v",
-        help="Specify a custom version (overrides part)"
+        "--version", "-v", help="Specify a custom version (overrides part)"
     )
     parser.add_argument(
-        "--commit", "-c",
-        action="store_true",
-        help="Commit and tag the version bump"
+        "--commit", "-c", action="store_true", help="Commit and tag the version bump"
     )
 
     args = parser.parse_args()
@@ -121,6 +123,7 @@ def main():
     # Commit and tag if requested
     if args.commit:
         commit_and_tag(new_version)
+
 
 if __name__ == "__main__":
     main()

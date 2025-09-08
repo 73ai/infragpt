@@ -9,7 +9,7 @@ module.exports = {
 			},
 			colors: {
 				primary: "#0023C4",
-			}
+			},
 		},
 	},
 	plugins: [require("@tailwindcss/typography")],

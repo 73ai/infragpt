@@ -16,9 +16,8 @@ snippet: Astro è un moderno framework front-end che porta un interessante
 publishDate: 2023-07-01 22:50
 category: Frameworks
 ---
+
 Astro è un moderno framework front-end che fornisce agli sviluppatori un modo più veloce per costruire siti web. Porta un interessante cambiamento di paradigma nel modo in cui pensiamo alla costruzione di moderne applicazioni web.
-
-
 
 ## Cos'è Astro?
 
@@ -26,23 +25,15 @@ Astro è un nuovo tipo di generatore di siti statici basato su JavaScript. A dif
 
 Astro è costruito per sfruttare le funzionalità moderne del browser, come HTTP/2 e componenti del server. Ciò ti consente di costruire siti altamente interattivi, senza il tipico costo associato all'invio di grandi pacchetti JavaScript al client.
 
-
-
 ## Caratteristiche Chiave di Astro
-
-
 
 ### Nessun JavaScript Inviato Per Impostazione Predefinita
 
 Per impostazione predefinita, Astro non invia JavaScript al client. Questo rende il tuo sito veloce fin da subito. Tuttavia, non sei limitato a questo. Puoi aggiungere quanto JavaScript desideri o di cui hai bisogno.
 
-
-
 ### Utilizza il Tuo Framework JavaScript Preferito
 
 Uno dei punti di forza di Astro è la sua capacità di lavorare con più framework JavaScript. Puoi utilizzare componenti da React, Vue, Svelte e altri all'interno dello stesso progetto. Questo ti consente di scegliere il miglior strumento per il lavoro, senza essere legato a una tecnologia specifica.
-
-
 
 ### Ottimizzato per SEO
 

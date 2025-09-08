@@ -1,18 +1,23 @@
 // Integration Manager Type Definitions
 
-export type ConnectorType = 
-  | 'slack' 
-  | 'github' 
-  | 'aws' 
-  | 'gcp' 
-  | 'pagerduty' 
-  | 'datadog';
+export type ConnectorType =
+  | "slack"
+  | "github"
+  | "aws"
+  | "gcp"
+  | "pagerduty"
+  | "datadog";
 
-export type AuthType = 'oauth2' | 'app_installation' | 'api_key';
+export type AuthType = "oauth2" | "app_installation" | "api_key";
 
-export type IntegrationStatus = 'active' | 'connected' | 'disconnected' | 'error' | 'syncing';
+export type IntegrationStatus =
+  | "active"
+  | "connected"
+  | "disconnected"
+  | "error"
+  | "syncing";
 
-export type ConnectorStatus = 'available' | 'connected' | 'coming_soon';
+export type ConnectorStatus = "available" | "connected" | "coming_soon";
 
 export interface Connector {
   type: ConnectorType;
@@ -33,7 +38,7 @@ export interface Integration {
   createdAt: string;
   updatedAt: string;
   lastSyncAt?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   configuration?: IntegrationConfiguration;
 }
 
@@ -43,29 +48,29 @@ export interface IntegrationConfiguration {
   teamId?: string;
   connectedChannels?: string[];
   permissions?: string[];
-  
+
   // GitHub specific
   installationId?: number;
   repositoryCount?: number;
   connectedRepos?: string[];
   webhookUrl?: string;
-  
+
   // AWS specific
   region?: string;
   accountId?: string;
-  
+
   // GCP specific
   projectId?: string;
-  
+
   // PagerDuty specific
   serviceName?: string;
-  
+
   // Datadog specific
   siteName?: string;
 }
 
 export interface AuthorizationIntent {
-  type: 'redirect' | 'popup' | 'oauth2' | 'installation';
+  type: "redirect" | "popup" | "oauth2" | "installation";
   url: string;
   state?: string;
   expires_at?: string;
@@ -80,7 +85,7 @@ export interface AuthorizeRequest {
 }
 
 export interface AuthorizeResponse {
-  type: 'redirect' | 'popup' | 'oauth2' | 'installation';
+  type: "redirect" | "popup" | "oauth2" | "installation";
   url: string;
   state?: string;
 }
@@ -90,7 +95,7 @@ export interface CallbackRequest {
   code?: string;
   state?: string;
   installation_id?: string;
-  [key: string]: any; // Allow for connector-specific parameters
+  [key: string]: unknown; // Allow for connector-specific parameters
 }
 
 export interface IntegrationsListRequest {
@@ -129,10 +134,15 @@ export interface TestConnectionResponse {
 export interface IntegrationActivity {
   id: string;
   integrationId: string;
-  activityType: 'connected' | 'disconnected' | 'error' | 'sync' | 'config_updated';
+  activityType:
+    | "connected"
+    | "disconnected"
+    | "error"
+    | "sync"
+    | "config_updated";
   description: string;
   timestamp: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Error Types
@@ -140,10 +150,10 @@ export class IntegrationError extends Error {
   constructor(
     public statusCode: number,
     message: string,
-    public connectorType?: ConnectorType
+    public connectorType?: ConnectorType,
   ) {
     super(message);
-    this.name = 'IntegrationError';
+    this.name = "IntegrationError";
   }
 }
 
@@ -157,10 +167,10 @@ export interface IntegrationUIState {
 
 // Connector Capabilities
 export const CONNECTOR_CAPABILITIES = {
-  slack: ['messaging', 'notifications', 'channels', 'threads'],
-  github: ['repositories', 'webhooks', 'pull_requests', 'issues'],
-  aws: ['compute', 'storage', 'networking', 'monitoring'],
-  gcp: ['compute', 'storage', 'databases', 'ai_ml'],
-  pagerduty: ['incident_management', 'alerting', 'escalation'],
-  datadog: ['monitoring', 'analytics', 'dashboards', 'alerts']
+  slack: ["messaging", "notifications", "channels", "threads"],
+  github: ["repositories", "webhooks", "pull_requests", "issues"],
+  aws: ["compute", "storage", "networking", "monitoring"],
+  gcp: ["compute", "storage", "databases", "ai_ml"],
+  pagerduty: ["incident_management", "alerting", "escalation"],
+  datadog: ["monitoring", "analytics", "dashboards", "alerts"],
 } as const;

@@ -7,7 +7,7 @@ const MainPage = () => {
       {/* Header */}
       <div className="border-b">
         <div className="flex h-16 items-center px-4 gap-4">
-        <SidebarTrigger />
+          <SidebarTrigger />
           <h1 className="text-xl font-semibold">Overview</h1>
         </div>
       </div>
@@ -15,4 +15,4 @@ const MainPage = () => {
   );
 };
 
-export default MainPage; 
+export default MainPage;

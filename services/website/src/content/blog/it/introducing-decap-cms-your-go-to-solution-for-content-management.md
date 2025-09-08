@@ -42,15 +42,15 @@ Iniziare con Decap CMS è facile come aggiungere due file al tuo progetto: `admi
 <!-- admin/index.html -->
 <!doctype html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gestore di Contenuti</title>
-</head>
-<body>
-  <!-- Includi lo script che costruisce la pagina e alimenta Decap CMS -->
-  <script src="https://unpkg.com/decap-cms@^2.0.0/dist/decap-cms.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestore di Contenuti</title>
+  </head>
+  <body>
+    <!-- Includi lo script che costruisce la pagina e alimenta Decap CMS -->
+    <script src="https://unpkg.com/decap-cms@^2.0.0/dist/decap-cms.js"></script>
+  </body>
 </html>
 ```
 
@@ -67,8 +67,8 @@ collections:
     folder: "_posts"
     create: true
     fields:
-      - {label: "Titolo", name: "title", widget: "string"}
-      - {label: "Corpo", name: "body", widget: "markdown"}
+      - { label: "Titolo", name: "title", widget: "string" }
+      - { label: "Corpo", name: "body", widget: "markdown" }
 ```
 
 Nell'era della Jamstack, Decap CMS sta aprendo la strada per la moderna gestione dei contenuti basata su Git. Con la sua semplicità e flessibilità, è un'ottima scelta per sviluppatori e creatori di contenuti.

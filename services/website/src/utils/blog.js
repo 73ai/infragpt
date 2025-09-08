@@ -4,9 +4,9 @@
  * @returns {number} readTime
  */
 export const getArticleReadingTime = (body) => {
-	const wordsPerMinute = 183;
-	const numberOfWords = body.split(/\s/g).length;
-	const minutes = numberOfWords / wordsPerMinute;
-	const readTime = Math.ceil(minutes);
-	return readTime;
+  const wordsPerMinute = 183;
+  const numberOfWords = body.split(/\s/g).length;
+  const minutes = numberOfWords / wordsPerMinute;
+  const readTime = Math.ceil(minutes);
+  return readTime;
 };

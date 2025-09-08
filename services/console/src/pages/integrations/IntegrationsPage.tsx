@@ -1,70 +1,85 @@
-import { useEffect, useState } from 'react';
-import { observer } from 'mobx-react-lite';
-import { useUser } from '@clerk/clerk-react';
-import { integrationStore } from '../../stores/IntegrationStore';
-import { userStore } from '../../stores/UserStore';
-import { ConnectorGrid } from './components/ConnectorGrid';
-import { Button } from '../../components/ui/button';
-import { Card } from '../../components/ui/card';
-import { Skeleton } from '../../components/ui/skeleton';
+import { useEffect, useState } from "react";
+import { observer } from "mobx-react-lite";
+import { useUser } from "@clerk/clerk-react";
+import { integrationStore } from "../../stores/IntegrationStore";
+import { userStore } from "../../stores/UserStore";
+import { ConnectorGrid } from "./components/ConnectorGrid";
+import { Button } from "../../components/ui/button";
+import { Card } from "../../components/ui/card";
+import { Skeleton } from "../../components/ui/skeleton";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { useApiClient } from '../../lib/api';
-import { GCPIntegrationModal } from './components/GCPIntegrationModal';
+import { useApiClient } from "../../lib/api";
+import { GCPIntegrationModal } from "./components/GCPIntegrationModal";
+import type { ConnectorType } from "../../types/integration";
 
 const IntegrationsPage = observer(() => {
   const { user } = useUser();
   const { getMe } = useApiClient();
   const [showGCPModal, setShowGCPModal] = useState(false);
-  
+
   const clerkUserId = user?.id;
   const clerkOrgId = user?.organizationMemberships?.[0]?.organization?.id;
 
   useEffect(() => {
     const loadData = async () => {
-      if (!userStore.userProfile && !userStore.loading && clerkUserId && clerkOrgId) {
+      if (
+        !userStore.userProfile &&
+        !userStore.loading &&
+        clerkUserId &&
+        clerkOrgId
+      ) {
         await userStore.loadUserProfile(getMe, clerkUserId, clerkOrgId);
       }
-      
+
       if (userStore.organizationId && !integrationStore.loading) {
         integrationStore.loadIntegrations(userStore.organizationId);
       }
     };
 
     loadData();
-  }, [getMe, clerkUserId, clerkOrgId, userStore.organizationId]);
+  }, [getMe, clerkUserId, clerkOrgId]);
 
-  const handleConnectorAction = async (connectorType: string, action: 'connect' | 'details') => {
+  const handleConnectorAction = async (
+    connectorType: string,
+    action: "connect" | "details",
+  ) => {
     if (!userStore.organizationId || !userStore.userId) return;
 
-    if (action === 'connect') {
-      if (connectorType === 'gcp') {
+    if (action === "connect") {
+      if (connectorType === "gcp") {
         setShowGCPModal(true);
         return;
       }
 
       try {
         const response = await integrationStore.initiateConnection(
-          connectorType as any,
+          connectorType as ConnectorType,
           userStore.organizationId,
           userStore.userId,
-          `${window.location.origin}/integrations/${connectorType}/authorize`
+          `${window.location.origin}/integrations/${connectorType}/authorize`,
         );
-        
-        if (response.type === 'redirect' || response.type === 'oauth2' || response.type === 'installation') {
-          window.open(response.url, '_blank');
 
-        } else if (response.type === 'popup') {
-          window.open(response.url, 'integration-auth', 'width=600,height=600');
+        if (
+          response.type === "redirect" ||
+          response.type === "oauth2" ||
+          response.type === "installation"
+        ) {
+          window.open(response.url, "_blank");
+        } else if (response.type === "popup") {
+          window.open(response.url, "integration-auth", "width=600,height=600");
         }
       } catch (error) {
-        integrationStore.handleError(error, 'connecting integration');
+        integrationStore.handleError(error, "connecting integration");
       }
-    } else if (action === 'details') {
+    } else if (action === "details") {
       window.location.href = `/integrations/${connectorType}`;
     }
   };
 
-  if ((userStore.loading || integrationStore.loading) && integrationStore.integrations.size === 0) {
+  if (
+    (userStore.loading || integrationStore.loading) &&
+    integrationStore.integrations.size === 0
+  ) {
     return (
       <div className="h-full flex flex-col">
         {/* Header */}
@@ -74,7 +89,7 @@ const IntegrationsPage = observer(() => {
             <h1 className="text-xl font-semibold">Integrations</h1>
           </div>
         </div>
-        
+
         {/* Loading Content */}
         <div className="flex-1 p-6 space-y-6">
           <div className="space-y-2">
@@ -113,14 +128,17 @@ const IntegrationsPage = observer(() => {
       <div className="flex-1 p-6 space-y-6">
         {/* Subtext */}
         <p className="text-muted-foreground">
-          Connect your tools to streamline DevOps workflows and automate your infrastructure management.
+          Connect your tools to streamline DevOps workflows and automate your
+          infrastructure management.
         </p>
 
         {/* Error Display */}
         {integrationStore.error && (
           <Card className="border-destructive bg-destructive/5 p-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-destructive">{integrationStore.error}</p>
+              <p className="text-sm text-destructive">
+                {integrationStore.error}
+              </p>
               <Button
                 variant="ghost"
                 size="sm"
@@ -132,7 +150,6 @@ const IntegrationsPage = observer(() => {
           </Card>
         )}
 
-
         {/* Connectors Grid */}
         <ConnectorGrid
           connectors={integrationStore.connectorsWithStatus}
@@ -142,8 +159,8 @@ const IntegrationsPage = observer(() => {
         />
 
         {/* GCP Integration Modal */}
-        <GCPIntegrationModal 
-          isOpen={showGCPModal} 
+        <GCPIntegrationModal
+          isOpen={showGCPModal}
           onClose={() => setShowGCPModal(false)}
         />
       </div>
