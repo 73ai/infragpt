@@ -17,7 +17,7 @@ from .exceptions import (
 
 __all__ = [
     "Message",
-    "StreamChunk", 
+    "StreamChunk",
     "ToolCall",
     "BaseLLMProvider",
     "OpenAIProvider",
