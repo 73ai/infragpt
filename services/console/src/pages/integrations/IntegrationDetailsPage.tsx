@@ -28,7 +28,9 @@ const IntegrationDetailsPage = observer(() => {
     ? getConnectorByType(connectorType as ConnectorType)
     : null;
   const integration = connectorType
-    ? integrationStore.getIntegrationByConnectorType(connectorType as ConnectorType)
+    ? integrationStore.getIntegrationByConnectorType(
+        connectorType as ConnectorType,
+      )
     : null;
 
   useEffect(() => {
@@ -318,7 +320,9 @@ const IntegrationDetailsPage = observer(() => {
           onTestConnection={handleTestConnection}
           onReconfigure={handleReconfigure}
           onDisconnect={handleDisconnect}
-          loading={integrationStore.isConnectorLoading(connector.type as ConnectorType)}
+          loading={integrationStore.isConnectorLoading(
+            connector.type as ConnectorType,
+          )}
         />
 
         {/* Activity Log - Disabled until API is implemented */}

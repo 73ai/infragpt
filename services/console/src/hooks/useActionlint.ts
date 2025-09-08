@@ -125,7 +125,9 @@ export function useActionlint(options: UseActionlintOptions = {}) {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastValidationContentRef = useRef<string>("");
   const wasmInstanceRef = useRef<WebAssembly.Instance | null>(null);
-  const goRef = useRef<{ run: (instance: WebAssembly.Instance) => void } | null>(null);
+  const goRef = useRef<{
+    run: (instance: WebAssembly.Instance) => void;
+  } | null>(null);
   const cacheRef = useRef<Map<string, ValidationCache>>(new Map());
 
   // Cache management functions

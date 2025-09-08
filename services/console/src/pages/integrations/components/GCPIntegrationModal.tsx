@@ -39,7 +39,10 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
     const [isValidating, setIsValidating] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isValidJSON, setIsValidJSON] = useState(false);
-    const [validationResult, setValidationResult] = useState<{ valid: boolean; errors?: string[] } | null>(null);
+    const [validationResult, setValidationResult] = useState<{
+      valid: boolean;
+      errors?: string[];
+    } | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [jsonError, setJsonError] = useState<string | null>(null);
     const { apiPost } = useApiClient();
@@ -115,14 +118,19 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
 
         setValidationResult(response);
 
-        const validationResponse = response as { valid: boolean; errors?: string[] };
+        const validationResponse = response as {
+          valid: boolean;
+          errors?: string[];
+        };
         if (!validationResponse.valid) {
           const errorMessage =
             validationResponse.errors?.join(", ") || "Validation failed";
           setError(errorMessage);
         }
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "Failed to validate credentials");
+        setError(
+          err instanceof Error ? err.message : "Failed to validate credentials",
+        );
       } finally {
         setIsValidating(false);
       }
@@ -156,7 +164,11 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
         // Close modal on success
         onClose();
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "Failed to connect GCP integration");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to connect GCP integration",
+        );
       } finally {
         setIsConnecting(false);
       }

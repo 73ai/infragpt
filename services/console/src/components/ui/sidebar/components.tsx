@@ -27,10 +27,9 @@ import {
 import {
   SidebarContext,
   useSidebar,
-  type SidebarContext as SidebarContextType
+  type SidebarContext as SidebarContextType,
 } from "./context";
 import { sidebarMenuButtonVariants } from "./variants";
-
 
 const SidebarProvider = React.forwardRef<
   HTMLDivElement,

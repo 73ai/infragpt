@@ -272,7 +272,9 @@ export const integrationService = new IntegrationService();
 
 export { IntegrationService };
 
-export const isIntegrationError = (error: unknown): error is IntegrationError => {
+export const isIntegrationError = (
+  error: unknown,
+): error is IntegrationError => {
   return error instanceof IntegrationError;
 };
 

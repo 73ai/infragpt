@@ -142,7 +142,12 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(
       return linter((view) => {
         const doc = view.state.doc;
         const text = doc.toString();
-        const diagnostics: { from: number; to: number; severity: string; message: string }[] = [];
+        const diagnostics: {
+          from: number;
+          to: number;
+          severity: string;
+          message: string;
+        }[] = [];
 
         if (!text.trim()) {
           return diagnostics;
@@ -152,7 +157,10 @@ const YamlEditor = forwardRef<YamlEditorRef, YamlEditorProps>(
         try {
           yamlParser.load(text);
         } catch (error: unknown) {
-          const yamlError = error as { mark?: { line: number; column: number }; reason?: string };
+          const yamlError = error as {
+            mark?: { line: number; column: number };
+            reason?: string;
+          };
           if (yamlError.mark) {
             const line = yamlError.mark.line + 1; // Convert to 1-based line numbers
             const column = yamlError.mark.column;

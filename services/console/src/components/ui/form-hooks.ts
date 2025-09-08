@@ -2,8 +2,10 @@ import * as React from "react";
 import { useFormContext } from "react-hook-form";
 
 type FormFieldContextValue<
-  TFieldValues extends import("react-hook-form").FieldValues = import("react-hook-form").FieldValues,
-  TName extends import("react-hook-form").FieldPath<TFieldValues> = import("react-hook-form").FieldPath<TFieldValues>,
+  TFieldValues extends
+    import("react-hook-form").FieldValues = import("react-hook-form").FieldValues,
+  TName extends
+    import("react-hook-form").FieldPath<TFieldValues> = import("react-hook-form").FieldPath<TFieldValues>,
 > = {
   name: TName;
 };
