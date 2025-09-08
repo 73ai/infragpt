@@ -32,6 +32,8 @@ check:
 	-@cd services/backend && go vet ./... && go mod tidy
 	@echo "Running console checks..."
 	-@cd services/console && npm run lint
+	@echo "Running website checks..."
+	-@cd services/website && npm run lint
 	@echo "Running agent checks..."
 	-@cd services/agent && ruff check .
 	@echo "Running CLI checks..."
@@ -45,6 +47,8 @@ format:
 	@cd services/backend && go fmt ./...
 	@echo "Formatting console code..."
 	@cd services/console && npm run format
+	@echo "Formatting website code..."
+	@cd services/website && npm run format
 	@echo "Formatting agent code..."
 	@cd services/agent && ruff format .
 	@echo "Formatting CLI code..."
