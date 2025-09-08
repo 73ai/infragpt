@@ -106,7 +106,7 @@ export const GCPIntegrationModal: React.FC<GCPIntegrationModalProps> = observer(
       setError(null);
 
       try {
-        const response = await apiPost("/integrations/validate", {
+        const response = await apiPost("/integrations/validate/", {
           connector_type: "gcp",
           credentials: {
             service_account_json: serviceAccountJSON,
