@@ -34,6 +34,8 @@ check:
 	-@cd services/console && npm run lint
 	@echo "Running agent checks..."
 	-@cd services/agent && ruff check .
+	@echo "Running CLI checks..."
+	-@cd cli && ruff check src/
 	@echo "Check complete."
 
 
@@ -45,6 +47,8 @@ format:
 	@cd services/console && npm run format
 	@echo "Formatting agent code..."
 	@cd services/agent && ruff format .
+	@echo "Formatting CLI code..."
+	@cd cli && ruff format src/
 	@echo "All code formatted."
 
 # Clean build artifacts
@@ -54,6 +58,13 @@ clean:
 	@rm -rf services/console/dist/
 	@rm -rf services/console/node_modules/
 	@rm -rf services/agent/__pycache__/
+	@rm -rf cli/__pycache__/
+	@rm -rf cli/src/infragpt/__pycache__/
+	@rm -rf cli/src/infragpt/**/__pycache__/
+	@rm -rf cli/.pytest_cache/
+	@rm -rf cli/infragpt.egg-info/
+	@rm -rf cli/dist/
+	@rm -rf cli/build/
 	@echo "Clean complete."
 
 # Display the last 100 lines of development log with ANSI codes stripped
