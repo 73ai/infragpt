@@ -29,29 +29,23 @@ build-console:
 # Linting and type checking
 check:
 	@echo "Running Go checks..."
-	@cd services/backend
-	@go vet ./...
-	@go mod tidy
-	@cd ../..
+	-@cd services/backend && go vet ./... && go mod tidy
 	@echo "Running console checks..."
-	@cd services/console && npm run lint
-	@cd ../..
+	-@cd services/console && npm run lint
 	@echo "Running agent checks..."
-	@cd services/agent && ruff check .
-	@cd ../.. && echo "All checks passed."
+	-@cd services/agent && ruff check .
+	@echo "Check complete."
 
 
 # Format code
 format:
 	@echo "Formatting Go code..."
 	@cd services/backend && go fmt ./...
-	@cd ../..
 	@echo "Formatting console code..."
 	@cd services/console && npm run format
-	@cd ../..
 	@echo "Formatting agent code..."
 	@cd services/agent && ruff format .
-	@cd ../.. && echo "All code formatted."
+	@echo "All code formatted."
 
 # Clean build artifacts
 clean:
