@@ -19,7 +19,7 @@ const resolvedImageWithDomain = new URL(
   Astro.site,
 ).toString();
 
-const { title, lang = null } = Astro.props;
+const { title, lang: _lang = null } = Astro.props;
 
 const makeTitle = title
   ? `${title} | InfraGPT`
