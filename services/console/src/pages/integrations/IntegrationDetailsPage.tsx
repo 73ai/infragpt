@@ -50,7 +50,7 @@ const IntegrationDetailsPage = observer(() => {
     ) {
       integrationStore.loadIntegrations(userStore.organizationId);
     }
-  }, [userStore.organizationId]);
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -65,7 +65,7 @@ const IntegrationDetailsPage = observer(() => {
     if (userStore.organizationId && !userStore.loading) {
       loadData();
     }
-  }, [connector, integration?.id, userStore.organizationId, userStore.loading]);
+  }, [connector, integration?.id]);
 
   const handleTestConnection = async () => {
     if (!integration) return;

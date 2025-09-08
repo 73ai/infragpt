@@ -37,7 +37,7 @@ const IntegrationsPage = observer(() => {
     };
 
     loadData();
-  }, [getMe, clerkUserId, clerkOrgId, userStore.organizationId]);
+  }, [getMe, clerkUserId, clerkOrgId]);
 
   const handleConnectorAction = async (
     connectorType: string,
