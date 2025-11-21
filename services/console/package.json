@@ -44,7 +44,7 @@
     "codemirror": "^6.0.2",
     "dexie": "^4.0.11",
     "dexie-react-hooks": "^1.1.7",
-    "js-yaml": "^4.1.0",
+    "js-yaml": "^4.1.1",
     "lucide-react": "^0.473.0",
     "mobx": "^6.13.6",
     "mobx-react-lite": "^4.1.0",

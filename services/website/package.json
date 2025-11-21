@@ -22,7 +22,7 @@
 		"@iconify-json/fluent": "^1.2.15",
 		"@types/alpinejs": "^3.13.10",
 		"alpinejs": "^3.13.7",
-		"astro": "^5.14.4",
+		"astro": "^5.16.0",
 		"astro-icon": "^1.1.0",
 		"astro-seo": "^0.8.3",
 		"bad-words": "^3.0.4",
