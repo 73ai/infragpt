@@ -1,4 +1,4 @@
-wwpackage gcp
+package gcp
 
 import (
 	"github.com/73ai/infragpt/services/backend/internal/integrationsvc/domain"

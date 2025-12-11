@@ -1,4 +1,4 @@
-wpackage postgres
+package postgres
 
 import (
 	"github.com/73ai/infragpt/services/backend/internal/generic/postgresconfig"
