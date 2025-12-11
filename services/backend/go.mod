@@ -1,8 +1,8 @@
-module github.com/priyanshujain/infragpt/services/backend
+module github.com/73ai/infragpt/services/backend
 
 go 1.24.0
 
-replace github.com/priyanshujain/infragpt/services/agent/src/client/go => ../agent/src/client/go
+replace github.com/73ai/infragpt/services/agent/src/client/go => ../agent/src/client/go
 
 require (
 	github.com/clerk/clerk-sdk-go/v2 v2.3.1
@@ -11,7 +11,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/m-mizutani/masq v0.1.11
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/priyanshujain/infragpt/services/agent/src/client/go v0.0.0-00010101000000-000000000000
+	github.com/73ai/infragpt/services/agent/src/client/go v0.0.0-00010101000000-000000000000
 	github.com/slack-go/slack v0.16.0
 	github.com/sqlc-dev/pqtype v0.3.0
 	github.com/svix/svix-webhooks v1.67.0

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/73ai/infragpt/services/backend/internal/integrationsvc/connectors/github"
 	"github.com/google/uuid"
-	"github.com/priyanshujain/infragpt/services/backend/internal/integrationsvc/connectors/github"
 )
 
 // timeFromNullTime converts sql.NullTime to time.Time

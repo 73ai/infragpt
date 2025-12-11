@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/priyanshujain/infragpt/services/backend/internal/identitysvc/domain"
+	"github.com/73ai/infragpt/services/backend/internal/identitysvc/domain"
 )
 
 type userRepository struct {

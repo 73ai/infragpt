@@ -7,9 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/73ai/infragpt/services/backend"
+	"github.com/73ai/infragpt/services/backend/internal/generic/httperrors"
 	"github.com/google/uuid"
-	"github.com/priyanshujain/infragpt/services/backend"
-	"github.com/priyanshujain/infragpt/services/backend/internal/generic/httperrors"
 )
 
 func NewHandler(svc backend.ConversationService) http.Handler {
