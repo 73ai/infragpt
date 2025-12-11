@@ -1,8 +1,8 @@
 ![InfraGPT](docs/assets/logo.svg)
 
 ![PyPI](https://img.shields.io/pypi/v/infragpt)
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/priyanshujain/infragpt/deploy.yml)
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/priyanshujain/infragpt/publish.yml)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/73ai/infragpt/deploy.yml)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/73ai/infragpt/publish.yml)
 
 InfraGPT is an AI SRE Copilot for the Cloud that provides infrastructure management agents through Slack integration. The system consists of multiple services that work together to deliver intelligent DevOps workflows.
 

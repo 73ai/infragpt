@@ -1,7 +1,7 @@
 package gcp
 
 import (
-	"github.com/priyanshujain/infragpt/services/backend/internal/integrationsvc/domain"
+	"github.com/73ai/infragpt/services/backend/internal/integrationsvc/domain"
 )
 
 // Config holds the configuration for the GCP connector

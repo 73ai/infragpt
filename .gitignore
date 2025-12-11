@@ -191,3 +191,4 @@ services/mcp/*
 
 
 .shoreman.pid
+.aider*

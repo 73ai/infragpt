@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/73ai/infragpt/services/backend"
+	"github.com/73ai/infragpt/services/backend/internal/integrationsvc/connectors/github"
+	"github.com/73ai/infragpt/services/backend/internal/integrationsvc/domain"
 	"github.com/google/uuid"
-	"github.com/priyanshujain/infragpt/services/backend"
-	"github.com/priyanshujain/infragpt/services/backend/internal/integrationsvc/connectors/github"
-	"github.com/priyanshujain/infragpt/services/backend/internal/integrationsvc/domain"
 )
 
 type service struct {

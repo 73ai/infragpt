@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/priyanshujain/infragpt/services/backend/internal/conversationsvc/domain"
+	"github.com/73ai/infragpt/services/backend/internal/conversationsvc/domain"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"
 )

@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	agent "github.com/priyanshujain/infragpt/services/agent/src/client/go"
-	"github.com/priyanshujain/infragpt/services/backend/internal/conversationsvc/domain"
+	agent "github.com/73ai/infragpt/services/agent/src/client/go"
+	"github.com/73ai/infragpt/services/backend/internal/conversationsvc/domain"
 )
 
 // Client wraps the agent gRPC client to implement domain.AgentService

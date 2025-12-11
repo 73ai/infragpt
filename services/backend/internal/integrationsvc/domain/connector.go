@@ -3,8 +3,8 @@ package domain
 import (
 	"context"
 
+	"github.com/73ai/infragpt/services/backend"
 	"github.com/google/uuid"
-	"github.com/priyanshujain/infragpt/services/backend"
 )
 
 type Connector interface {

@@ -15,4 +15,4 @@
  
 ## Reporting a Vulnerability
 
-Report security concerns to ipriyanshujain@gmail.com.
+Report security concerns to pj@73ai.org

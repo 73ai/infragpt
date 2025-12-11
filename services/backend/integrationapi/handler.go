@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/73ai/infragpt/services/backend"
+	"github.com/73ai/infragpt/services/backend/internal/generic/httperrors"
 	"github.com/google/uuid"
-	"github.com/priyanshujain/infragpt/services/backend"
-	"github.com/priyanshujain/infragpt/services/backend/internal/generic/httperrors"
 )
 
 type httpHandler struct {

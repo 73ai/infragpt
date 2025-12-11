@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/73ai/infragpt/services/backend"
+	"github.com/73ai/infragpt/services/backend/internal/conversationsvc/domain"
 	"github.com/google/uuid"
-	"github.com/priyanshujain/infragpt/services/backend"
-	"github.com/priyanshujain/infragpt/services/backend/internal/conversationsvc/domain"
 )
 
 type BackendDB struct {

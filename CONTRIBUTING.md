@@ -6,7 +6,7 @@ Thank you for your interest in contributing to InfraGPT\! This document provides
 
 1. Clone the repository:
    ```
-   git clone https://github.com/priyanshujain/infragpt.git
+   git clone https://github.com/73ai/infragpt.git
    cd infragpt
    ```
 

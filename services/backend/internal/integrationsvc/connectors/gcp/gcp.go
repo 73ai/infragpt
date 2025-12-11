@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/73ai/infragpt/services/backend"
+	"github.com/73ai/infragpt/services/backend/internal/integrationsvc/domain"
 	"github.com/google/uuid"
-	"github.com/priyanshujain/infragpt/services/backend"
-	"github.com/priyanshujain/infragpt/services/backend/internal/integrationsvc/domain"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/option"
 )

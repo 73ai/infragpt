@@ -4,8 +4,8 @@ InfraGPT lets you interactively generate and execute infrastructure commands usi
 InfraGPT works best with OpenAI GPT-4o and Anthropic Claude Sonet models.
 
 ![PyPI](https://img.shields.io/pypi/v/infragpt)
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/priyanshujain/infragpt/deploy.yml)
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/priyanshujain/infragpt/publish.yml)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/73ai/infragpt/deploy.yml)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/73ai/infragpt/publish.yml)
 
 <!-- [![asciicast](https://asciinema.org/a/w4YKOCP5zcYF0bSlZ2JSLczs8.svg)](https://asciinema.org/a/w4YKOCP5zcYF0bSlZ2JSLczs8) -->
 
@@ -44,7 +44,7 @@ pipx install infragpt
 
 1. Clone the repository:
    ```
-   git clone https://github.com/priyanshujain/infragpt.git
+   git clone https://github.com/73ai/infragpt.git
    cd infragpt
    ```
 

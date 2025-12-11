@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/73ai/infragpt/services/backend/internal/identitysvc/domain"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
-	"github.com/priyanshujain/infragpt/services/backend/internal/identitysvc/domain"
 )
 
 type memberRepository struct {

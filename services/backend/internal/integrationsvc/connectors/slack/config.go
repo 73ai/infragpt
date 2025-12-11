@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/priyanshujain/infragpt/services/backend/internal/integrationsvc/domain"
+	"github.com/73ai/infragpt/services/backend/internal/integrationsvc/domain"
 )
 
 type Config struct {

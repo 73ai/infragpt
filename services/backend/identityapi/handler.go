@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/priyanshujain/infragpt/services/backend/internal/generic/httperrors"
+	"github.com/73ai/infragpt/services/backend/internal/generic/httperrors"
 
+	"github.com/73ai/infragpt/services/backend"
 	"github.com/google/uuid"
-	"github.com/priyanshujain/infragpt/services/backend"
 )
 
 type httpHandler struct {

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/73ai/infragpt/services/backend/internal/integrationsvc/domain"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/priyanshujain/infragpt/services/backend/internal/integrationsvc/domain"
 )
 
 type Config struct {

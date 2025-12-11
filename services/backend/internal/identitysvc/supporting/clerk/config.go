@@ -1,6 +1,6 @@
 package clerk
 
-import "github.com/priyanshujain/infragpt/services/backend/internal/identitysvc/domain"
+import "github.com/73ai/infragpt/services/backend/internal/identitysvc/domain"
 
 type Config struct {
 	Port          int    `mapstructure:"port"`
