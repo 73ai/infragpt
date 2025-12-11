@@ -20,16 +20,13 @@ jobs:
         run: uv python install 3.13
 
       - name: Build package
-        run: |
-          cd cli
-          uv build
+        run: uv build cli
 
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: "__token__"
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          cd cli
           uv tool install twine
           uv tool run twine check dist/*
           uv tool run twine upload dist/*
