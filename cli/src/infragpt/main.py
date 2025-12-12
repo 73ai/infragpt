@@ -12,6 +12,8 @@ from infragpt.llm.router import LLMRouter
 from infragpt.llm.exceptions import ValidationError, AuthenticationError
 from infragpt.history import history_command
 from infragpt.agent import run_shell_agent
+from infragpt.container import is_sandbox_mode, is_docker_available, get_executor, cleanup_executor
+from infragpt.tools import cleanup_executor as cleanup_tools_executor
 
 
 @click.group(invoke_without_command=True)
@@ -140,6 +142,27 @@ def main(model, api_key, verbose):
         except Exception:
             console.print("[dim]InfraGPT V2: Version information not available[/dim]")
 
+    # Sandbox mode check - at startup
+    sandbox_enabled = is_sandbox_mode()
+    if sandbox_enabled:
+        if not is_docker_available():
+            console.print("[red]Error: Docker is not running.[/red]")
+            console.print(
+                "Please start Docker to use sandbox mode (INFRAGPT_ISOLATED=true)"
+            )
+            sys.exit(1)
+
+        console.print(
+            "[yellow]Sandbox mode enabled - starting Docker container...[/yellow]"
+        )
+        try:
+            executor = get_executor()
+            executor.start()
+            console.print("[green]Sandbox container ready.[/green]\n")
+        except Exception as e:
+            console.print(f"[red]Failed to start sandbox container: {e}[/red]")
+            sys.exit(1)
+
     # Get credentials
     try:
         model_string, resolved_api_key = get_credentials_v2(model, api_key, verbose)
@@ -148,7 +171,13 @@ def main(model, api_key, verbose):
             console.print(f"[dim]Using model: {model_string}[/dim]")
 
         # Run the shell agent
-        run_shell_agent(model_string, resolved_api_key, verbose)
+        try:
+            run_shell_agent(model_string, resolved_api_key, verbose)
+        finally:
+            # Clean up sandbox container if enabled
+            if sandbox_enabled:
+                cleanup_executor()
+                cleanup_tools_executor()
 
     except ValidationError as e:
         console.print(f"[red]Validation Error: {e}[/red]")

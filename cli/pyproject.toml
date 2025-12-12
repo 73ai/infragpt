@@ -35,6 +35,9 @@ Homepage = "https://github.com/73ai/infragpt"
 [project.scripts]
 infragpt = "infragpt.main:cli"
 
+[project.optional-dependencies]
+sandbox = ["docker>=7.0.0"]
+
 
 
 [dependency-groups]

@@ -22,11 +22,13 @@ import select
 
 from rich.console import Console
 
+from .container import ExecutorInterface
+
 # Initialize console for rich output
 console = Console()
 
 
-class CommandExecutor:
+class CommandExecutor(ExecutorInterface):
     """Handles shell command execution with streaming and timeout."""
 
     def __init__(self, timeout: int = 60, env: Optional[Dict[str, str]] = None):
@@ -251,6 +253,10 @@ class CommandExecutor:
     def get_environment(self) -> Dict[str, str]:
         """Get current environment variables."""
         return self.env.copy()
+
+    def cleanup(self) -> None:
+        """No-op cleanup for host executor - implements ExecutorInterface."""
+        pass
 
 
 def parse_environment_changes(output: str) -> Dict[str, str]:
