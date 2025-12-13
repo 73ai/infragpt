@@ -12,7 +12,7 @@ from infragpt.llm.router import LLMRouter
 from infragpt.llm.exceptions import ValidationError, AuthenticationError
 from infragpt.history import history_command
 from infragpt.agent import run_shell_agent
-from infragpt.container import is_sandbox_mode, is_docker_available, get_executor, cleanup_executor
+from infragpt.container import is_sandbox_mode, is_docker_available, get_executor, cleanup_executor, DockerNotAvailableError
 from infragpt.tools import cleanup_executor as cleanup_tools_executor
 
 
@@ -145,22 +145,19 @@ def main(model, api_key, verbose):
     # Sandbox mode check - at startup
     sandbox_enabled = is_sandbox_mode()
     if sandbox_enabled:
-        if not is_docker_available():
-            console.print("[red]Error: Docker is not running.[/red]")
-            console.print(
-                "Please start Docker to use sandbox mode (INFRAGPT_ISOLATED=true)"
-            )
-            sys.exit(1)
-
-        console.print(
-            "[yellow]Sandbox mode enabled - starting Docker container...[/yellow]"
-        )
         try:
+            is_docker_available()
+            console.print(
+                "[yellow]Sandbox mode enabled - starting Docker container...[/yellow]"
+            )
             executor = get_executor()
             executor.start()
             console.print("[green]Sandbox container ready.[/green]\n")
-        except Exception as e:
-            console.print(f"[red]Failed to start sandbox container: {e}[/red]")
+        except DockerNotAvailableError as e:
+            console.print(f"[red]Error: {e}[/red]")
+            console.print(
+                "Please fix the issue above or disable sandbox mode with INFRAGPT_ISOLATED=false"
+            )
             sys.exit(1)
 
     # Get credentials

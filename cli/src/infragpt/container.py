@@ -46,22 +46,29 @@ class ExecutorInterface(ABC):
 
 
 def is_sandbox_mode() -> bool:
-    """Check if sandbox mode is enabled via environment variable."""
-    return os.environ.get("INFRAGPT_ISOLATED", "").lower() == "true"
+    """
+    Check if sandbox mode is enabled.
+
+    Sandbox mode is enabled by default. Set INFRAGPT_ISOLATED=false to disable.
+    """
+    return os.environ.get("INFRAGPT_ISOLATED", "").lower() != "false"
 
 
 def is_docker_available() -> bool:
     """Check if Docker daemon is available and running."""
     try:
         import docker
+    except ImportError:
+        raise DockerNotAvailableError(
+            "Docker SDK not installed. Install with: uv pip install docker"
+        )
 
+    try:
         client = docker.from_env()
         client.ping()
         return True
-    except ImportError:
-        return False
-    except Exception:
-        return False
+    except docker.errors.DockerException as e:
+        raise DockerNotAvailableError(f"Docker error: {e}")
 
 
 # Module-level executor singleton
@@ -86,38 +93,6 @@ def cleanup_executor() -> None:
 
 class ContainerRunner(ExecutorInterface):
     """Docker container executor with streaming support."""
-
-    # Cloud credentials to pass through to container
-    PASSTHROUGH_ENV_VARS = [
-        # AWS
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_SESSION_TOKEN",
-        "AWS_REGION",
-        "AWS_DEFAULT_REGION",
-        "AWS_PROFILE",
-        # GCP
-        "GOOGLE_APPLICATION_CREDENTIALS",
-        "CLOUDSDK_CORE_PROJECT",
-        "GCLOUD_PROJECT",
-        "GOOGLE_CLOUD_PROJECT",
-        # Azure
-        "AZURE_SUBSCRIPTION_ID",
-        "AZURE_TENANT_ID",
-        "AZURE_CLIENT_ID",
-        "AZURE_CLIENT_SECRET",
-        # Kubernetes
-        "KUBECONFIG",
-        # General
-        "HOME",
-        "USER",
-    ]
-
-    # Environment variable prefixes to pass through
-    PASSTHROUGH_ENV_PREFIXES = [
-        "TF_VAR_",  # Terraform variables
-        "ARM_",  # Azure Resource Manager
-    ]
 
     def __init__(
         self,
@@ -164,87 +139,35 @@ class ContainerRunner(ExecutorInterface):
 
         self.client = docker.from_env()
 
-        # Check if image exists, if not try to build it
+        # Check if image exists, if not pull from registry
         try:
             self.client.images.get(self.image)
         except docker.errors.ImageNotFound:
-            console.print(
-                f"[yellow]Image {self.image} not found. Attempting to build...[/yellow]"
-            )
-            self._build_image()
+            try:
+                self.client.images.pull("ghcr.io/73ai/infragpt-sandbox", tag="latest")
+                self.client.images.get("ghcr.io/73ai/infragpt-sandbox:latest").tag(
+                    "infragpt/sandbox", "latest"
+                )
+            except Exception as e:
+                raise DockerNotAvailableError(
+                    f"Failed to pull sandbox image: {e}\n"
+                    f"Run: docker pull ghcr.io/73ai/infragpt-sandbox:latest"
+                )
 
         # Build volume mounts
         mounts = {os.getcwd(): {"bind": "/workspace", "mode": "rw"}}
         mounts.update(self.user_volumes)
 
-        # Build environment
-        container_env = self._build_environment()
-
-        # Create and start container
-        console.print("[dim]Starting sandbox container...[/dim]")
         self.container = self.client.containers.run(
             self.image,
-            command="tail -f /dev/null",  # Keep alive
+            command="tail -f /dev/null",
             detach=True,
             tty=True,
             working_dir=self.workdir,
             volumes=mounts,
-            environment=container_env,
-            remove=True,  # Auto-remove when stopped
+            environment=self.user_env,
+            remove=True,
         )
-        console.print(
-            f"[green]Container started: {self.container.short_id}[/green]"
-        )
-
-    def _build_image(self) -> None:
-        """Build the sandbox image from Dockerfile."""
-        import pathlib
-
-        # Look for Dockerfile.sandbox in the CLI directory
-        cli_dir = pathlib.Path(__file__).parent.parent.parent
-        dockerfile_path = cli_dir / "Dockerfile.sandbox"
-
-        if not dockerfile_path.exists():
-            raise DockerNotAvailableError(
-                f"Dockerfile not found at {dockerfile_path}.\n"
-                f"Please build the image manually:\n"
-                f"  cd {cli_dir}\n"
-                f"  docker build -t {self.image} -f Dockerfile.sandbox ."
-            )
-
-        console.print(
-            "[yellow]Building sandbox image (this may take several minutes)...[/yellow]"
-        )
-        try:
-            self.client.images.build(
-                path=str(cli_dir),
-                dockerfile="Dockerfile.sandbox",
-                tag=self.image,
-                rm=True,
-            )
-            console.print("[green]Sandbox image built successfully.[/green]")
-        except Exception as e:
-            raise DockerNotAvailableError(f"Failed to build sandbox image: {e}")
-
-    def _build_environment(self) -> Dict[str, str]:
-        """Build environment variables for the container."""
-        env = {}
-
-        # Pass through specific environment variables
-        for var in self.PASSTHROUGH_ENV_VARS:
-            if var in os.environ:
-                env[var] = os.environ[var]
-
-        # Pass through variables with specific prefixes
-        for prefix in self.PASSTHROUGH_ENV_PREFIXES:
-            for key, value in os.environ.items():
-                if key.startswith(prefix):
-                    env[key] = value
-
-        # Merge with user-provided env
-        env.update(self.user_env)
-
-        return env
 
     def execute_command(self, command: str) -> Tuple[int, str, bool]:
         """
