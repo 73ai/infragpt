@@ -1,0 +1,2 @@
+- use uv for running python scripts
+- Write minimal comments without extra explanations
