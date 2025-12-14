@@ -7,6 +7,7 @@ from typing import Callable, Dict, Any, Optional, List
 from functools import wraps
 from rich.console import Console
 from .shell import CommandExecutor
+from .container import ExecutorInterface, is_sandbox_mode, get_executor as get_container_executor
 from .llm.models import Tool, InputSchema, Parameter
 
 
@@ -17,6 +18,37 @@ class ToolExecutionCancelled(Exception):
 
 
 console = Console()
+
+# Module-level executor (singleton for session)
+_host_executor: Optional[CommandExecutor] = None
+
+
+def get_executor() -> ExecutorInterface:
+    """Get the appropriate executor based on sandbox mode."""
+    global _host_executor
+
+    if is_sandbox_mode():
+        # Return the container executor (managed by container module)
+        return get_container_executor()
+    else:
+        # Return host executor (create if needed)
+        if _host_executor is None:
+            _host_executor = CommandExecutor(timeout=60)
+        return _host_executor
+
+
+def cleanup_executor() -> None:
+    """Clean up executor resources."""
+    global _host_executor
+
+    if is_sandbox_mode():
+        # Container cleanup is handled by container module
+        from .container import cleanup_executor as cleanup_container
+
+        cleanup_container()
+    elif _host_executor is not None:
+        _host_executor.cleanup()
+        _host_executor = None
 
 
 def tool(name: Optional[str] = None, description: Optional[str] = None):
@@ -150,14 +182,13 @@ def execute_shell_command(command: str, description: Optional[str] = None) -> st
     # If we get here, user input is 'y', 'yes', or empty (default yes) - execute command
 
     try:
-        # Use the proper shell executor for streaming output
-        # Pass our console instance to ensure consistent output
-        executor = CommandExecutor(timeout=60)
+        # Get the appropriate executor (container or host based on sandbox mode)
+        executor = get_executor()
 
         console.print("\n[bold blue]Executing command...[/bold blue]")
         console.file.flush()  # Ensure prompt is displayed immediately
 
-        # Execute the command - output should stream in real-time via shell.py console
+        # Execute the command - output should stream in real-time
         exit_code, output, was_cancelled = executor.execute_command(command)
 
         if was_cancelled:
