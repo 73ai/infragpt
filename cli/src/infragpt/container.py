@@ -10,11 +10,22 @@ This module provides isolated command execution in Docker containers with:
 """
 
 import os
+import platform
 from abc import ABC, abstractmethod
 from typing import Tuple, Dict, Optional
 from rich.console import Console
 
 console = Console()
+
+
+def get_sandbox_image() -> str:
+    """Get the full sandbox image name for current platform."""
+    machine = platform.machine().lower()
+    if machine in ("arm64", "aarch64"):
+        arch = "arm64"
+    else:
+        arch = "amd64"
+    return f"ghcr.io/73ai/infragpt-sandbox:latest-{arch}"
 
 
 class DockerNotAvailableError(Exception):
@@ -96,7 +107,7 @@ class ContainerRunner(ExecutorInterface):
 
     def __init__(
         self,
-        image: str = "infragpt/sandbox:latest",
+        image: Optional[str] = None,
         workdir: str = "/workspace",
         env: Optional[Dict[str, str]] = None,
         volumes: Optional[Dict[str, Dict[str, str]]] = None,
@@ -112,7 +123,7 @@ class ContainerRunner(ExecutorInterface):
             volumes: Additional volume mounts {host_path: {"bind": container_path, "mode": "rw"}}
             timeout: Command timeout in seconds
         """
-        self.image = image
+        self.image = image or get_sandbox_image()
         self.workdir = workdir
         self.user_env = env or {}
         self.user_volumes = volumes or {}
@@ -144,14 +155,11 @@ class ContainerRunner(ExecutorInterface):
             self.client.images.get(self.image)
         except docker.errors.ImageNotFound:
             try:
-                self.client.images.pull("ghcr.io/73ai/infragpt-sandbox", tag="latest")
-                self.client.images.get("ghcr.io/73ai/infragpt-sandbox:latest").tag(
-                    "infragpt/sandbox", "latest"
-                )
+                self.client.images.pull(self.image)
             except Exception as e:
                 raise DockerNotAvailableError(
                     f"Failed to pull sandbox image: {e}\n"
-                    f"Run: docker pull ghcr.io/73ai/infragpt-sandbox:latest"
+                    f"Run: docker pull {self.image}"
                 )
 
         # Build volume mounts
