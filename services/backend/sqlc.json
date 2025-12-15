@@ -27,6 +27,15 @@
       "path": "./internal/integrationsvc/supporting/postgres",
       "queries": "./internal/integrationsvc/supporting/postgres/queries/",
       "schema": "./internal/integrationsvc/supporting/postgres/schema/"
+    },
+    {
+      "name": "postgres",
+      "emit_json_tags": true,
+      "emit_prepared_queries": true,
+      "emit_interface": true,
+      "path": "./internal/devicesvc/supporting/postgres",
+      "queries": "./internal/devicesvc/supporting/postgres/queries/",
+      "schema": "./internal/devicesvc/supporting/postgres/schema/"
     }
   ]
 }

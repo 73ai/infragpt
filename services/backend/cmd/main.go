@@ -14,6 +14,7 @@ import (
 
 	agentclient "github.com/73ai/infragpt/services/agent/src/client/go"
 	"github.com/73ai/infragpt/services/backend/backendapi"
+	"github.com/73ai/infragpt/services/backend/deviceapi"
 	"github.com/73ai/infragpt/services/backend/identityapi"
 	"github.com/73ai/infragpt/services/backend/integrationapi"
 	"github.com/73ai/infragpt/services/backend/internal/conversationsvc"
@@ -21,6 +22,7 @@ import (
 	"github.com/73ai/infragpt/services/backend/internal/conversationsvc/supporting/agent"
 	"github.com/73ai/infragpt/services/backend/internal/conversationsvc/supporting/postgres"
 	"github.com/73ai/infragpt/services/backend/internal/conversationsvc/supporting/slack"
+	"github.com/73ai/infragpt/services/backend/internal/devicesvc"
 	"github.com/73ai/infragpt/services/backend/internal/generic/httplog"
 	"github.com/73ai/infragpt/services/backend/internal/generic/postgresconfig"
 	"github.com/73ai/infragpt/services/backend/internal/identitysvc"
@@ -101,6 +103,8 @@ func main() {
 		panic(fmt.Errorf("error creating integration service: %w", err))
 	}
 
+	deviceService := devicesvc.Config{Database: db.DB()}.New()
+
 	authMiddleware := c.Identity.Clerk.NewAuthMiddleware()
 
 	sr, err := slackConfig.New(ctx)
@@ -145,6 +149,7 @@ func main() {
 	coreAPIHandler := backendapi.NewHandler(svc)
 	identityAPIHandler := identityapi.NewHandler(identityService, authMiddleware)
 	integrationAPIHandler := integrationapi.NewHandler(integrationService, authMiddleware)
+	deviceAPIHandler := deviceapi.NewHandler(deviceService, integrationService, authMiddleware)
 
 	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -158,6 +163,10 @@ func main() {
 		}
 		if strings.HasPrefix(r.URL.Path, "/integrations/") {
 			integrationAPIHandler.ServeHTTP(w, r)
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/device/") {
+			deviceAPIHandler.ServeHTTP(w, r)
 			return
 		}
 		coreAPIHandler.ServeHTTP(w, r)

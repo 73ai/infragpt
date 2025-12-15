@@ -217,6 +217,28 @@ func (s *service) Integration(ctx context.Context, query backend.IntegrationQuer
 	return integration, nil
 }
 
+func (s *service) IntegrationCredentials(ctx context.Context, query backend.IntegrationCredentialsQuery) (backend.Credentials, error) {
+	integration, err := s.integrationRepository.FindByID(ctx, query.IntegrationID)
+	if err != nil {
+		return backend.Credentials{}, fmt.Errorf("failed to find integration: %w", err)
+	}
+
+	if integration.OrganizationID != query.OrganizationID {
+		return backend.Credentials{}, fmt.Errorf("integration not found for organization")
+	}
+
+	credential, err := s.credentialRepository.FindByIntegration(ctx, query.IntegrationID)
+	if err != nil {
+		return backend.Credentials{}, fmt.Errorf("failed to find credentials: %w", err)
+	}
+
+	return backend.Credentials{
+		Type:      credential.CredentialType,
+		Data:      credential.Data,
+		ExpiresAt: credential.ExpiresAt,
+	}, nil
+}
+
 func (s *service) SyncIntegration(ctx context.Context, cmd backend.SyncIntegrationCommand) error {
 	integration, err := s.integrationRepository.FindByID(ctx, cmd.IntegrationID)
 	if err != nil {
