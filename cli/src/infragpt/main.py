@@ -14,7 +14,6 @@ from infragpt.history import history_command
 from infragpt.agent import run_shell_agent
 from infragpt.container import (
     is_sandbox_mode,
-    is_docker_available,
     get_executor,
     cleanup_executor,
     cleanup_old_containers,
@@ -203,25 +202,23 @@ def main(model, api_key, verbose):
         except Exception:
             console.print("[dim]InfraGPT V2: Version information not available[/dim]")
 
-    # Fetch GCP credentials if authenticated
+    sandbox_started = False
     gcp_creds_path = None
-    gke_cluster = None
-    if is_authenticated():
-        refresh_token_if_needed()
-        gcp_creds = fetch_gcp_credentials()
-        if gcp_creds:
-            gcp_creds_path = write_gcp_credentials_file(gcp_creds)
-            if gcp_creds_path and verbose:
-                console.print("[dim]GCP credentials loaded.[/dim]")
-        gke_cluster = fetch_gke_cluster_info()
-        if gke_cluster and verbose:
-            console.print(f"[dim]GKE cluster: {gke_cluster.cluster_name}[/dim]")
 
-    # Sandbox mode check - at startup
-    sandbox_enabled = is_sandbox_mode()
-    if sandbox_enabled:
-        try:
-            is_docker_available()
+    try:
+        gke_cluster = None
+        if is_authenticated():
+            refresh_token_if_needed()
+            gcp_creds = fetch_gcp_credentials()
+            if gcp_creds:
+                gcp_creds_path = write_gcp_credentials_file(gcp_creds)
+                if gcp_creds_path and verbose:
+                    console.print("[dim]GCP credentials loaded.[/dim]")
+            gke_cluster = fetch_gke_cluster_info()
+            if gke_cluster and verbose:
+                console.print(f"[dim]GKE cluster: {gke_cluster.cluster_name}[/dim]")
+
+        if is_sandbox_mode():
             removed = cleanup_old_containers()
             if removed > 0:
                 console.print(
@@ -235,38 +232,27 @@ def main(model, api_key, verbose):
                 gke_cluster_info=gke_cluster,
             )
             executor.start()
+            sandbox_started = True
             if gcp_creds_path:
                 console.print(
                     "[green]Sandbox container ready (GCP configured).[/green]\n"
                 )
             else:
                 console.print("[green]Sandbox container ready.[/green]\n")
-        except DockerNotAvailableError as e:
-            console.print(f"[red]Error: {e}[/red]")
-            console.print(
-                "Please fix the issue above or disable sandbox mode with INFRAGPT_ISOLATED=false"
-            )
-            sys.exit(1)
 
-    # Get credentials
-    try:
         model_string, resolved_api_key = get_credentials_v2(model, api_key, verbose)
 
         if verbose:
             console.print(f"[dim]Using model: {model_string}[/dim]")
 
-        # Run the shell agent
-        try:
-            run_shell_agent(model_string, resolved_api_key, verbose)
-        finally:
-            # Clean up sandbox container if enabled
-            if sandbox_enabled:
-                cleanup_executor()
-                cleanup_tools_executor()
-            # Clean up GCP credentials file
-            if gcp_creds_path:
-                cleanup_credentials()
+        run_shell_agent(model_string, resolved_api_key, verbose)
 
+    except DockerNotAvailableError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        console.print(
+            "Please fix the issue above or disable sandbox mode with INFRAGPT_ISOLATED=false"
+        )
+        sys.exit(1)
     except ValidationError as e:
         console.print(f"[red]Validation Error: {e}[/red]")
         console.print(
@@ -283,6 +269,12 @@ def main(model, api_key, verbose):
 
             console.print(traceback.format_exc())
         sys.exit(1)
+    finally:
+        if sandbox_started:
+            cleanup_executor()
+            cleanup_tools_executor()
+        if gcp_creds_path:
+            cleanup_credentials()
 
 
 if __name__ == "__main__":
