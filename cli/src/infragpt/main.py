@@ -2,7 +2,7 @@
 
 import os
 import sys
-from typing import Optional
+from typing import Optional, Tuple
 
 import click
 from rich.panel import Panel
@@ -68,7 +68,7 @@ def get_credentials_v2(
     model_string: Optional[str] = None,
     api_key: Optional[str] = None,
     verbose: bool = False,
-):
+) -> Tuple[str, str]:
     """Get credentials for the new system."""
     # If model is provided, validate it
     if model_string:
@@ -129,7 +129,9 @@ def get_credentials_v2(
     return model_string, api_key
 
 
-def main(model, api_key, verbose):
+def main(
+    model: Optional[str], api_key: Optional[str], verbose: bool
+) -> None:
     """InfraGPT V2 - Interactive shell operations with direct SDK integration."""
     # Initialize config file if it doesn't exist
     init_config()
