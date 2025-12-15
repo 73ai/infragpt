@@ -168,10 +168,7 @@ def main(model, api_key, verbose):
         if verbose:
             console.print(f"[dim]Using model: {model_string}[/dim]")
 
-        try:
-            run_shell_agent(model_string, resolved_api_key, verbose)
-        finally:
-            cleanup_executor()
+        run_shell_agent(model_string, resolved_api_key, verbose)
 
     except ValidationError as e:
         console.print(f"[red]Validation Error: {e}[/red]")
@@ -189,6 +186,9 @@ def main(model, api_key, verbose):
 
             console.print(traceback.format_exc())
         sys.exit(1)
+    finally:
+        if sandbox_enabled:
+            cleanup_executor()
 
 
 if __name__ == "__main__":
