@@ -164,7 +164,6 @@ class ContainerRunner(ExecutorInterface):
 
         self.client = docker.from_env()
 
-        # Check if image exists, if not pull from registry
         try:
             self.client.images.get(self.image)
         except docker.errors.ImageNotFound:
@@ -176,7 +175,6 @@ class ContainerRunner(ExecutorInterface):
                     f"Run: docker pull {self.image}"
                 )
 
-        # Build volume mounts
         mounts = {os.getcwd(): {"bind": "/workspace", "mode": "rw"}}
         mounts.update(self.user_volumes)
 
@@ -210,16 +208,13 @@ class ContainerRunner(ExecutorInterface):
         console.print("[dim]Press Ctrl+C to cancel...[/dim]\n")
 
         try:
-            # Prepend cd to current working directory, append pwd capture for tracking
             cwd_marker = "__INFRAGPT_CWD__"
-            # Use timeout command if timeout is set (124 is timeout's exit code)
             timeout_prefix = f"timeout {self.timeout} " if self.timeout > 0 else ""
             full_command = (
                 f"cd {shlex.quote(self.current_cwd)} 2>/dev/null || cd /workspace; "
                 f"{timeout_prefix}{command}; _exit_code=$?; echo {cwd_marker}; pwd; exit $_exit_code"
             )
 
-            # Create exec instance using low-level API for streaming
             exec_id = self.client.api.exec_create(
                 container=self.container.id,
                 cmd=["/bin/sh", "-c", full_command],
@@ -228,20 +223,17 @@ class ContainerRunner(ExecutorInterface):
                 stderr=True,
             )
 
-            # Stream output
             output_chunks = []
             try:
                 for chunk in self.client.api.exec_start(exec_id, stream=True):
                     decoded = chunk.decode("utf-8", errors="replace")
                     output_chunks.append(decoded)
-                    # Don't print the cwd marker and path
                     if cwd_marker not in decoded:
                         console.print(decoded, end="")
                     console.file.flush()
             except KeyboardInterrupt:
                 self.cancelled = True
                 console.print("\n[yellow]Command cancelled by user[/yellow]")
-                # Try to kill the exec process
                 try:
                     self.client.api.exec_start(
                         self.client.api.exec_create(
@@ -252,12 +244,10 @@ class ContainerRunner(ExecutorInterface):
                 except Exception:
                     pass
 
-            # Get exit code
             exec_info = self.client.api.exec_inspect(exec_id)
             exit_code = exec_info.get("ExitCode", -1) if not self.cancelled else -1
             output = "".join(output_chunks)
 
-            # Extract and update working directory from output
             self._update_cwd_from_output(output, cwd_marker)
 
             return exit_code, output, self.cancelled
@@ -267,16 +257,9 @@ class ContainerRunner(ExecutorInterface):
             return -1, str(e), False
 
     def _update_cwd_from_output(self, output: str, marker: str) -> None:
-        """
-        Extract working directory from command output using the marker.
-
-        Args:
-            output: Full command output containing the marker and pwd
-            marker: The marker string used to identify pwd output
-        """
+        """Extract working directory from command output using the marker."""
         try:
             if marker in output:
-                # Find the line after the marker
                 lines = output.split(marker)
                 if len(lines) > 1:
                     pwd_output = lines[-1].strip().split("\n")[0].strip()
