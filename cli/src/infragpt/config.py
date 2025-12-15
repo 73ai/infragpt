@@ -3,6 +3,7 @@
 import os
 import yaml
 import pathlib
+from typing import Any, Dict
 
 from rich.console import Console
 
@@ -21,7 +22,7 @@ CONFIG_DIR = pathlib.Path.home() / ".config" / "infragpt"
 CONFIG_FILE = CONFIG_DIR / "config.yaml"
 
 
-def load_config():
+def load_config() -> Dict[str, Any]:
     """Load configuration from config file."""
     if not CONFIG_FILE.exists():
         return {}
@@ -34,7 +35,7 @@ def load_config():
         return {}
 
 
-def save_config(config):
+def save_config(config: Dict[str, Any]) -> None:
     """Save configuration to config file."""
     # Ensure directory exists
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -46,7 +47,7 @@ def save_config(config):
         console.print(f"[yellow]Warning:[/yellow] Could not save config: {e}")
 
 
-def init_config():
+def init_config() -> None:
     """Initialize configuration file with environment variables if it doesn't exist."""
     if CONFIG_FILE.exists():
         return

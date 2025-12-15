@@ -46,7 +46,9 @@ def cleanup_executor() -> None:
         _host_executor = None
 
 
-def tool(name: Optional[str] = None, description: Optional[str] = None):
+def tool(
+    name: Optional[str] = None, description: Optional[str] = None
+) -> Callable[[Callable], Callable]:
     """
     Decorator to convert a function into a tool definition.
     Replacement for LangChain's @tool decorator.
@@ -115,7 +117,7 @@ def tool(name: Optional[str] = None, description: Optional[str] = None):
         func._tool = tool_obj
 
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             return func(*args, **kwargs)
 
         return wrapper
