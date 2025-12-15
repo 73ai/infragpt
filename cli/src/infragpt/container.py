@@ -12,8 +12,11 @@ This module provides isolated command execution in Docker containers with:
 import os
 import platform
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Tuple, Dict, Optional
 from rich.console import Console
+
+from infragpt.api_client import GKEClusterInfo
 
 console = Console()
 
@@ -117,11 +120,17 @@ def cleanup_old_containers() -> int:
         return 0
 
 
-def get_executor() -> "ContainerRunner":
+def get_executor(
+    gcp_credentials_path: Optional[Path] = None,
+    gke_cluster_info: Optional[GKEClusterInfo] = None,
+) -> "ContainerRunner":
     """Get or create the ContainerRunner singleton."""
     global _executor
     if _executor is None:
-        _executor = ContainerRunner()
+        _executor = ContainerRunner(
+            gcp_credentials_path=gcp_credentials_path,
+            gke_cluster_info=gke_cluster_info,
+        )
     return _executor
 
 
@@ -143,6 +152,8 @@ class ContainerRunner(ExecutorInterface):
         env: Optional[Dict[str, str]] = None,
         volumes: Optional[Dict[str, Dict[str, str]]] = None,
         timeout: int = 60,
+        gcp_credentials_path: Optional[Path] = None,
+        gke_cluster_info: Optional[GKEClusterInfo] = None,
     ):
         """
         Initialize container runner.
@@ -153,12 +164,16 @@ class ContainerRunner(ExecutorInterface):
             env: Additional environment variables
             volumes: Additional volume mounts {host_path: {"bind": container_path, "mode": "rw"}}
             timeout: Command timeout in seconds
+            gcp_credentials_path: Path to GCP service account JSON file to mount
+            gke_cluster_info: GKE cluster info for kubectl configuration
         """
         self.image = image or get_sandbox_image()
         self.workdir = workdir
         self.user_env = env or {}
         self.user_volumes = volumes or {}
         self.timeout = timeout
+        self.gcp_credentials_path = gcp_credentials_path
+        self.gke_cluster_info = gke_cluster_info
 
         self.client = None
         self.container = None
@@ -189,13 +204,23 @@ class ContainerRunner(ExecutorInterface):
                 self.client.images.pull(self.image)
             except Exception as e:
                 raise DockerNotAvailableError(
-                    f"Failed to pull sandbox image: {e}\n"
-                    f"Run: docker pull {self.image}"
+                    f"Failed to pull sandbox image: {e}\nRun: docker pull {self.image}"
                 )
 
         # Build volume mounts
         mounts = {os.getcwd(): {"bind": "/workspace", "mode": "rw"}}
         mounts.update(self.user_volumes)
+
+        # Build environment variables
+        env = dict(self.user_env)
+
+        # Mount GCP credentials if available
+        if self.gcp_credentials_path and self.gcp_credentials_path.exists():
+            mounts[str(self.gcp_credentials_path)] = {
+                "bind": "/credentials/gcp_sa.json",
+                "mode": "ro",
+            }
+            env["GOOGLE_APPLICATION_CREDENTIALS"] = "/credentials/gcp_sa.json"
 
         self.container = self.client.containers.run(
             self.image,
@@ -204,9 +229,13 @@ class ContainerRunner(ExecutorInterface):
             tty=True,
             working_dir=self.workdir,
             volumes=mounts,
-            environment=self.user_env,
+            environment=env,
             remove=True,
         )
+
+        # Configure GCP tools if credentials are mounted
+        if self.gcp_credentials_path and self.gcp_credentials_path.exists():
+            self._configure_gcp_tools()
 
     def execute_command(self, command: str) -> Tuple[int, str, bool]:
         """
@@ -228,7 +257,9 @@ class ContainerRunner(ExecutorInterface):
 
         try:
             # Prepend cd to current working directory
-            full_command = f"cd {self.current_cwd} 2>/dev/null || cd /workspace; {command}"
+            full_command = (
+                f"cd {self.current_cwd} 2>/dev/null || cd /workspace; {command}"
+            )
 
             # Create exec instance using low-level API for streaming
             exec_id = self.client.api.exec_create(
@@ -303,6 +334,52 @@ class ContainerRunner(ExecutorInterface):
                     self.current_cwd = new_cwd
         except Exception:
             pass  # Ignore errors in tracking
+
+    def _configure_gcp_tools(self) -> None:
+        """Configure gcloud and kubectl with injected credentials."""
+        if self.container is None:
+            return
+
+        commands = []
+
+        # Activate service account
+        commands.append(
+            "gcloud auth activate-service-account --key-file=/credentials/gcp_sa.json 2>/dev/null"
+        )
+
+        # Set project if we have GKE cluster info
+        if self.gke_cluster_info:
+            commands.append(
+                f"gcloud config set project {self.gke_cluster_info.project_id} 2>/dev/null"
+            )
+
+            # Configure kubectl for GKE cluster
+            if self.gke_cluster_info.zone:
+                commands.append(
+                    f"gcloud container clusters get-credentials {self.gke_cluster_info.cluster_name} "
+                    f"--zone {self.gke_cluster_info.zone} "
+                    f"--project {self.gke_cluster_info.project_id} 2>/dev/null"
+                )
+            elif self.gke_cluster_info.region:
+                commands.append(
+                    f"gcloud container clusters get-credentials {self.gke_cluster_info.cluster_name} "
+                    f"--region {self.gke_cluster_info.region} "
+                    f"--project {self.gke_cluster_info.project_id} 2>/dev/null"
+                )
+
+        # Execute all commands
+        full_command = " && ".join(commands)
+        try:
+            exec_id = self.client.api.exec_create(
+                container=self.container.id,
+                cmd=["/bin/sh", "-c", full_command],
+                tty=False,
+                stdout=True,
+                stderr=True,
+            )
+            self.client.api.exec_start(exec_id, stream=False)
+        except Exception:
+            pass  # Best effort configuration
 
     def stop(self) -> None:
         """Stop and remove the container."""

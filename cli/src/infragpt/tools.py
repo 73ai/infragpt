@@ -7,7 +7,11 @@ from typing import Callable, Dict, Any, Optional, List
 from functools import wraps
 from rich.console import Console
 from .shell import CommandExecutor
-from .container import ExecutorInterface, is_sandbox_mode, get_executor as get_container_executor
+from .container import (
+    ExecutorInterface,
+    is_sandbox_mode,
+    get_executor as get_container_executor,
+)
 from .llm.models import Tool, InputSchema, Parameter
 
 

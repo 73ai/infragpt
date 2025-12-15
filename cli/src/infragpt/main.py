@@ -12,8 +12,26 @@ from infragpt.llm.router import LLMRouter
 from infragpt.llm.exceptions import ValidationError, AuthenticationError
 from infragpt.history import history_command
 from infragpt.agent import run_shell_agent
-from infragpt.container import is_sandbox_mode, is_docker_available, get_executor, cleanup_executor, cleanup_old_containers, DockerNotAvailableError
+from infragpt.container import (
+    is_sandbox_mode,
+    is_docker_available,
+    get_executor,
+    cleanup_executor,
+    cleanup_old_containers,
+    DockerNotAvailableError,
+)
 from infragpt.tools import cleanup_executor as cleanup_tools_executor
+from infragpt.auth import (
+    login as auth_login,
+    logout as auth_logout,
+    get_auth_status,
+    is_authenticated,
+    refresh_token_if_needed,
+    fetch_gcp_credentials,
+    fetch_gke_cluster_info,
+    write_gcp_credentials_file,
+    cleanup_credentials,
+)
 
 
 @click.group(invoke_without_command=True)
@@ -62,6 +80,49 @@ def providers_cli():
         console.print(f"\n[bold cyan]{provider.upper()}[/bold cyan]")
         console.print(f"  Example: [yellow]{examples[provider]}[/yellow]")
         console.print(f"  Default params: {config['default_params']}")
+
+
+@cli.group()
+def auth():
+    """Authentication commands for InfraGPT platform."""
+    pass
+
+
+@auth.command(name="login")
+@click.option(
+    "--server", "-s", default=None, help="Server URL (default: https://api.infragpt.io)"
+)
+def auth_login_cli(server):
+    """Authenticate with InfraGPT platform."""
+    auth_login(server_url=server)
+
+
+@auth.command(name="logout")
+def auth_logout_cli():
+    """Remove stored credentials and revoke token."""
+    auth_logout()
+
+
+@auth.command(name="status")
+def auth_status_cli():
+    """Show authentication status."""
+    status = get_auth_status()
+
+    if not status.authenticated:
+        console.print("[yellow]Not authenticated.[/yellow]")
+        console.print("\nRun [cyan]infragpt auth login[/cyan] to authenticate.")
+        return
+
+    console.print("[green]Authenticated[/green]\n")
+
+    if status.organization_id:
+        console.print(f"Organization ID: [cyan]{status.organization_id}[/cyan]")
+    if status.user_id:
+        console.print(f"User ID: [cyan]{status.user_id}[/cyan]")
+    if status.server_url:
+        console.print(f"Server: [dim]{status.server_url}[/dim]")
+    if status.expires_at:
+        console.print(f"Token expires: [dim]{status.expires_at}[/dim]")
 
 
 def get_credentials_v2(
@@ -142,6 +203,20 @@ def main(model, api_key, verbose):
         except Exception:
             console.print("[dim]InfraGPT V2: Version information not available[/dim]")
 
+    # Fetch GCP credentials if authenticated
+    gcp_creds_path = None
+    gke_cluster = None
+    if is_authenticated():
+        refresh_token_if_needed()
+        gcp_creds = fetch_gcp_credentials()
+        if gcp_creds:
+            gcp_creds_path = write_gcp_credentials_file(gcp_creds)
+            if gcp_creds_path and verbose:
+                console.print("[dim]GCP credentials loaded.[/dim]")
+        gke_cluster = fetch_gke_cluster_info()
+        if gke_cluster and verbose:
+            console.print(f"[dim]GKE cluster: {gke_cluster.cluster_name}[/dim]")
+
     # Sandbox mode check - at startup
     sandbox_enabled = is_sandbox_mode()
     if sandbox_enabled:
@@ -149,13 +224,23 @@ def main(model, api_key, verbose):
             is_docker_available()
             removed = cleanup_old_containers()
             if removed > 0:
-                console.print(f"[dim]Cleaned up {removed} old sandbox container(s)[/dim]")
+                console.print(
+                    f"[dim]Cleaned up {removed} old sandbox container(s)[/dim]"
+                )
             console.print(
                 "[yellow]Sandbox mode enabled - starting Docker container...[/yellow]"
             )
-            executor = get_executor()
+            executor = get_executor(
+                gcp_credentials_path=gcp_creds_path,
+                gke_cluster_info=gke_cluster,
+            )
             executor.start()
-            console.print("[green]Sandbox container ready.[/green]\n")
+            if gcp_creds_path:
+                console.print(
+                    "[green]Sandbox container ready (GCP configured).[/green]\n"
+                )
+            else:
+                console.print("[green]Sandbox container ready.[/green]\n")
         except DockerNotAvailableError as e:
             console.print(f"[red]Error: {e}[/red]")
             console.print(
@@ -178,6 +263,9 @@ def main(model, api_key, verbose):
             if sandbox_enabled:
                 cleanup_executor()
                 cleanup_tools_executor()
+            # Clean up GCP credentials file
+            if gcp_creds_path:
+                cleanup_credentials()
 
     except ValidationError as e:
         console.print(f"[red]Validation Error: {e}[/red]")
