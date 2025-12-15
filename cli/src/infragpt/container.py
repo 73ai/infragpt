@@ -4,15 +4,17 @@ Docker container execution module for InfraGPT CLI agent.
 
 This module provides isolated command execution in Docker containers with:
 - Real-time streaming output
-- Environment variable passthrough for cloud credentials
 - Working directory tracking
 - Container lifecycle management
 """
 
 import os
 import platform
+import shlex
 from abc import ABC, abstractmethod
 from typing import Tuple, Dict, Optional
+
+import docker
 from rich.console import Console
 
 console = Console()
@@ -65,19 +67,12 @@ def is_sandbox_mode() -> bool:
     return os.environ.get("INFRAGPT_ISOLATED", "").lower() != "false"
 
 
-def is_docker_available() -> bool:
-    """Check if Docker daemon is available and running."""
-    try:
-        import docker
-    except ImportError:
-        raise DockerNotAvailableError(
-            "Docker SDK not installed. Install with: uv pip install docker"
-        )
-
+def ensure_docker_available() -> None:
+    """Ensure Docker daemon is available and running. Raises DockerNotAvailableError if not."""
     try:
         client = docker.from_env()
         client.ping()
-        return True
+        client.close()
     except docker.errors.DockerException as e:
         raise DockerNotAvailableError(f"Docker error: {e}")
 
@@ -88,11 +83,7 @@ _executor: Optional["ContainerRunner"] = None
 
 def cleanup_old_containers() -> int:
     """Remove any existing sandbox containers from previous CLI sessions."""
-    try:
-        import docker
-    except ImportError:
-        return 0
-
+    client = None
     try:
         client = docker.from_env()
         image_prefix = "ghcr.io/73ai/infragpt-sandbox:"
@@ -111,10 +102,12 @@ def cleanup_old_containers() -> int:
                 except Exception:
                     pass
                 removed += 1
-        client.close()
         return removed
     except Exception:
         return 0
+    finally:
+        if client is not None:
+            client.close()
 
 
 def get_executor() -> "ContainerRunner":
@@ -167,17 +160,7 @@ class ContainerRunner(ExecutorInterface):
 
     def start(self) -> None:
         """Create and start the container."""
-        try:
-            import docker
-        except ImportError:
-            raise DockerNotAvailableError(
-                "Docker SDK not installed. Install with: pip install docker"
-            )
-
-        if not is_docker_available():
-            raise DockerNotAvailableError(
-                "Docker is not running. Please start Docker to use sandbox mode."
-            )
+        ensure_docker_available()
 
         self.client = docker.from_env()
 
@@ -227,8 +210,14 @@ class ContainerRunner(ExecutorInterface):
         console.print("[dim]Press Ctrl+C to cancel...[/dim]\n")
 
         try:
-            # Prepend cd to current working directory
-            full_command = f"cd {self.current_cwd} 2>/dev/null || cd /workspace; {command}"
+            # Prepend cd to current working directory, append pwd capture for tracking
+            cwd_marker = "__INFRAGPT_CWD__"
+            # Use timeout command if timeout is set (124 is timeout's exit code)
+            timeout_prefix = f"timeout {self.timeout} " if self.timeout > 0 else ""
+            full_command = (
+                f"cd {shlex.quote(self.current_cwd)} 2>/dev/null || cd /workspace; "
+                f"{timeout_prefix}{command}; _exit_code=$?; echo {cwd_marker}; pwd; exit $_exit_code"
+            )
 
             # Create exec instance using low-level API for streaming
             exec_id = self.client.api.exec_create(
@@ -245,7 +234,9 @@ class ContainerRunner(ExecutorInterface):
                 for chunk in self.client.api.exec_start(exec_id, stream=True):
                     decoded = chunk.decode("utf-8", errors="replace")
                     output_chunks.append(decoded)
-                    console.print(decoded, end="")
+                    # Don't print the cwd marker and path
+                    if cwd_marker not in decoded:
+                        console.print(decoded, end="")
                     console.file.flush()
             except KeyboardInterrupt:
                 self.cancelled = True
@@ -266,8 +257,8 @@ class ContainerRunner(ExecutorInterface):
             exit_code = exec_info.get("ExitCode", -1) if not self.cancelled else -1
             output = "".join(output_chunks)
 
-            # Track working directory changes
-            self._track_cwd(command)
+            # Extract and update working directory from output
+            self._update_cwd_from_output(output, cwd_marker)
 
             return exit_code, output, self.cancelled
 
@@ -275,34 +266,24 @@ class ContainerRunner(ExecutorInterface):
             console.print(f"[bold red]Error executing command:[/bold red] {e}")
             return -1, str(e), False
 
-    def _track_cwd(self, command: str) -> None:
+    def _update_cwd_from_output(self, output: str, marker: str) -> None:
         """
-        Track working directory changes from cd commands.
+        Extract working directory from command output using the marker.
 
         Args:
-            command: The command that was executed
+            output: Full command output containing the marker and pwd
+            marker: The marker string used to identify pwd output
         """
-        # Get the actual current directory from the container
         try:
-            exec_id = self.client.api.exec_create(
-                container=self.container.id,
-                cmd=[
-                    "/bin/sh",
-                    "-c",
-                    f"cd {self.current_cwd} 2>/dev/null || cd /workspace; {command}; pwd",
-                ],
-                tty=False,
-                stdout=True,
-                stderr=False,
-            )
-            # Only update if command contains cd
-            if "cd " in command or command.strip() == "cd":
-                result = self.client.api.exec_start(exec_id, stream=False)
-                new_cwd = result.decode("utf-8").strip().split("\n")[-1]
-                if new_cwd and new_cwd.startswith("/"):
-                    self.current_cwd = new_cwd
+            if marker in output:
+                # Find the line after the marker
+                lines = output.split(marker)
+                if len(lines) > 1:
+                    pwd_output = lines[-1].strip().split("\n")[0].strip()
+                    if pwd_output and pwd_output.startswith("/"):
+                        self.current_cwd = pwd_output
         except Exception:
-            pass  # Ignore errors in tracking
+            pass
 
     def stop(self) -> None:
         """Stop and remove the container."""
