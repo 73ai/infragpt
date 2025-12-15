@@ -12,6 +12,8 @@ from infragpt.llm.router import LLMRouter
 from infragpt.llm.exceptions import ValidationError, AuthenticationError
 from infragpt.history import history_command
 from infragpt.agent import run_shell_agent
+from infragpt.container import is_sandbox_mode, get_executor, cleanup_old_containers, DockerNotAvailableError
+from infragpt.tools import cleanup_executor
 
 
 @click.group(invoke_without_command=True)
@@ -140,14 +142,32 @@ def main(model, api_key, verbose):
         except Exception:
             console.print("[dim]InfraGPT V2: Version information not available[/dim]")
 
-    # Get credentials
+    # Sandbox mode check - at startup
+    sandbox_enabled = is_sandbox_mode()
+    if sandbox_enabled:
+        try:
+            removed = cleanup_old_containers()
+            if removed > 0:
+                console.print(f"[dim]Cleaned up {removed} old sandbox container(s)[/dim]")
+            console.print(
+                "[yellow]Sandbox mode enabled - starting Docker container...[/yellow]"
+            )
+            executor = get_executor()
+            executor.start()  # This checks Docker availability
+            console.print("[green]Sandbox container ready.[/green]\n")
+        except DockerNotAvailableError as e:
+            console.print(f"[red]Error: {e}[/red]")
+            console.print(
+                "Please fix the issue above or disable sandbox mode with INFRAGPT_ISOLATED=false"
+            )
+            sys.exit(1)
+
     try:
         model_string, resolved_api_key = get_credentials_v2(model, api_key, verbose)
 
         if verbose:
             console.print(f"[dim]Using model: {model_string}[/dim]")
 
-        # Run the shell agent
         run_shell_agent(model_string, resolved_api_key, verbose)
 
     except ValidationError as e:
@@ -166,6 +186,9 @@ def main(model, api_key, verbose):
 
             console.print(traceback.format_exc())
         sys.exit(1)
+    finally:
+        if sandbox_enabled:
+            cleanup_executor()
 
 
 if __name__ == "__main__":

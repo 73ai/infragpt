@@ -57,10 +57,7 @@ class LLMAdapter:
             StreamChunk objects with content and/or tool calls
         """
         try:
-            # Get tools (same for all providers now)
             tools = get_available_tools()
-
-            # Stream response
             tool_calls_buffer = []
 
             try:
@@ -83,23 +80,17 @@ class LLMAdapter:
                             )
                         yield chunk
             except KeyboardInterrupt:
-                # Handle interrupt during streaming
                 console.print("\n[yellow]Streaming cancelled by user.[/yellow]")
                 return
 
-            # Execute tool calls if any
             if tool_calls_buffer:
                 try:
                     yield from self._execute_tool_calls(tool_calls_buffer, messages)
                 except KeyboardInterrupt:
-                    # Handle interrupt during tool execution
-                    console.print(
-                        "\n[yellow]Tool execution cancelled by user.[/yellow]"
-                    )
+                    console.print("\n[yellow]Tool execution cancelled by user.[/yellow]")
                     return
 
         except ToolExecutionCancelled:
-            # User cancelled - propagate without wrapping
             raise
         except Exception as e:
             error_msg = f"Streaming failed: {e}"
@@ -112,8 +103,6 @@ class LLMAdapter:
     ) -> Iterator[StreamChunk]:
         """Execute tool calls and continue conversation."""
         provider_name, _ = LLMRouter.parse_model_string(self.model_string)
-
-        # Execute each tool call
         tool_results = []
         for tool_call in tool_calls:
             try:
@@ -122,7 +111,6 @@ class LLMAdapter:
                         f"[dim]Executing tool: {tool_call.name} with args: {tool_call.arguments}[/dim]"
                     )
 
-                # Execute tool
                 result = execute_tool_call(tool_call.name, tool_call.arguments)
                 tool_results.append(
                     {
@@ -133,7 +121,6 @@ class LLMAdapter:
                 )
 
             except ToolExecutionCancelled:
-                # User cancelled - propagate to break the loop
                 raise
             except Exception as e:
                 error_msg = f"Tool execution failed: {e}"
@@ -150,11 +137,9 @@ class LLMAdapter:
                     }
                 )
 
-        # Build updated messages based on provider
         updated_messages = original_messages.copy()
 
         if provider_name == "anthropic":
-            # Anthropic format: add assistant message with tool calls, then user message with tool results
             assistant_content = []
             for tc in tool_calls:
                 assistant_content.append(
@@ -168,7 +153,6 @@ class LLMAdapter:
 
             updated_messages.append({"role": "assistant", "content": assistant_content})
 
-            # Add tool results as user message
             user_content = []
             for result in tool_results:
                 user_content.append(
@@ -182,10 +166,9 @@ class LLMAdapter:
             updated_messages.append({"role": "user", "content": user_content})
 
         else:
-            # OpenAI format: assistant message with tool_calls, then tool messages
             tool_call_message = {
                 "role": "assistant",
-                "content": None,  # OpenAI allows null content when using tools
+                "content": None,
                 "tool_calls": [
                     {
                         "id": tc.id,
@@ -202,7 +185,6 @@ class LLMAdapter:
             }
             updated_messages.append(tool_call_message)
 
-            # Add tool result messages
             for result in tool_results:
                 updated_messages.append(
                     {
@@ -213,12 +195,10 @@ class LLMAdapter:
                     }
                 )
 
-        # Continue conversation with tool results
         if self.verbose:
             console.print("[dim]Continuing conversation after tool execution...[/dim]")
 
         try:
-            # Use recursive streaming to handle multiple tool calls in sequence
             yield from self.stream_with_tools(updated_messages)
 
         except Exception as e:

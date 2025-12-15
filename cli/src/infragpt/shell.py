@@ -22,11 +22,12 @@ import select
 
 from rich.console import Console
 
-# Initialize console for rich output
+from .container import ExecutorInterface
+
 console = Console()
 
 
-class CommandExecutor:
+class CommandExecutor(ExecutorInterface):
     """Handles shell command execution with streaming and timeout."""
 
     def __init__(self, timeout: int = 60, env: Optional[Dict[str, str]] = None):
@@ -60,11 +61,9 @@ class CommandExecutor:
         console.print("[dim]Press ESC to cancel command...[/dim]\n")
 
         try:
-            # Create a pseudo-terminal for better command interaction
             master_fd, slave_fd = pty.openpty()
 
-            # Start the command
-            # Note: preexec_fn might not work on all platforms, so we handle it carefully
+            # preexec_fn might not work on all platforms
             popen_args = {
                 "shell": True,
                 "stdin": slave_fd,
@@ -73,7 +72,6 @@ class CommandExecutor:
                 "env": self.env,
             }
 
-            # Only use preexec_fn on Unix-like systems (not Windows)
             if hasattr(os, "setsid"):
                 try:
                     popen_args["preexec_fn"] = os.setsid
@@ -81,22 +79,16 @@ class CommandExecutor:
                     pass  # Skip if not supported
 
             self.current_process = subprocess.Popen(command, **popen_args)
-
-            # Close slave fd in parent process
             os.close(slave_fd)
 
-            # Start timeout timer
             timer = threading.Timer(self.timeout, self._timeout_handler)
             timer.start()
 
-            # Start ESC key listener
             esc_thread = threading.Thread(target=self._esc_listener, daemon=True)
             esc_thread.start()
 
-            # Stream output
             output = self._stream_output(master_fd)
 
-            # Wait for process to complete, but avoid indefinite blocking
             exit_code = None
             poll_interval = 0.1  # seconds
             start_time = time.time()
@@ -106,26 +98,19 @@ class CommandExecutor:
                     exit_code = ret
                     break
                 if self.cancelled:
-                    # Process should have been terminated by _timeout_handler or ESC
                     exit_code = -1
                     break
                 if (time.time() - start_time) > self.timeout:
-                    # Timeout exceeded, process should have been terminated by timer
                     exit_code = -1
                     break
                 time.sleep(poll_interval)
 
-            # Cancel timer
             timer.cancel()
-
-            # Close master fd
             os.close(master_fd)
 
             if self.cancelled:
                 console.print("\n[bold yellow]Command cancelled by user[/bold yellow]")
                 return -1, output, True
-
-            # Don't display exit code here - let the caller handle it
 
             return exit_code, output, False
 
@@ -141,9 +126,7 @@ class CommandExecutor:
 
         try:
             while True:
-                # Check if process is still running
                 if self.current_process and self.current_process.poll() is not None:
-                    # Process finished, read any remaining output
                     try:
                         ready, _, _ = select.select([fd], [], [], 0.1)
                         if ready:
@@ -156,7 +139,6 @@ class CommandExecutor:
                         pass
                     break
 
-                # Check for available data
                 try:
                     ready, _, _ = select.select([fd], [], [], 0.1)
                     if ready:
@@ -164,17 +146,14 @@ class CommandExecutor:
                         if data:
                             output_lines.append(data)
                             console.print(data, end="")
-                            console.file.flush()  # Force flush for real-time output
+                            console.file.flush()
 
-                    # Check if cancelled
                     if self.cancelled:
                         break
 
                 except (OSError, ValueError):
-                    # FD closed or invalid
                     break
                 except KeyboardInterrupt:
-                    # Handle Ctrl+C gracefully
                     self.cancelled = True
                     self._terminate_command()
                     break
@@ -196,21 +175,15 @@ class CommandExecutor:
         """Terminate the current command."""
         if self.current_process:
             try:
-                # Check if process group exists
                 pgid = os.getpgid(self.current_process.pid)
             except (OSError, ProcessLookupError):
-                # Process group does not exist, nothing to terminate
                 return
             try:
-                # Send SIGTERM to the process group
                 os.killpg(pgid, signal.SIGTERM)
-                # Wait a bit for graceful shutdown
                 time.sleep(1)
-                # Force kill if still running
                 if self.current_process.poll() is None:
                     os.killpg(pgid, signal.SIGKILL)
             except (OSError, ProcessLookupError):
-                # Process group may have terminated between checks
                 pass
 
     def _esc_listener(self):
@@ -219,29 +192,24 @@ class CommandExecutor:
             import termios
             import tty
 
-            # Save terminal settings
             old_settings = termios.tcgetattr(sys.stdin)
 
             try:
-                # Set terminal to raw mode for immediate key detection
                 tty.cbreak(sys.stdin.fileno())
 
                 while self.current_process and self.current_process.poll() is None:
                     if sys.stdin in select.select([sys.stdin], [], [], 0.1)[0]:
                         key = sys.stdin.read(1)
-                        if key == "\x1b":  # ESC key
+                        if key == "\x1b":
                             self.cancelled = True
                             self._terminate_command()
                             break
             finally:
-                # Restore terminal settings
                 termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
         except ImportError:
-            # termios not available (Windows), skip ESC handling
-            pass
+            pass  # termios not available (Windows)
         except Exception:
-            # Other errors, skip ESC handling
             pass
 
     def update_environment(self, env_vars: Dict[str, str]):
@@ -251,6 +219,10 @@ class CommandExecutor:
     def get_environment(self) -> Dict[str, str]:
         """Get current environment variables."""
         return self.env.copy()
+
+    def cleanup(self) -> None:
+        """No-op cleanup for host executor - implements ExecutorInterface."""
+        pass
 
 
 def parse_environment_changes(output: str) -> Dict[str, str]:
@@ -267,22 +239,17 @@ def parse_environment_changes(output: str) -> Dict[str, str]:
         Dictionary of environment variable changes
     """
     env_changes = {}
-
-    # Look for export statements in output
     lines = output.split("\n")
     for line in lines:
         line = line.strip()
         if line.startswith("export ") and "=" in line:
             try:
-                # Parse export VAR=value
-                export_part = line[7:]  # Remove 'export '
+                export_part = line[7:]
                 if "=" in export_part:
                     var, value = export_part.split("=", 1)
-                    # Remove quotes if present
                     value = value.strip("\"'")
                     env_changes[var] = value
             except Exception:
-                # Skip malformed export statements
                 pass
 
     return env_changes
