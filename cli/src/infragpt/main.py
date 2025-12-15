@@ -12,7 +12,7 @@ from infragpt.llm.router import LLMRouter
 from infragpt.llm.exceptions import ValidationError, AuthenticationError
 from infragpt.history import history_command
 from infragpt.agent import run_shell_agent
-from infragpt.container import is_sandbox_mode, is_docker_available, get_executor, cleanup_executor, DockerNotAvailableError
+from infragpt.container import is_sandbox_mode, is_docker_available, get_executor, cleanup_executor, cleanup_old_containers, DockerNotAvailableError
 from infragpt.tools import cleanup_executor as cleanup_tools_executor
 
 
@@ -147,6 +147,9 @@ def main(model, api_key, verbose):
     if sandbox_enabled:
         try:
             is_docker_available()
+            removed = cleanup_old_containers()
+            if removed > 0:
+                console.print(f"[dim]Cleaned up {removed} old sandbox container(s)[/dim]")
             console.print(
                 "[yellow]Sandbox mode enabled - starting Docker container...[/yellow]"
             )

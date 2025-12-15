@@ -86,6 +86,37 @@ def is_docker_available() -> bool:
 _executor: Optional["ContainerRunner"] = None
 
 
+def cleanup_old_containers() -> int:
+    """Remove any existing sandbox containers from previous CLI sessions."""
+    try:
+        import docker
+    except ImportError:
+        return 0
+
+    try:
+        client = docker.from_env()
+        image_prefix = "ghcr.io/73ai/infragpt-sandbox:"
+        containers = client.containers.list(all=True)
+        removed = 0
+        for container in containers:
+            if container.image.tags and any(
+                tag.startswith(image_prefix) for tag in container.image.tags
+            ):
+                try:
+                    container.stop(timeout=5)
+                except Exception:
+                    pass
+                try:
+                    container.remove(force=True)
+                except Exception:
+                    pass
+                removed += 1
+        client.close()
+        return removed
+    except Exception:
+        return 0
+
+
 def get_executor() -> "ContainerRunner":
     """Get or create the ContainerRunner singleton."""
     global _executor
