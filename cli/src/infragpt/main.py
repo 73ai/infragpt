@@ -12,8 +12,8 @@ from infragpt.llm.router import LLMRouter
 from infragpt.llm.exceptions import ValidationError, AuthenticationError
 from infragpt.history import history_command
 from infragpt.agent import run_shell_agent
-from infragpt.container import is_sandbox_mode, get_executor, cleanup_executor, cleanup_old_containers, DockerNotAvailableError
-from infragpt.tools import cleanup_executor as cleanup_tools_executor
+from infragpt.container import is_sandbox_mode, get_executor, cleanup_old_containers, DockerNotAvailableError
+from infragpt.tools import cleanup_executor
 
 
 @click.group(invoke_without_command=True)
@@ -162,21 +162,16 @@ def main(model, api_key, verbose):
             )
             sys.exit(1)
 
-    # Get credentials
     try:
         model_string, resolved_api_key = get_credentials_v2(model, api_key, verbose)
 
         if verbose:
             console.print(f"[dim]Using model: {model_string}[/dim]")
 
-        # Run the shell agent
         try:
             run_shell_agent(model_string, resolved_api_key, verbose)
         finally:
-            # Clean up sandbox container if enabled
-            if sandbox_enabled:
-                cleanup_executor()
-                cleanup_tools_executor()
+            cleanup_executor()
 
     except ValidationError as e:
         console.print(f"[red]Validation Error: {e}[/red]")
