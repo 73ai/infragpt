@@ -29,7 +29,7 @@ func (c Config) New() (backend.IntegrationService, error) {
 
 	connectors := make(map[backend.ConnectorType]domain.Connector)
 
-	if c.Slack.ClientID != "" {
+	if c.Slack.ClientID != "" && c.Slack.BotToken != "" {
 		connectors[backend.ConnectorTypeSlack] = c.Slack.New()
 	}
 
