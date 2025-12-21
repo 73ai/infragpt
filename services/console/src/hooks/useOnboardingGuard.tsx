@@ -62,13 +62,13 @@ export const useOnboardingGuard = (): OnboardingStatus => {
 
       // Load user profile and check onboarding completion
       try {
+        // Wait for any in-progress load to complete before checking
+        if (userStore.loading) {
+          return; // Stay in loading state, effect will re-run when store changes
+        }
+
         // Load user profile if not already loaded
-        if (
-          !userStore.userProfile &&
-          !userStore.loading &&
-          clerkUserId &&
-          clerkOrgId
-        ) {
+        if (!userStore.userProfile && clerkUserId && clerkOrgId) {
           await userStore.loadUserProfile(getMe, clerkUserId, clerkOrgId);
         }
 
