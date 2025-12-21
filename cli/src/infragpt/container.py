@@ -22,6 +22,8 @@ from infragpt.api_client import GKEClusterInfo
 
 console = Console()
 
+CONTAINER_NAME = "infragpt-sandbox"
+
 
 def get_sandbox_image() -> str:
     """Get the full sandbox image name for current platform."""
@@ -93,9 +95,11 @@ def cleanup_old_containers() -> int:
         containers = client.containers.list(all=True)
         removed = 0
         for container in containers:
-            if container.image.tags and any(
-                tag.startswith(image_prefix) for tag in container.image.tags
-            ):
+            is_sandbox = container.name == CONTAINER_NAME or (
+                container.image.tags
+                and any(tag.startswith(image_prefix) for tag in container.image.tags)
+            )
+            if is_sandbox:
                 try:
                     container.stop(timeout=5)
                 except Exception:
@@ -180,11 +184,9 @@ class ContainerRunner(ExecutorInterface):
         self.client = docker.from_env()
 
         try:
-            self.client.images.get(self.image)
-        except docker.errors.ImageNotFound:
-            try:
-                self.client.images.pull(self.image)
-            except Exception as e:
+            self.client.images.pull(self.image)
+        except Exception as e:
+            if not self.client.images.list(name=self.image):
                 raise DockerNotAvailableError(
                     f"Failed to pull sandbox image: {e}\nRun: docker pull {self.image}"
                 )
@@ -206,6 +208,7 @@ class ContainerRunner(ExecutorInterface):
         self.container = self.client.containers.run(
             self.image,
             command="tail -f /dev/null",
+            name=CONTAINER_NAME,
             detach=True,
             tty=True,
             working_dir=self.workdir,
@@ -216,7 +219,11 @@ class ContainerRunner(ExecutorInterface):
 
         # Configure GCP tools if credentials are mounted
         if self.gcp_credentials_path and self.gcp_credentials_path.exists():
-            self._configure_gcp_tools()
+            try:
+                self._configure_gcp_tools()
+            except RuntimeError as e:
+                console.print(f"[red]GCP configuration failed: {e}[/red]")
+                raise
 
     def execute_command(self, command: str) -> Tuple[int, str, bool]:
         """
@@ -297,51 +304,71 @@ class ContainerRunner(ExecutorInterface):
         except Exception:
             pass
 
+    def _exec_in_container(self, command: str) -> tuple[int, str, str]:
+        """Execute a command in container and return (exit_code, stdout, stderr)."""
+        if self.container is None:
+            raise RuntimeError("Container not running")
+
+        exec_id = self.client.api.exec_create(
+            container=self.container.id,
+            cmd=["/bin/sh", "-c", command],
+            tty=False,
+            stdout=True,
+            stderr=True,
+        )
+        output = self.client.api.exec_start(exec_id, stream=False, demux=True)
+        exit_code = self.client.api.exec_inspect(exec_id)["ExitCode"]
+
+        stdout = output[0].decode().strip() if output[0] else ""
+        stderr = output[1].decode().strip() if output[1] else ""
+
+        return exit_code, stdout, stderr
+
     def _configure_gcp_tools(self) -> None:
         """Configure gcloud and kubectl with injected credentials."""
         if self.container is None:
             return
 
-        commands = []
-
-        # Activate service account
-        commands.append(
-            "gcloud auth activate-service-account --key-file=/credentials/gcp_sa.json 2>/dev/null"
+        # Step 1: Activate service account
+        exit_code, _, stderr = self._exec_in_container(
+            "gcloud auth activate-service-account --key-file=/credentials/gcp_sa.json"
         )
+        if exit_code != 0:
+            raise RuntimeError(f"Failed to activate service account: {stderr}")
 
-        # Set project if we have GKE cluster info
-        if self.gke_cluster_info:
-            commands.append(
-                f"gcloud config set project {self.gke_cluster_info.project_id} 2>/dev/null"
-            )
+        # Step 2: Get project ID
+        exit_code, stdout, stderr = self._exec_in_container(
+            'gcloud projects list --format="value(projectId)" --limit=1'
+        )
+        if exit_code != 0 or not stdout:
+            raise RuntimeError(f"Failed to list projects: {stderr}")
+        project_id = stdout.strip()
 
-            # Configure kubectl for GKE cluster
-            if self.gke_cluster_info.zone:
-                commands.append(
-                    f"gcloud container clusters get-credentials {self.gke_cluster_info.cluster_name} "
-                    f"--zone {self.gke_cluster_info.zone} "
-                    f"--project {self.gke_cluster_info.project_id} 2>/dev/null"
-                )
-            elif self.gke_cluster_info.region:
-                commands.append(
-                    f"gcloud container clusters get-credentials {self.gke_cluster_info.cluster_name} "
-                    f"--region {self.gke_cluster_info.region} "
-                    f"--project {self.gke_cluster_info.project_id} 2>/dev/null"
-                )
+        # Step 3: Set project
+        exit_code, _, stderr = self._exec_in_container(
+            f"gcloud config set project {project_id}"
+        )
+        if exit_code != 0:
+            raise RuntimeError(f"Failed to set project: {stderr}")
 
-        # Execute all commands
-        full_command = " && ".join(commands)
-        try:
-            exec_id = self.client.api.exec_create(
-                container=self.container.id,
-                cmd=["/bin/sh", "-c", full_command],
-                tty=False,
-                stdout=True,
-                stderr=True,
-            )
-            self.client.api.exec_start(exec_id, stream=False)
-        except Exception:
-            pass  # Best effort configuration
+        # Step 4: List clusters and get first one
+        exit_code, stdout, stderr = self._exec_in_container(
+            'gcloud container clusters list --format="value(name,location)" --limit=1'
+        )
+        if exit_code != 0 or not stdout:
+            raise RuntimeError(f"Failed to list clusters: {stderr}")
+
+        parts = stdout.strip().split()
+        if len(parts) < 2:
+            raise RuntimeError(f"Invalid cluster list output: {stdout}")
+        cluster_name, location = parts[0], parts[1]
+
+        # Step 5: Get cluster credentials
+        exit_code, _, stderr = self._exec_in_container(
+            f"gcloud container clusters get-credentials {cluster_name} --region {location} --project {project_id}"
+        )
+        if exit_code != 0:
+            raise RuntimeError(f"Failed to get cluster credentials: {stderr}")
 
     def stop(self) -> None:
         """Stop and remove the container."""
