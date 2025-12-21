@@ -50,8 +50,8 @@ func NewClient(config *Config) (*Client, error) {
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                10 * time.Second,
-			Timeout:             5 * time.Second,
+			Time:                5 * time.Minute,
+			Timeout:             20 * time.Second,
 			PermitWithoutStream: true,
 		}),
 	}
