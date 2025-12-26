@@ -336,13 +336,17 @@ class ContainerRunner(ExecutorInterface):
         if exit_code != 0:
             raise RuntimeError(f"Failed to activate service account: {stderr}")
 
-        # Step 2: Get project ID
-        exit_code, stdout, stderr = self._exec_in_container(
-            'gcloud projects list --format="value(projectId)" --limit=1'
-        )
-        if exit_code != 0 or not stdout:
-            raise RuntimeError(f"Failed to list projects: {stderr}")
-        project_id = stdout.strip()
+        # Step 2: Get project ID - use provided info or discover via gcloud
+        project_id = None
+        if self.gke_cluster_info and self.gke_cluster_info.project_id:
+            project_id = self.gke_cluster_info.project_id
+        else:
+            exit_code, stdout, stderr = self._exec_in_container(
+                'gcloud projects list --format="value(projectId)" --limit=1'
+            )
+            if exit_code != 0 or not stdout:
+                raise RuntimeError(f"Failed to list projects: {stderr}")
+            project_id = stdout.strip()
 
         # Step 3: Set project
         exit_code, _, stderr = self._exec_in_container(
@@ -351,17 +355,34 @@ class ContainerRunner(ExecutorInterface):
         if exit_code != 0:
             raise RuntimeError(f"Failed to set project: {stderr}")
 
-        # Step 4: List clusters and get first one
-        exit_code, stdout, stderr = self._exec_in_container(
-            'gcloud container clusters list --format="value(name,location)" --limit=1'
-        )
-        if exit_code != 0 or not stdout:
-            raise RuntimeError(f"Failed to list clusters: {stderr}")
+        # Step 4: Get cluster name and location - use provided info or discover via gcloud
+        cluster_name = None
+        location = None
 
-        parts = stdout.strip().split()
-        if len(parts) < 2:
-            raise RuntimeError(f"Invalid cluster list output: {stdout}")
-        cluster_name, location = parts[0], parts[1]
+        if self.gke_cluster_info:
+            if self.gke_cluster_info.cluster_name:
+                cluster_name = self.gke_cluster_info.cluster_name
+            if self.gke_cluster_info.region:
+                location = self.gke_cluster_info.region
+            elif self.gke_cluster_info.zone:
+                location = self.gke_cluster_info.zone
+
+        # Fall back to discovery if any required field is missing
+        if not cluster_name or not location:
+            exit_code, stdout, stderr = self._exec_in_container(
+                'gcloud container clusters list --format="value(name,location)" --limit=1'
+            )
+            if exit_code != 0 or not stdout:
+                raise RuntimeError(f"Failed to list clusters: {stderr}")
+
+            parts = stdout.strip().split()
+            if len(parts) < 2:
+                raise RuntimeError(f"Invalid cluster list output: {stdout}")
+
+            if not cluster_name:
+                cluster_name = parts[0]
+            if not location:
+                location = parts[1]
 
         # Step 5: Get cluster credentials
         exit_code, _, stderr = self._exec_in_container(
