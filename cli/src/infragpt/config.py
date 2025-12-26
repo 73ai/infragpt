@@ -53,24 +53,17 @@ def init_config() -> None:
 
     init_history_dir()
 
-    config = {}
-
-    from infragpt.llm import validate_env_api_keys
+    config: Dict[str, Any] = {}
 
     openai_key = os.getenv("OPENAI_API_KEY")
     anthropic_key = os.getenv("ANTHROPIC_API_KEY")
     env_model = os.getenv("INFRAGPT_MODEL")
 
-    model, api_key = validate_env_api_keys()
-
-    if model and api_key:
-        config["model"] = model
-        config["api_key"] = api_key
-    elif anthropic_key and (not env_model or env_model == "claude"):
-        config["model"] = "claude"
+    if anthropic_key and (not env_model or env_model == "claude"):
+        config["model"] = "anthropic:claude-sonnet-4-20250514"
         config["api_key"] = anthropic_key
     elif openai_key and (not env_model or env_model == "gpt4o"):
-        config["model"] = "gpt4o"
+        config["model"] = "openai:gpt-4o"
         config["api_key"] = openai_key
 
     if config:

@@ -194,7 +194,7 @@ class CommandExecutor(ExecutorInterface):
             old_settings = termios.tcgetattr(sys.stdin)
 
             try:
-                tty.cbreak(sys.stdin.fileno())
+                tty.setcbreak(sys.stdin.fileno())
 
                 while self.current_process and self.current_process.poll() is None:
                     if sys.stdin in select.select([sys.stdin], [], [], 0.1)[0]:

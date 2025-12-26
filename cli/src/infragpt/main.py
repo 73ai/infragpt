@@ -200,9 +200,7 @@ def get_credentials_v2(
     return model_string, api_key
 
 
-def main(
-    model: Optional[str], api_key: Optional[str], verbose: bool
-) -> None:
+def main(model: Optional[str], api_key: Optional[str], verbose: bool) -> None:
     """InfraGPT V2 - Interactive shell operations with direct SDK integration."""
     init_config()
 
