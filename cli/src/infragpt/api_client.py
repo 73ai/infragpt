@@ -52,8 +52,10 @@ class InfraGPTAPIError(Exception):
 
 
 class InfraGPTClient:
-    def __init__(self, api_base_url: str, timeout: float = 30.0):
-        self.api_base_url = api_base_url.rstrip("/")
+    DEFAULT_SERVER_URL = "https://api.infragpt.io"
+
+    def __init__(self, api_base_url: Optional[str] = None, timeout: float = 30.0):
+        self.api_base_url = (api_base_url or self.DEFAULT_SERVER_URL).rstrip("/")
         self.timeout = timeout
 
     def _make_request(

@@ -238,7 +238,7 @@ def login(
                 "organization_id": result.organization_id,
                 "user_id": result.user_id,
                 "expires_at": expires_at.isoformat(),
-                "api_base_url": api_base_url or InfraGPTClient.DEFAULT_SERVER_URL,
+                "api_base_url": api_url,
             }
             _save_auth_data(auth_data)
 
