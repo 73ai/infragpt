@@ -18,6 +18,7 @@ import docker
 from rich.console import Console
 
 from infragpt.api_client import GKEClusterInfo
+from infragpt.exceptions import ContainerSetupError
 
 console = Console()
 
@@ -223,8 +224,7 @@ class ContainerRunner(ExecutorInterface):
             try:
                 self._configure_gcp_tools()
             except RuntimeError as e:
-                console.print(f"[red]GCP configuration failed: {e}[/red]")
-                raise
+                raise ContainerSetupError(f"GCP configuration failed: {e}") from e
 
     def execute_command(self, command: str) -> Tuple[int, str, bool]:
         """

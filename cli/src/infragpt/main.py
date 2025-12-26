@@ -25,11 +25,19 @@ from infragpt.auth import (
     logout as auth_logout,
     get_auth_status,
     is_authenticated,
-    refresh_token_if_needed,
-    fetch_gcp_credentials,
-    fetch_gke_cluster_info,
+    validate_token_with_api,
+    refresh_token_strict,
+    fetch_gcp_credentials_strict,
+    fetch_gke_cluster_info_strict,
     write_gcp_credentials_file,
     cleanup_credentials,
+)
+from infragpt.exceptions import (
+    AuthValidationError,
+    TokenRefreshError,
+    GCPCredentialError,
+    GKEClusterError,
+    ContainerSetupError,
 )
 
 
@@ -199,19 +207,22 @@ def main(model, api_key, verbose):
     gcp_creds_path = None
 
     try:
+        authenticated = is_authenticated()
+        sandbox = is_sandbox_mode()
         gke_cluster = None
-        if is_authenticated():
-            refresh_token_if_needed()
-            gcp_creds = fetch_gcp_credentials()
-            if gcp_creds:
-                gcp_creds_path = write_gcp_credentials_file(gcp_creds)
-                if gcp_creds_path and verbose:
-                    console.print("[dim]GCP credentials loaded.[/dim]")
-            gke_cluster = fetch_gke_cluster_info()
-            if gke_cluster and verbose:
+
+        if authenticated and sandbox:
+            # STRICT MODE - all failures exit CLI
+            validate_token_with_api()
+            refresh_token_strict()
+            gcp_creds = fetch_gcp_credentials_strict()
+            gke_cluster = fetch_gke_cluster_info_strict()
+            gcp_creds_path = write_gcp_credentials_file(gcp_creds)
+            if verbose:
+                console.print("[dim]GCP credentials loaded.[/dim]")
                 console.print(f"[dim]GKE cluster: {gke_cluster.cluster_name}[/dim]")
 
-        if is_sandbox_mode():
+        if sandbox:
             removed = cleanup_old_containers()
             if removed > 0:
                 console.print(
@@ -240,7 +251,14 @@ def main(model, api_key, verbose):
 
         run_shell_agent(model_string, resolved_api_key, verbose)
 
-    except DockerNotAvailableError as e:
+    except (AuthValidationError, TokenRefreshError) as e:
+        console.print(f"[red]Authentication Error: {e}[/red]")
+        console.print("\nRun [cyan]infragpt auth login[/cyan] to re-authenticate.")
+        sys.exit(1)
+    except (GCPCredentialError, GKEClusterError) as e:
+        console.print(f"[red]Credential Error: {e}[/red]")
+        sys.exit(1)
+    except (DockerNotAvailableError, ContainerSetupError) as e:
         console.print(f"[red]Error: {e}[/red]")
         console.print(
             "Please fix the issue above or disable sandbox mode with INFRAGPT_ISOLATED=false"

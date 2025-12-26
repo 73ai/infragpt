@@ -22,6 +22,12 @@ from infragpt.api_client import (
     GCPCredentials,
     GKEClusterInfo,
 )
+from infragpt.exceptions import (
+    AuthValidationError,
+    TokenRefreshError,
+    GCPCredentialError,
+    GKEClusterError,
+)
 
 
 AUTH_FILE = CONFIG_DIR / "auth.json"
@@ -298,3 +304,109 @@ def cleanup_credentials() -> None:
     """Remove temporary credential files."""
     if GCP_CREDENTIALS_FILE.exists():
         GCP_CREDENTIALS_FILE.unlink()
+
+
+def validate_token_with_api() -> None:
+    """Validate token with backend API. Raises AuthValidationError on failure."""
+    status = get_auth_status()
+    if not status.authenticated or not status.access_token:
+        raise AuthValidationError("Not authenticated")
+
+    try:
+        client = InfraGPTClient(server_url=status.server_url)
+        client.validate_token(status.access_token)
+    except InfraGPTAPIError as e:
+        if e.status_code == 401:
+            raise AuthValidationError("Token is invalid or expired") from e
+        raise AuthValidationError(f"Failed to validate token: {e.message}") from e
+    except httpx.RequestError as e:
+        raise AuthValidationError(f"Failed to connect to server: {e}") from e
+
+
+def refresh_token_strict() -> None:
+    """Refresh token if needed. Raises TokenRefreshError on failure."""
+    data = _load_auth_data()
+    if not data:
+        raise TokenRefreshError("No auth data found")
+
+    expires_at = data.get("expires_at")
+    refresh_token = data.get("refresh_token")
+
+    if not refresh_token:
+        raise TokenRefreshError("No refresh token available")
+
+    should_refresh = False
+    if expires_at:
+        try:
+            expires_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+            hours_until_expiry = (
+                expires_dt - datetime.now(timezone.utc)
+            ).total_seconds() / 3600
+            should_refresh = hours_until_expiry < TOKEN_REFRESH_THRESHOLD_HOURS
+        except ValueError:
+            should_refresh = True
+    else:
+        should_refresh = True
+
+    if not should_refresh:
+        return
+
+    try:
+        server_url = data.get("server_url")
+        client = InfraGPTClient(server_url=server_url)
+        result = client.refresh_token(refresh_token)
+
+        from datetime import timedelta
+
+        expires_at_new = datetime.now(timezone.utc).replace(microsecond=0)
+        expires_at_new = expires_at_new.replace(tzinfo=None)
+        expires_at_new = expires_at_new + timedelta(seconds=result.expires_in)
+        expires_at_new = expires_at_new.replace(tzinfo=timezone.utc)
+
+        data["access_token"] = result.access_token
+        data["refresh_token"] = result.refresh_token
+        data["expires_at"] = expires_at_new.isoformat()
+
+        _save_auth_data(data)
+    except InfraGPTAPIError as e:
+        raise TokenRefreshError(f"Failed to refresh token: {e.message}") from e
+    except httpx.RequestError as e:
+        raise TokenRefreshError(f"Failed to connect to server: {e}") from e
+
+
+def fetch_gcp_credentials_strict() -> GCPCredentials:
+    """Fetch GCP credentials from server. Raises GCPCredentialError on failure."""
+    status = get_auth_status()
+    if not status.authenticated or not status.access_token:
+        raise GCPCredentialError("Not authenticated")
+
+    try:
+        client = InfraGPTClient(server_url=status.server_url)
+        return client.get_gcp_credentials(status.access_token)
+    except InfraGPTAPIError as e:
+        if e.status_code == 404:
+            raise GCPCredentialError(
+                "No GCP credentials configured for your organization"
+            ) from e
+        raise GCPCredentialError(f"Failed to fetch GCP credentials: {e.message}") from e
+    except httpx.RequestError as e:
+        raise GCPCredentialError(f"Failed to connect to server: {e}") from e
+
+
+def fetch_gke_cluster_info_strict() -> GKEClusterInfo:
+    """Fetch GKE cluster info from server. Raises GKEClusterError on failure."""
+    status = get_auth_status()
+    if not status.authenticated or not status.access_token:
+        raise GKEClusterError("Not authenticated")
+
+    try:
+        client = InfraGPTClient(server_url=status.server_url)
+        return client.get_gke_cluster_info(status.access_token)
+    except InfraGPTAPIError as e:
+        if e.status_code == 404:
+            raise GKEClusterError(
+                "No GKE cluster configured for your organization"
+            ) from e
+        raise GKEClusterError(f"Failed to fetch GKE cluster info: {e.message}") from e
+    except httpx.RequestError as e:
+        raise GKEClusterError(f"Failed to connect to server: {e}") from e

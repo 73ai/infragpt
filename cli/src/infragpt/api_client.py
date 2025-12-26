@@ -166,3 +166,17 @@ class InfraGPTClient:
             zone=data.get("zone"),
             region=data.get("region"),
         )
+
+    def validate_token(self, access_token: str) -> bool:
+        """Validate token with backend API. Returns True if valid, raises on 401."""
+        try:
+            self._make_request(
+                "POST",
+                "/device/credentials/gcp",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            return True
+        except InfraGPTAPIError as e:
+            if e.status_code == 404:
+                return True  # Valid token but no GCP credentials configured
+            raise
