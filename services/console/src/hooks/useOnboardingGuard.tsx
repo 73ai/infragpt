@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useOrganization, useAuth, useUser } from "@clerk/clerk-react";
+import { autorun } from "mobx";
 import { useApiClient } from "@/lib/api";
 import { userStore } from "@/stores/UserStore";
 
@@ -64,7 +65,7 @@ export const useOnboardingGuard = (): OnboardingStatus => {
       try {
         // Wait for any in-progress load to complete before checking
         if (userStore.loading) {
-          return; // Stay in loading state, effect will re-run when store changes
+          return; // Stay in loading state, autorun will re-run when store changes
         }
 
         // Load user profile if not already loaded
@@ -97,7 +98,17 @@ export const useOnboardingGuard = (): OnboardingStatus => {
       }
     };
 
-    checkOnboardingStatus();
+    // Use MobX autorun to observe userStore changes (loading, userProfile)
+    const dispose = autorun(() => {
+      // Access observables to track them (void to satisfy TypeScript unused var check)
+      void userStore.loading;
+      void userStore.userProfile;
+
+      // Trigger the async check (runs outside autorun context)
+      checkOnboardingStatus();
+    });
+
+    return () => dispose();
   }, [
     organization?.id,
     isSignedIn,
