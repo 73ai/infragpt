@@ -50,11 +50,6 @@ class BaseLLMProvider(ABC):
         pass
 
     @abstractmethod
-    def _normalize_chunk(self, raw_chunk) -> StreamChunk:
-        """Convert provider-specific chunk to unified format."""
-        pass
-
-    @abstractmethod
     def _map_error(self, error: Exception) -> Exception:
         """Map provider-specific error to unified exception."""
         pass

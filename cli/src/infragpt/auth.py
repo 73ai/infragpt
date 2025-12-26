@@ -1,11 +1,13 @@
-#!/usr/bin/env python3
-
+import json
 import time
 import webbrowser
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+
+import httpx
+from cryptography.fernet import InvalidToken
 
 from infragpt.config import CONFIG_DIR, console
 from infragpt.encryption import (
@@ -24,6 +26,7 @@ from infragpt.api_client import (
 
 AUTH_FILE = CONFIG_DIR / "auth.json"
 GCP_CREDENTIALS_FILE = CONFIG_DIR / "gcp_credentials.json"
+TOKEN_REFRESH_THRESHOLD_HOURS = 1
 
 
 @dataclass
@@ -44,7 +47,7 @@ def _load_auth_data() -> Optional[dict]:
         return None
     try:
         return decrypt_data(encrypted)
-    except Exception:
+    except (InvalidToken, json.JSONDecodeError):
         return None
 
 
@@ -66,7 +69,7 @@ def is_authenticated() -> bool:
             expires_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
             if expires_dt < datetime.now(timezone.utc):
                 return False
-        except Exception:
+        except ValueError:
             pass
 
     return bool(data.get("access_token"))
@@ -117,8 +120,8 @@ def refresh_token_if_needed() -> bool:
             hours_until_expiry = (
                 expires_dt - datetime.now(timezone.utc)
             ).total_seconds() / 3600
-            should_refresh = hours_until_expiry < 1
-        except Exception:
+            should_refresh = hours_until_expiry < TOKEN_REFRESH_THRESHOLD_HOURS
+        except ValueError:
             should_refresh = True
     else:
         should_refresh = True
@@ -131,13 +134,10 @@ def refresh_token_if_needed() -> bool:
         client = InfraGPTClient(server_url=server_url)
         result = client.refresh_token(refresh_token)
 
-        # Update stored tokens
-        expires_at_new = datetime.now(timezone.utc).replace(microsecond=0)
-        expires_at_new = expires_at_new.replace(
-            tzinfo=None
-        )  # Remove timezone for arithmetic
         from datetime import timedelta
 
+        expires_at_new = datetime.now(timezone.utc).replace(microsecond=0)
+        expires_at_new = expires_at_new.replace(tzinfo=None)
         expires_at_new = expires_at_new + timedelta(seconds=result.expires_in)
         expires_at_new = expires_at_new.replace(tzinfo=timezone.utc)
 
@@ -147,7 +147,7 @@ def refresh_token_if_needed() -> bool:
 
         _save_auth_data(data)
         return True
-    except Exception:
+    except (InfraGPTAPIError, httpx.RequestError):
         return False
 
 
@@ -178,11 +178,10 @@ def login(server_url: Optional[str] = None) -> None:
     console.print(f"Visit: [cyan]{verification_url}[/cyan]")
     console.print(f"Enter this code: [bold yellow]{flow.user_code}[/bold yellow]\n")
 
-    # Try to open browser
     try:
         webbrowser.open(verification_url)
         console.print("[dim]Browser opened automatically.[/dim]\n")
-    except Exception:
+    except OSError:
         pass
 
     console.print("[dim]Waiting for authorization...[/dim]", end="")
@@ -249,14 +248,12 @@ def logout() -> None:
             server_url = data.get("server_url")
             client = InfraGPTClient(server_url=server_url)
             client.revoke_token(data["access_token"])
-        except Exception:
-            pass  # Best effort revocation
+        except (InfraGPTAPIError, httpx.RequestError):
+            pass  # Token may already be invalid; don't fail logout
 
-    # Remove auth file
     if AUTH_FILE.exists():
         AUTH_FILE.unlink()
 
-    # Remove GCP credentials file
     cleanup_credentials()
 
     console.print("[green]Logged out successfully.[/green]")

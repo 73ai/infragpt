@@ -45,7 +45,6 @@ from infragpt.auth import (
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 def cli(ctx, model, api_key, verbose):
     """InfraGPT V2 - Interactive shell operations with direct SDK integration."""
-    # If no subcommand is specified, go to interactive mode
     if ctx.invoked_subcommand is None:
         main(model=model, api_key=api_key, verbose=verbose)
 
@@ -130,7 +129,6 @@ def get_credentials_v2(
     verbose: bool = False,
 ):
     """Get credentials for the new system."""
-    # If model is provided, validate it
     if model_string:
         if not LLMRouter.validate_model_string(model_string):
             raise ValidationError("Invalid model format. Use 'provider:model' format.")
@@ -139,15 +137,12 @@ def get_credentials_v2(
     else:
         provider_name = None
 
-    # Try to get API key from various sources
     if not api_key:
-        # Try environment variables
         if provider_name == "openai":
             api_key = os.getenv("OPENAI_API_KEY")
         elif provider_name == "anthropic":
             api_key = os.getenv("ANTHROPIC_API_KEY")
         else:
-            # Check both if provider not specified
             openai_key = os.getenv("OPENAI_API_KEY")
             anthropic_key = os.getenv("ANTHROPIC_API_KEY")
 
@@ -160,7 +155,6 @@ def get_credentials_v2(
                 api_key = anthropic_key
                 provider_name = "anthropic"
 
-    # If still no credentials, prompt user
     if not model_string or not api_key:
         console.print(
             "\n[yellow]No valid credentials found. Please provide model and API key.[/yellow]"
@@ -191,7 +185,6 @@ def get_credentials_v2(
 
 def main(model, api_key, verbose):
     """InfraGPT V2 - Interactive shell operations with direct SDK integration."""
-    # Initialize config file if it doesn't exist
     init_config()
 
     if verbose:

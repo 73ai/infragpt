@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Docker container execution module for InfraGPT CLI agent.
 
@@ -23,6 +22,8 @@ from infragpt.api_client import GKEClusterInfo
 console = Console()
 
 CONTAINER_NAME = "infragpt-sandbox"
+CONTAINER_STOP_TIMEOUT = 5
+CWD_MARKER = "__INFRAGPT_CWD__"
 
 
 def get_sandbox_image() -> str:
@@ -101,16 +102,16 @@ def cleanup_old_containers() -> int:
             )
             if is_sandbox:
                 try:
-                    container.stop(timeout=5)
-                except Exception:
+                    container.stop(timeout=CONTAINER_STOP_TIMEOUT)
+                except docker.errors.APIError:
                     pass
                 try:
                     container.remove(force=True)
-                except Exception:
+                except docker.errors.APIError:
                     pass
                 removed += 1
         return removed
-    except Exception:
+    except docker.errors.DockerException:
         return 0
     finally:
         if client is not None:
@@ -185,7 +186,7 @@ class ContainerRunner(ExecutorInterface):
 
         try:
             self.client.images.pull(self.image)
-        except Exception as e:
+        except docker.errors.APIError as e:
             if not self.client.images.list(name=self.image):
                 raise DockerNotAvailableError(
                     f"Failed to pull sandbox image: {e}\nRun: docker pull {self.image}"
@@ -244,11 +245,10 @@ class ContainerRunner(ExecutorInterface):
         console.print("[dim]Press Ctrl+C to cancel...[/dim]\n")
 
         try:
-            cwd_marker = "__INFRAGPT_CWD__"
             timeout_prefix = f"timeout {self.timeout} " if self.timeout > 0 else ""
             full_command = (
                 f"cd {shlex.quote(self.current_cwd)} 2>/dev/null || cd /workspace; "
-                f"{timeout_prefix}{command}; _exit_code=$?; echo {cwd_marker}; pwd; exit $_exit_code"
+                f"{timeout_prefix}{command}; _exit_code=$?; echo {CWD_MARKER}; pwd; exit $_exit_code"
             )
 
             exec_id = self.client.api.exec_create(
@@ -264,7 +264,7 @@ class ContainerRunner(ExecutorInterface):
                 for chunk in self.client.api.exec_start(exec_id, stream=True):
                     decoded = chunk.decode("utf-8", errors="replace")
                     output_chunks.append(decoded)
-                    if cwd_marker not in decoded:
+                    if CWD_MARKER not in decoded:
                         console.print(decoded, end="")
                     console.file.flush()
             except KeyboardInterrupt:
@@ -277,18 +277,18 @@ class ContainerRunner(ExecutorInterface):
                             cmd=["/bin/sh", "-c", "pkill -P 1"],
                         )
                     )
-                except Exception:
+                except docker.errors.APIError:
                     pass
 
             exec_info = self.client.api.exec_inspect(exec_id)
             exit_code = exec_info.get("ExitCode", -1) if not self.cancelled else -1
             output = "".join(output_chunks)
 
-            self._update_cwd_from_output(output, cwd_marker)
+            self._update_cwd_from_output(output, CWD_MARKER)
 
             return exit_code, output, self.cancelled
 
-        except Exception as e:
+        except docker.errors.APIError as e:
             console.print(f"[bold red]Error executing command:[/bold red] {e}")
             return -1, str(e), False
 
@@ -301,7 +301,7 @@ class ContainerRunner(ExecutorInterface):
                     pwd_output = lines[-1].strip().split("\n")[0].strip()
                     if pwd_output and pwd_output.startswith("/"):
                         self.current_cwd = pwd_output
-        except Exception:
+        except (ValueError, IndexError):
             pass
 
     def _exec_in_container(self, command: str) -> tuple[int, str, str]:
@@ -375,11 +375,11 @@ class ContainerRunner(ExecutorInterface):
         if self.container is not None:
             try:
                 console.print("[dim]Stopping sandbox container...[/dim]")
-                self.container.stop(timeout=5)
-            except Exception:
+                self.container.stop(timeout=CONTAINER_STOP_TIMEOUT)
+            except docker.errors.APIError:
                 try:
                     self.container.kill()
-                except Exception:
+                except docker.errors.APIError:
                     pass
             self.container = None
 

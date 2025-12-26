@@ -1,5 +1,5 @@
 """
-Tool system without LangChain dependencies.
+Tool system for LLM function calling.
 """
 
 import inspect
@@ -44,6 +44,7 @@ def cleanup_executor() -> None:
 
     if is_sandbox_mode():
         from .container import cleanup_executor as cleanup_container
+
         cleanup_container()
     elif _host_executor is not None:
         _host_executor.cleanup()
@@ -51,10 +52,7 @@ def cleanup_executor() -> None:
 
 
 def tool(name: Optional[str] = None, description: Optional[str] = None):
-    """
-    Decorator to convert a function into a tool definition.
-    Replacement for LangChain's @tool decorator.
-    """
+    """Decorator to convert a function into a tool definition."""
 
     def decorator(func: Callable) -> Callable:
         sig = inspect.signature(func)

@@ -57,10 +57,7 @@ class AnthropicProvider(BaseLLMProvider):
     ) -> Iterator[StreamChunk]:
         """Stream response with unified tool calling support following Anthropic best practices."""
         try:
-            # Convert to Anthropic format
             request_params = self._build_request(messages, tools, **kwargs)
-
-            # Stream response
             response = self._client.messages.create(**request_params)
 
             # Buffer for tool calls using index-based tracking (Anthropic best practice)
@@ -72,7 +69,6 @@ class AnthropicProvider(BaseLLMProvider):
 
                 if event.type == "content_block_start":
                     if event.content_block.type == "tool_use":
-                        # Track tool by index (official pattern)
                         index = event.index
                         tool_blocks[index] = {
                             "id": event.content_block.id,
@@ -82,16 +78,13 @@ class AnthropicProvider(BaseLLMProvider):
 
                 elif event.type == "content_block_delta":
                     if event.delta.type == "text_delta":
-                        # Text content
                         chunk = StreamChunk(content=event.delta.text)
                     elif event.delta.type == "input_json_delta":
-                        # Tool call arguments (partial JSON) - use index tracking
                         index = event.index
                         if index in tool_use_inputs:
                             tool_use_inputs[index] += event.delta.partial_json
 
                 elif event.type == "content_block_stop":
-                    # End of content block - parse complete JSON if it's a tool
                     index = event.index
                     if index in tool_blocks and index in tool_use_inputs:
                         tool_block = tool_blocks[index]
@@ -99,8 +92,6 @@ class AnthropicProvider(BaseLLMProvider):
 
                         try:
                             arguments = json.loads(json_str) if json_str else {}
-
-                            # Yield valid tool call immediately
                             tool_call = ToolCall(
                                 id=tool_block["id"],
                                 name=tool_block["name"],
@@ -116,10 +107,8 @@ class AnthropicProvider(BaseLLMProvider):
                 elif event.type == "message_delta" and hasattr(
                     event.delta, "stop_reason"
                 ):
-                    # Message finished
                     chunk = StreamChunk(finish_reason=event.delta.stop_reason)
 
-                # Yield chunk if we have one
                 if chunk:
                     yield chunk
 
@@ -133,7 +122,6 @@ class AnthropicProvider(BaseLLMProvider):
         **kwargs: Any,
     ) -> Dict[str, Any]:
         """Build Anthropic API request."""
-        # Extract system message
         system_message = None
         filtered_messages = []
 
@@ -161,7 +149,6 @@ class AnthropicProvider(BaseLLMProvider):
 
     def _convert_messages(self, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Convert unified message format to Anthropic format."""
-        # Handle system message separately and convert content
         converted_messages = []
         system_message = None
 
@@ -175,10 +162,8 @@ class AnthropicProvider(BaseLLMProvider):
 
     def _convert_tools(self, tools: List["Tool"]) -> List[Dict]:
         """Convert Tool objects to Anthropic format."""
-
         anthropic_tools = []
         for tool in tools:
-            # Convert InputSchema to dict format
             input_schema_dict = {
                 "type": tool.input_schema.type,
                 "properties": {
@@ -207,14 +192,6 @@ class AnthropicProvider(BaseLLMProvider):
             )
 
         return anthropic_tools
-
-    def _normalize_chunk(self, raw_chunk) -> StreamChunk:
-        """Convert Anthropic chunk to unified format."""
-        # This method is not used in the current implementation
-        # as we handle normalization in the stream method
-        raise NotImplementedError(
-            "This method is not used in the current implementation"
-        )
 
     def _map_error(self, error: Exception) -> Exception:
         """Map Anthropic errors to unified exceptions."""

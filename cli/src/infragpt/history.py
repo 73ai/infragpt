@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import os
 import json
 import uuid
@@ -58,8 +56,14 @@ def sanitize_sensitive_data(data: Any) -> Any:
             (r"\bghp_[A-Za-z0-9]{36}\b", "ghp_***REDACTED***"),
             (r"\bgithub_pat_[A-Za-z0-9_]{82,}\b", "github_pat_***REDACTED***"),
             (r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b", "xox***REDACTED***"),
-            (r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----", "***REDACTED PEM KEY***"),
-            (r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b", "***REDACTED JWT***"),
+            (
+                r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----",
+                "***REDACTED PEM KEY***",
+            ),
+            (
+                r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b",
+                "***REDACTED JWT***",
+            ),
             (r"\b[A-Za-z0-9]{32,}\b", "***REDACTED***"),
         ]
         result = data
@@ -188,7 +192,6 @@ def display_history_entry(i: int, entry: Dict[str, Any]):
         )
         console.print(f"[bold cyan]User:[/bold cyan] {user_input}")
 
-        # Truncate long responses for display
         if len(assistant_response) > 200:
             response_preview = assistant_response[:200] + "..."
         else:
