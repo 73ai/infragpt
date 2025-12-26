@@ -1,5 +1,5 @@
 """
-Modern InfraGPT Shell Agent using direct SDKs instead of LangChain.
+InfraGPT Shell Agent for interactive command execution.
 """
 
 from typing import List, Dict, Any, Optional

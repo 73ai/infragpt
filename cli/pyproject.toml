@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "infragpt"
-version = "0.1.51"
+version = "0.1.52"
 description = "InfraGPT is an AI assistant for interactively managing your infrastructure."
 readme = "README.md"
 authors = [{ name = "Priyanshu Jain", email = "pj@73ai.org" }]
@@ -28,6 +28,8 @@ dependencies = [
     "openai>=1.98.0",
     "anthropic>=0.60.0",
     "docker>=7.1.0",
+    "cryptography>=44.0.1",
+    "httpx>=0.28.1",
 ]
 
 [project.urls]

@@ -98,8 +98,14 @@ type IntegrationService interface {
 	RevokeIntegration(ctx context.Context, cmd RevokeIntegrationCommand) error
 	Integrations(ctx context.Context, query IntegrationsQuery) ([]Integration, error)
 	Integration(ctx context.Context, query IntegrationQuery) (Integration, error)
+	IntegrationCredentials(ctx context.Context, query IntegrationCredentialsQuery) (Credentials, error)
 	ValidateCredentials(ctx context.Context, connectorType ConnectorType, credentials map[string]any) (CredentialValidationResult, error)
 	Subscribe(ctx context.Context) error
+}
+
+type IntegrationCredentialsQuery struct {
+	IntegrationID  uuid.UUID
+	OrganizationID uuid.UUID
 }
 
 type NewIntegrationCommand struct {

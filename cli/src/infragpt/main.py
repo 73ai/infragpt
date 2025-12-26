@@ -12,8 +12,33 @@ from infragpt.llm.router import LLMRouter
 from infragpt.llm.exceptions import ValidationError, AuthenticationError
 from infragpt.history import history_command
 from infragpt.agent import run_shell_agent
-from infragpt.container import is_sandbox_mode, get_executor, cleanup_old_containers, DockerNotAvailableError
-from infragpt.tools import cleanup_executor
+from infragpt.container import (
+    is_sandbox_mode,
+    get_executor,
+    cleanup_executor,
+    cleanup_old_containers,
+    DockerNotAvailableError,
+)
+from infragpt.tools import cleanup_executor as cleanup_tools_executor
+from infragpt.auth import (
+    login as auth_login,
+    logout as auth_logout,
+    get_auth_status,
+    is_authenticated,
+    validate_token_with_api,
+    refresh_token_strict,
+    fetch_gcp_credentials_strict,
+    fetch_gke_cluster_info_strict,
+    write_gcp_credentials_file,
+    cleanup_credentials,
+)
+from infragpt.exceptions import (
+    AuthValidationError,
+    TokenRefreshError,
+    GCPCredentialError,
+    GKEClusterError,
+    ContainerSetupError,
+)
 
 
 @click.group(invoke_without_command=True)
@@ -28,7 +53,6 @@ from infragpt.tools import cleanup_executor
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 def cli(ctx, model, api_key, verbose):
     """InfraGPT V2 - Interactive shell operations with direct SDK integration."""
-    # If no subcommand is specified, go to interactive mode
     if ctx.invoked_subcommand is None:
         main(model=model, api_key=api_key, verbose=verbose)
 
@@ -64,13 +88,64 @@ def providers_cli():
         console.print(f"  Default params: {config['default_params']}")
 
 
+@cli.group()
+def auth():
+    """Authentication commands for InfraGPT platform."""
+    pass
+
+
+@auth.command(name="login")
+@click.option(
+    "--api-url",
+    "-a",
+    default=None,
+    help="API base URL (default: https://api.infragpt.io)",
+)
+@click.option(
+    "--console-url",
+    "-c",
+    default=None,
+    help="Console base URL for verification (default: https://app.infragpt.io)",
+)
+def auth_login_cli(api_url, console_url):
+    """Authenticate with InfraGPT platform."""
+    auth_login(api_base_url=api_url, console_base_url=console_url)
+
+
+@auth.command(name="logout")
+def auth_logout_cli():
+    """Remove stored credentials and revoke token."""
+    auth_logout()
+
+
+@auth.command(name="status")
+def auth_status_cli():
+    """Show authentication status."""
+    status = get_auth_status()
+
+    if not status.authenticated:
+        console.print("[yellow]Not authenticated.[/yellow]")
+        console.print("\nRun [cyan]infragpt auth login[/cyan] to authenticate.")
+        return
+
+    console.print("[green]Authenticated[/green]\n")
+
+    if status.organization_id:
+        console.print(f"Organization ID: [cyan]{status.organization_id}[/cyan]")
+    if status.user_id:
+        console.print(f"User ID: [cyan]{status.user_id}[/cyan]")
+    if status.api_base_url:
+        console.print(f"API: [dim]{status.api_base_url}[/dim]")
+    if status.expires_at:
+        console.print(f"Token expires: [dim]{status.expires_at}[/dim]")
+
+
 def get_credentials_v2(
     model_string: Optional[str] = None,
     api_key: Optional[str] = None,
     verbose: bool = False,
 ) -> Tuple[str, str]:
     """Get credentials for the new system."""
-    # If model is provided, validate it
     if model_string:
         if not LLMRouter.validate_model_string(model_string):
             raise ValidationError("Invalid model format. Use 'provider:model' format.")
@@ -79,15 +154,12 @@ def get_credentials_v2(
     else:
         provider_name = None
 
-    # Try to get API key from various sources
     if not api_key:
-        # Try environment variables
         if provider_name == "openai":
             api_key = os.getenv("OPENAI_API_KEY")
         elif provider_name == "anthropic":
             api_key = os.getenv("ANTHROPIC_API_KEY")
         else:
-            # Check both if provider not specified
             openai_key = os.getenv("OPENAI_API_KEY")
             anthropic_key = os.getenv("ANTHROPIC_API_KEY")
 
@@ -100,7 +172,6 @@ def get_credentials_v2(
                 api_key = anthropic_key
                 provider_name = "anthropic"
 
-    # If still no credentials, prompt user
     if not model_string or not api_key:
         console.print(
             "\n[yellow]No valid credentials found. Please provide model and API key.[/yellow]"
@@ -133,7 +204,6 @@ def main(
     model: Optional[str], api_key: Optional[str], verbose: bool
 ) -> None:
     """InfraGPT V2 - Interactive shell operations with direct SDK integration."""
-    # Initialize config file if it doesn't exist
     init_config()
 
     if verbose:
@@ -144,27 +214,47 @@ def main(
         except Exception:
             console.print("[dim]InfraGPT V2: Version information not available[/dim]")
 
-    # Sandbox mode check - at startup
-    sandbox_enabled = is_sandbox_mode()
-    if sandbox_enabled:
-        try:
+    sandbox_started = False
+    gcp_creds_path = None
+
+    try:
+        authenticated = is_authenticated()
+        sandbox = is_sandbox_mode()
+        gke_cluster = None
+
+        if authenticated and sandbox:
+            # STRICT MODE - all failures exit CLI
+            validate_token_with_api()
+            refresh_token_strict()
+            gcp_creds = fetch_gcp_credentials_strict()
+            gke_cluster = fetch_gke_cluster_info_strict()
+            gcp_creds_path = write_gcp_credentials_file(gcp_creds)
+            if verbose:
+                console.print("[dim]GCP credentials loaded.[/dim]")
+                console.print(f"[dim]GKE cluster: {gke_cluster.cluster_name}[/dim]")
+
+        if sandbox:
             removed = cleanup_old_containers()
             if removed > 0:
-                console.print(f"[dim]Cleaned up {removed} old sandbox container(s)[/dim]")
+                console.print(
+                    f"[dim]Cleaned up {removed} old sandbox container(s)[/dim]"
+                )
             console.print(
                 "[yellow]Sandbox mode enabled - starting Docker container...[/yellow]"
             )
-            executor = get_executor()
-            executor.start()  # This checks Docker availability
-            console.print("[green]Sandbox container ready.[/green]\n")
-        except DockerNotAvailableError as e:
-            console.print(f"[red]Error: {e}[/red]")
-            console.print(
-                "Please fix the issue above or disable sandbox mode with INFRAGPT_ISOLATED=false"
+            executor = get_executor(
+                gcp_credentials_path=gcp_creds_path,
+                gke_cluster_info=gke_cluster,
             )
-            sys.exit(1)
+            executor.start()
+            sandbox_started = True
+            if gcp_creds_path:
+                console.print(
+                    "[green]Sandbox container ready (GCP configured).[/green]\n"
+                )
+            else:
+                console.print("[green]Sandbox container ready.[/green]\n")
 
-    try:
         model_string, resolved_api_key = get_credentials_v2(model, api_key, verbose)
 
         if verbose:
@@ -172,6 +262,19 @@ def main(
 
         run_shell_agent(model_string, resolved_api_key, verbose)
 
+    except (AuthValidationError, TokenRefreshError) as e:
+        console.print(f"[red]Authentication Error: {e}[/red]")
+        console.print("\nRun [cyan]infragpt auth login[/cyan] to re-authenticate.")
+        sys.exit(1)
+    except (GCPCredentialError, GKEClusterError) as e:
+        console.print(f"[red]Credential Error: {e}[/red]")
+        sys.exit(1)
+    except (DockerNotAvailableError, ContainerSetupError) as e:
+        console.print(f"[red]Error: {e}[/red]")
+        console.print(
+            "Please fix the issue above or disable sandbox mode with INFRAGPT_ISOLATED=false"
+        )
+        sys.exit(1)
     except ValidationError as e:
         console.print(f"[red]Validation Error: {e}[/red]")
         console.print(
@@ -189,8 +292,11 @@ def main(
             console.print(traceback.format_exc())
         sys.exit(1)
     finally:
-        if sandbox_enabled:
+        if sandbox_started:
             cleanup_executor()
+            cleanup_tools_executor()
+        if gcp_creds_path:
+            cleanup_credentials()
 
 
 if __name__ == "__main__":

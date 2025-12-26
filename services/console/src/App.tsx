@@ -16,6 +16,7 @@ import IntegrationDetailsPage from "./pages/integrations/IntegrationDetailsPage"
 import IntegrationCallbackPage from "./pages/integrations/IntegrationCallbackPage";
 import CreateSkillPage from "./pages/skills/CreateSkillPage";
 import IntegrationSetupPage from "./pages/integrations/IntegrationSetupPage";
+import CLIVerifyPage from "./pages/cli/VerifyPage";
 import { RedirectToSignIn, useAuth } from "@clerk/clerk-react";
 import { useOnboardingGuard } from "./hooks/useOnboardingGuard";
 
@@ -113,6 +114,14 @@ const App = () => {
           <Route
             path="/integrations/:connectorType/setup"
             element={<IntegrationSetupPage />}
+          />
+          <Route
+            path="/cli/verify"
+            element={
+              <ProtectedRoute>
+                <CLIVerifyPage />
+              </ProtectedRoute>
+            }
           />
           {/* TEMPORARY: Made skills page public for debugging WASM issues */}
           <Route
