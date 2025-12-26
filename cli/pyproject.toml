@@ -28,8 +28,8 @@ dependencies = [
     "openai>=1.98.0",
     "anthropic>=0.60.0",
     "docker>=7.1.0",
-    "cryptography>=44.0.0",
-    "httpx>=0.28.0",
+    "cryptography>=44.0.1",
+    "httpx>=0.28.1",
 ]
 
 [project.urls]

@@ -52,10 +52,8 @@ class InfraGPTAPIError(Exception):
 
 
 class InfraGPTClient:
-    DEFAULT_SERVER_URL = "https://api.infragpt.io"
-
-    def __init__(self, server_url: Optional[str] = None, timeout: float = 30.0):
-        self.server_url = (server_url or self.DEFAULT_SERVER_URL).rstrip("/")
+    def __init__(self, api_base_url: str, timeout: float = 30.0):
+        self.api_base_url = api_base_url.rstrip("/")
         self.timeout = timeout
 
     def _make_request(
@@ -65,7 +63,7 @@ class InfraGPTClient:
         json_data: Optional[dict] = None,
         headers: Optional[dict] = None,
     ) -> dict:
-        url = f"{self.server_url}{endpoint}"
+        url = f"{self.api_base_url}{endpoint}"
         request_headers = {"Content-Type": "application/json"}
         if headers:
             request_headers.update(headers)
@@ -95,7 +93,9 @@ class InfraGPTClient:
         except httpx.TimeoutException:
             raise InfraGPTAPIError(0, "Request timed out")
         except httpx.ConnectError:
-            raise InfraGPTAPIError(0, f"Could not connect to server: {self.server_url}")
+            raise InfraGPTAPIError(
+                0, f"Could not connect to server: {self.api_base_url}"
+            )
 
     def initiate_device_flow(self) -> DeviceFlowResponse:
         data = self._make_request("POST", "/device/auth/initiate")

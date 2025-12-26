@@ -35,6 +35,20 @@ GCP_CREDENTIALS_FILE = CONFIG_DIR / "gcp_credentials.json"
 TOKEN_REFRESH_THRESHOLD_HOURS = 1
 
 
+def _get_api_base_url(api_base_url: Optional[str]) -> str:
+    DEFAULT = "https://api.infragpt.io"
+    if api_base_url:
+        return api_base_url.rstrip("/")
+    return DEFAULT
+
+
+def _get_console_base_url(console_base_url: Optional[str]) -> str:
+    DEFAULT = "https://app.infragpt.io"
+    if console_base_url:
+        return console_base_url.rstrip("/")
+    return DEFAULT
+
+
 @dataclass
 class AuthStatus:
     authenticated: bool
@@ -43,7 +57,7 @@ class AuthStatus:
     access_token: Optional[str] = None
     refresh_token: Optional[str] = None
     expires_at: Optional[str] = None
-    server_url: Optional[str] = None
+    api_base_url: Optional[str] = None
 
 
 def _load_auth_data() -> Optional[dict]:
@@ -94,7 +108,7 @@ def get_auth_status() -> AuthStatus:
         access_token=data.get("access_token"),
         refresh_token=data.get("refresh_token"),
         expires_at=data.get("expires_at"),
-        server_url=data.get("server_url"),
+        api_base_url=data.get("api_base_url"),
     )
 
 
@@ -136,8 +150,8 @@ def refresh_token_if_needed() -> bool:
         return True
 
     try:
-        server_url = data.get("server_url")
-        client = InfraGPTClient(server_url=server_url)
+        api_base_url = data.get("api_base_url")
+        client = InfraGPTClient(api_base_url=api_base_url)
         result = client.refresh_token(refresh_token)
 
         from datetime import timedelta
@@ -157,9 +171,12 @@ def refresh_token_if_needed() -> bool:
         return False
 
 
-def login(server_url: Optional[str] = None) -> None:
+def login(
+    api_base_url: Optional[str] = None, console_base_url: Optional[str] = None
+) -> None:
     """Authenticate with InfraGPT platform using device flow."""
-    client = InfraGPTClient(server_url=server_url)
+    api_url = _get_api_base_url(api_base_url)
+    client = InfraGPTClient(api_base_url=api_url)
 
     console.print("\n[bold]Authenticating with InfraGPT...[/bold]\n")
 
@@ -173,13 +190,9 @@ def login(server_url: Optional[str] = None) -> None:
     if flow.verification_url.startswith("http"):
         verification_url = flow.verification_url
     else:
-        base_url = server_url or InfraGPTClient.DEFAULT_SERVER_URL
-        # Assume web app is on same domain but different port/subdomain
-        # For production, this should be app.infragpt.io
-        verification_url = (
-            base_url.replace("api.", "app.").replace(":8080", ":5173")
-            + flow.verification_url
-        )
+        console_url = _get_console_base_url(console_base_url)
+        path = flow.verification_url.lstrip("/")
+        verification_url = f"{console_url}/{path}"
 
     console.print(f"Visit: [cyan]{verification_url}[/cyan]")
     console.print(f"Enter this code: [bold yellow]{flow.user_code}[/bold yellow]\n")
@@ -225,7 +238,7 @@ def login(server_url: Optional[str] = None) -> None:
                 "organization_id": result.organization_id,
                 "user_id": result.user_id,
                 "expires_at": expires_at.isoformat(),
-                "server_url": server_url or InfraGPTClient.DEFAULT_SERVER_URL,
+                "api_base_url": api_base_url or InfraGPTClient.DEFAULT_SERVER_URL,
             }
             _save_auth_data(auth_data)
 
@@ -251,8 +264,8 @@ def logout() -> None:
 
     if data and data.get("access_token"):
         try:
-            server_url = data.get("server_url")
-            client = InfraGPTClient(server_url=server_url)
+            api_base_url = data.get("api_base_url")
+            client = InfraGPTClient(api_base_url=api_base_url)
             client.revoke_token(data["access_token"])
         except (InfraGPTAPIError, httpx.RequestError):
             pass  # Token may already be invalid; don't fail logout
@@ -272,7 +285,7 @@ def fetch_gcp_credentials() -> Optional[GCPCredentials]:
         return None
 
     try:
-        client = InfraGPTClient(server_url=status.server_url)
+        client = InfraGPTClient(api_base_url=status.api_base_url)
         return client.get_gcp_credentials(status.access_token)
     except InfraGPTAPIError:
         return None
@@ -285,7 +298,7 @@ def fetch_gke_cluster_info() -> Optional[GKEClusterInfo]:
         return None
 
     try:
-        client = InfraGPTClient(server_url=status.server_url)
+        client = InfraGPTClient(api_base_url=status.api_base_url)
         return client.get_gke_cluster_info(status.access_token)
     except InfraGPTAPIError:
         return None
@@ -313,7 +326,7 @@ def validate_token_with_api() -> None:
         raise AuthValidationError("Not authenticated")
 
     try:
-        client = InfraGPTClient(server_url=status.server_url)
+        client = InfraGPTClient(api_base_url=status.api_base_url)
         client.validate_token(status.access_token)
     except InfraGPTAPIError as e:
         if e.status_code == 401:
@@ -352,8 +365,8 @@ def refresh_token_strict() -> None:
         return
 
     try:
-        server_url = data.get("server_url")
-        client = InfraGPTClient(server_url=server_url)
+        api_base_url = data.get("api_base_url")
+        client = InfraGPTClient(api_base_url=api_base_url)
         result = client.refresh_token(refresh_token)
 
         from datetime import timedelta
@@ -381,7 +394,7 @@ def fetch_gcp_credentials_strict() -> GCPCredentials:
         raise GCPCredentialError("Not authenticated")
 
     try:
-        client = InfraGPTClient(server_url=status.server_url)
+        client = InfraGPTClient(api_base_url=status.api_base_url)
         return client.get_gcp_credentials(status.access_token)
     except InfraGPTAPIError as e:
         if e.status_code == 404:
@@ -400,7 +413,7 @@ def fetch_gke_cluster_info_strict() -> GKEClusterInfo:
         raise GKEClusterError("Not authenticated")
 
     try:
-        client = InfraGPTClient(server_url=status.server_url)
+        client = InfraGPTClient(api_base_url=status.api_base_url)
         return client.get_gke_cluster_info(status.access_token)
     except InfraGPTAPIError as e:
         if e.status_code == 404:

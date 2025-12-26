@@ -704,9 +704,9 @@ dev = [
 requires-dist = [
     { name = "anthropic", specifier = ">=0.60.0" },
     { name = "click", specifier = ">=8.2.1" },
-    { name = "cryptography", specifier = ">=44.0.0" },
+    { name = "cryptography", specifier = ">=44.0.1" },
     { name = "docker", specifier = ">=7.1.0" },
-    { name = "httpx", specifier = ">=0.28.0" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "openai", specifier = ">=1.98.0" },
     { name = "prompt-toolkit", specifier = ">=3.0.51" },
     { name = "pyperclip", specifier = ">=1.9.0" },

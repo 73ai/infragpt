@@ -96,11 +96,20 @@ def auth():
 
 @auth.command(name="login")
 @click.option(
-    "--server", "-s", default=None, help="Server URL (default: https://api.infragpt.io)"
+    "--api-url",
+    "-a",
+    default=None,
+    help="API base URL (default: https://api.infragpt.io)",
 )
-def auth_login_cli(server):
+@click.option(
+    "--console-url",
+    "-c",
+    default=None,
+    help="Console base URL for verification (default: https://app.infragpt.io)",
+)
+def auth_login_cli(api_url, console_url):
     """Authenticate with InfraGPT platform."""
-    auth_login(server_url=server)
+    auth_login(api_base_url=api_url, console_base_url=console_url)
 
 
 @auth.command(name="logout")
@@ -125,8 +134,8 @@ def auth_status_cli():
         console.print(f"Organization ID: [cyan]{status.organization_id}[/cyan]")
     if status.user_id:
         console.print(f"User ID: [cyan]{status.user_id}[/cyan]")
-    if status.server_url:
-        console.print(f"Server: [dim]{status.server_url}[/dim]")
+    if status.api_base_url:
+        console.print(f"API: [dim]{status.api_base_url}[/dim]")
     if status.expires_at:
         console.print(f"Token expires: [dim]{status.expires_at}[/dim]")
 

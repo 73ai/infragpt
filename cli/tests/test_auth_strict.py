@@ -8,7 +8,11 @@ from infragpt.auth import (
     fetch_gke_cluster_info_strict,
     AuthStatus,
 )
-from infragpt.api_client import InfraGPTAPIError, GCPCredentials, GKEClusterInfo
+from infragpt.api_client import (
+    InfraGPTAPIError,
+    GCPCredentials,
+    GKEClusterInfo,
+)
 from infragpt.exceptions import (
     AuthValidationError,
     TokenRefreshError,
@@ -27,7 +31,7 @@ class TestValidateTokenWithApi:
     def test_raises_on_401(self):
         with patch("infragpt.auth.get_auth_status") as mock_status:
             mock_status.return_value = AuthStatus(
-                authenticated=True, access_token="token", server_url="http://test"
+                authenticated=True, access_token="token", api_base_url="http://test"
             )
             with patch("infragpt.auth.InfraGPTClient") as mock_client_class:
                 mock_client = MagicMock()
@@ -43,7 +47,7 @@ class TestValidateTokenWithApi:
     def test_raises_on_connection_error(self):
         with patch("infragpt.auth.get_auth_status") as mock_status:
             mock_status.return_value = AuthStatus(
-                authenticated=True, access_token="token", server_url="http://test"
+                authenticated=True, access_token="token", api_base_url="http://test"
             )
             with patch("infragpt.auth.InfraGPTClient") as mock_client_class:
                 mock_client = MagicMock()
@@ -61,7 +65,7 @@ class TestValidateTokenWithApi:
     def test_success(self):
         with patch("infragpt.auth.get_auth_status") as mock_status:
             mock_status.return_value = AuthStatus(
-                authenticated=True, access_token="token", server_url="http://test"
+                authenticated=True, access_token="token", api_base_url="http://test"
             )
             with patch("infragpt.auth.InfraGPTClient") as mock_client_class:
                 mock_client = MagicMock()
@@ -109,7 +113,7 @@ class TestFetchGcpCredentialsStrict:
     def test_raises_on_404(self):
         with patch("infragpt.auth.get_auth_status") as mock_status:
             mock_status.return_value = AuthStatus(
-                authenticated=True, access_token="token", server_url="http://test"
+                authenticated=True, access_token="token", api_base_url="http://test"
             )
             with patch("infragpt.auth.InfraGPTClient") as mock_client_class:
                 mock_client = MagicMock()
@@ -126,7 +130,7 @@ class TestFetchGcpCredentialsStrict:
     def test_success(self):
         with patch("infragpt.auth.get_auth_status") as mock_status:
             mock_status.return_value = AuthStatus(
-                authenticated=True, access_token="token", server_url="http://test"
+                authenticated=True, access_token="token", api_base_url="http://test"
             )
             with patch("infragpt.auth.InfraGPTClient") as mock_client_class:
                 mock_client = MagicMock()
@@ -149,7 +153,7 @@ class TestFetchGkeClusterInfoStrict:
     def test_raises_on_404(self):
         with patch("infragpt.auth.get_auth_status") as mock_status:
             mock_status.return_value = AuthStatus(
-                authenticated=True, access_token="token", server_url="http://test"
+                authenticated=True, access_token="token", api_base_url="http://test"
             )
             with patch("infragpt.auth.InfraGPTClient") as mock_client_class:
                 mock_client = MagicMock()
@@ -166,7 +170,7 @@ class TestFetchGkeClusterInfoStrict:
     def test_success(self):
         with patch("infragpt.auth.get_auth_status") as mock_status:
             mock_status.return_value = AuthStatus(
-                authenticated=True, access_token="token", server_url="http://test"
+                authenticated=True, access_token="token", api_base_url="http://test"
             )
             with patch("infragpt.auth.InfraGPTClient") as mock_client_class:
                 mock_client = MagicMock()
