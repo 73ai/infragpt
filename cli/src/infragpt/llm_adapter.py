@@ -1,5 +1,5 @@
 """
-New LLM adapter using direct SDKs instead of LangChain.
+LLM adapter for unified provider access.
 """
 
 import json
@@ -15,7 +15,7 @@ console = Console()
 
 
 class LLMAdapter:
-    """New LLM adapter without LangChain dependencies."""
+    """LLM adapter for streaming responses and tool calling."""
 
     def __init__(self, model_string: str, api_key: str, verbose: bool = False):
         """
@@ -87,7 +87,9 @@ class LLMAdapter:
                 try:
                     yield from self._execute_tool_calls(tool_calls_buffer, messages)
                 except KeyboardInterrupt:
-                    console.print("\n[yellow]Tool execution cancelled by user.[/yellow]")
+                    console.print(
+                        "\n[yellow]Tool execution cancelled by user.[/yellow]"
+                    )
                     return
 
         except ToolExecutionCancelled:

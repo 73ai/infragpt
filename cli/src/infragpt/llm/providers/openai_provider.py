@@ -31,7 +31,6 @@ class OpenAIProvider(BaseLLMProvider):
     def validate_api_key(self) -> bool:
         """Validate API key with a simple test call."""
         try:
-            # Use appropriate parameter based on model
             params = {
                 "model": self.model,
                 "messages": [{"role": "user", "content": "hi"}],
@@ -60,10 +59,7 @@ class OpenAIProvider(BaseLLMProvider):
     ) -> Iterator[StreamChunk]:
         """Stream response with unified tool calling support."""
         try:
-            # Convert to OpenAI format
             request_params = self._build_request(messages, tools, **kwargs)
-
-            # Stream response
             response = self._client.chat.completions.create(**request_params)
 
             # Buffer for tool calls - persistent across chunks
@@ -75,15 +71,12 @@ class OpenAIProvider(BaseLLMProvider):
                 if chunk.choices and len(chunk.choices) > 0:
                     choice = chunk.choices[0]
 
-                    # Handle content
                     content = None
                     if choice.delta.content:
                         content = choice.delta.content
 
-                    # Handle tool calls
                     tool_calls = None
                     if choice.delta.tool_calls:
-                        # Update call IDs per index
                         for tc in choice.delta.tool_calls:
                             if tc.id and hasattr(tc, "index") and tc.index is not None:
                                 call_id_by_index[tc.index] = tc.id
@@ -94,10 +87,8 @@ class OpenAIProvider(BaseLLMProvider):
                         if tool_calls:
                             accumulated_tool_calls.extend(tool_calls)
 
-                    # Handle finish reason
                     finish_reason = choice.finish_reason
 
-                    # Yield content chunks without tool calls
                     if content or (finish_reason and finish_reason != "tool_calls"):
                         yield StreamChunk(
                             content=content,
@@ -114,7 +105,7 @@ class OpenAIProvider(BaseLLMProvider):
                             tool_calls=accumulated_tool_calls,
                             finish_reason=finish_reason,
                         )
-                        accumulated_tool_calls = []  # Reset after emitting
+                        accumulated_tool_calls = []
 
         except Exception as e:
             raise self._map_error(e)
@@ -129,19 +120,17 @@ class OpenAIProvider(BaseLLMProvider):
             "stream": True,
         }
 
-        # Handle temperature - o4 models only support default temperature of 1.0
+        # o4/o1/gpt-5 models only support default temperature of 1.0
         if (
             self.model.startswith("o4")
             or self.model.startswith("o1")
             or self.model.startswith("gpt-5")
         ):
-            # Don't set temperature for o4/o1 models (uses default 1.0)
             pass
         else:
             request["temperature"] = kwargs.get("temperature", 0.0)
 
         if kwargs.get("max_tokens"):
-            # Use appropriate parameter based on model
             if (
                 self.model.startswith("o4")
                 or self.model.startswith("o1")
@@ -167,7 +156,6 @@ class OpenAIProvider(BaseLLMProvider):
 
         openai_tools = []
         for tool in tools:
-            # Convert InputSchema to dict format (same as Anthropic but wrapped differently)
             parameters_dict = {
                 "type": tool.input_schema.type,
                 "properties": {
@@ -207,24 +195,20 @@ class OpenAIProvider(BaseLLMProvider):
         completed_tools = []
 
         for i, delta_call in enumerate(delta_tool_calls):
-            # Get call ID - if None, use the ID for this index from our mapping
             call_id = delta_call.id
             if not call_id:
-                # No ID in this delta - look up by index
                 index = getattr(delta_call, "index", None)
                 if index is not None and index in call_id_by_index:
                     call_id = call_id_by_index[index]
                 else:
                     continue
-            else:
-                # New ID - initialize buffer entry
-                if call_id not in buffer:
-                    buffer[call_id] = {
-                        "id": call_id,
-                        "name": "",
-                        "arguments": "",
-                        "complete": False,
-                    }
+            elif call_id not in buffer:
+                buffer[call_id] = {
+                    "id": call_id,
+                    "name": "",
+                    "arguments": "",
+                    "complete": False,
+                }
 
             if delta_call.function:
                 if delta_call.function.name:
@@ -232,18 +216,14 @@ class OpenAIProvider(BaseLLMProvider):
                 if delta_call.function.arguments:
                     buffer[call_id]["arguments"] += delta_call.function.arguments
 
-            # Check if this tool call is complete
-            # For o4 models, we need to check if the arguments form valid JSON
             tool_data = buffer[call_id]
             if (
                 not buffer[call_id]["complete"]
                 and tool_data["name"]
                 and tool_data["arguments"]
             ):
-                # Try to parse the arguments to see if they're complete JSON
                 try:
                     arguments = json.loads(tool_data["arguments"])
-                    # If parsing succeeds, the tool call is complete
                     buffer[call_id]["complete"] = True
                     completed_tools.append(
                         ToolCall(
@@ -253,16 +233,9 @@ class OpenAIProvider(BaseLLMProvider):
                         )
                     )
                 except json.JSONDecodeError:
-                    # Not complete yet, keep accumulating
                     pass
 
         return completed_tools if completed_tools else None
-
-    def _normalize_chunk(self, raw_chunk) -> StreamChunk:
-        """Convert OpenAI chunk to unified format."""
-        # This method is not used in the current implementation
-        # as we handle normalization in the stream method
-        pass
 
     def _map_error(self, error: Exception) -> Exception:
         """Map OpenAI errors to unified exceptions."""

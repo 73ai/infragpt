@@ -11,7 +11,6 @@ from .exceptions import ValidationError
 class LLMRouter:
     """Router for selecting and configuring LLM providers."""
 
-    # Provider-specific model defaults
     MODEL_CONFIGS = {
         "openai": {
             "default_params": {"temperature": 0.0},
@@ -51,14 +50,10 @@ class LLMRouter:
         """Create provider instance from model string."""
         provider_name, model = cls.parse_model_string(model_string)
 
-        # Get provider configuration
         config = cls.MODEL_CONFIGS[provider_name]
         provider_class = config["provider_class"]
-
-        # Merge default parameters with provided kwargs
         merged_kwargs = {**config["default_params"], **kwargs}
 
-        # Create provider instance
         try:
             return provider_class(api_key=api_key, model=model, **merged_kwargs)
         except Exception as e:

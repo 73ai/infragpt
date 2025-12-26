@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Shell command execution module for InfraGPT CLI agent.
 
@@ -75,8 +74,8 @@ class CommandExecutor(ExecutorInterface):
             if hasattr(os, "setsid"):
                 try:
                     popen_args["preexec_fn"] = os.setsid
-                except Exception:
-                    pass  # Skip if not supported
+                except TypeError:
+                    pass
 
             self.current_process = subprocess.Popen(command, **popen_args)
             os.close(slave_fd)
@@ -114,7 +113,7 @@ class CommandExecutor(ExecutorInterface):
 
             return exit_code, output, False
 
-        except Exception as e:
+        except OSError as e:
             console.print(f"[bold red]Error executing command:[/bold red] {e}")
             return -1, str(e), False
         finally:
@@ -158,7 +157,7 @@ class CommandExecutor(ExecutorInterface):
                     self._terminate_command()
                     break
 
-        except Exception as e:
+        except OSError as e:
             console.print(f"[bold red]Error streaming output:[/bold red] {e}")
 
         return "".join(output_lines)
@@ -209,8 +208,8 @@ class CommandExecutor(ExecutorInterface):
 
         except ImportError:
             pass  # termios not available (Windows)
-        except Exception:
-            pass
+        except OSError:
+            pass  # Terminal I/O error
 
     def update_environment(self, env_vars: Dict[str, str]):
         """Update environment variables for future commands."""
@@ -249,7 +248,7 @@ def parse_environment_changes(output: str) -> Dict[str, str]:
                     var, value = export_part.split("=", 1)
                     value = value.strip("\"'")
                     env_changes[var] = value
-            except Exception:
+            except ValueError:
                 pass
 
     return env_changes
