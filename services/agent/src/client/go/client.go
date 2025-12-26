@@ -110,7 +110,7 @@ func (c *Client) ProcessMessage(ctx context.Context, req AgentRequest) (AgentRes
 	var lastErr error
 	for attempt := 0; attempt < c.config.RetryAttempts; attempt++ {
 		if attempt > 0 {
-			// Exponential backoff for retries
+			// Linear backoff for retries
 			delay := time.Duration(attempt) * time.Second
 			select {
 			case <-time.After(delay):
